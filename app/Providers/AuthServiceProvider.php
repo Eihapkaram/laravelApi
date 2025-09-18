@@ -25,11 +25,12 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        // Load Passport keys from environment variables if they exist
+        // Load Passport keys from environment variables directly
         $privateKey = env('PASSPORT_PRIVATE_KEY');
         $publicKey  = env('PASSPORT_PUBLIC_KEY');
 
-        if ($privateKey && $publicKey) {
+        if (!empty($privateKey) && !empty($publicKey)) {
+            // Load keys as strings, not arrays
             Passport::loadKeysFrom([
                 'private' => $privateKey,
                 'public'  => $publicKey,
