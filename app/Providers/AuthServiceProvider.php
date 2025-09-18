@@ -15,7 +15,7 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        // Use keys from environment variables
+        // Load Passport keys directly from environment variables
         if (env('PASSPORT_PRIVATE_KEY') && env('PASSPORT_PUBLIC_KEY')) {
             Passport::loadKeysFrom([
                 'private' => env('PASSPORT_PRIVATE_KEY'),
@@ -23,7 +23,7 @@ class AuthServiceProvider extends ServiceProvider
             ]);
         }
 
-        // Optional: disable routes registration if not needed
+        // Optional: Disable automatic routes if you register them manually
         // Passport::ignoreRoutes();
     }
 }
