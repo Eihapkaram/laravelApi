@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-// use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Laravel\Passport\Passport;
 
@@ -26,6 +25,13 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //
+        // Register Passport routes
+        Passport::routes();
+
+        // Load keys from environment variables
+        Passport::loadKeysFrom([
+            'private' => env('PASSPORT_PRIVATE_KEY'),
+            'public'  => env('PASSPORT_PUBLIC_KEY'),
+        ]);
     }
 }
