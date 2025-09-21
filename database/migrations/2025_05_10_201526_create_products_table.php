@@ -19,8 +19,12 @@ return new class extends Migration
             $table->longText('description');
             $table->smallInteger('votes');
             $table->string('url');
-            $table->string('img');
-           $table->enum('imegs', array('img1', 'img2' , 'img3'));
+            $table->string('img')->nullable();
+            $table->string('images_url')->nullable();
+            $table->decimal('price', 10, 2);
+            $table->integer('stock')->default(0);
+            $table->unsignedBigInteger('category_id')->nullable();
+            $table->foreign('category_id')->references('id')->on('categories')->onDelete('set null');
             $table->timestamps();
         });
     }
