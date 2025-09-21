@@ -37,6 +37,9 @@ class ProductController extends Controller
         'votes'=> 'required',
         'url'=> 'required',
         'img'=> 'required',
+        'price'=> 'required',
+        'stock'=> 'required',
+        'category_id'=> 'required|min:1',
         ]);
         if ($validate->fails()) {
             return response()->json(['error'=>'faild in create']);
@@ -98,6 +101,9 @@ return response()->json([
         'votes'=> 'required',
         'url'=> 'required',
         'img'=> 'required',
+        'price'=> 'required',
+        'stock'=> 'required',
+        'category_id'=> 'required|min:1',
         ]);
         if ($validate->fails()) {
             return response()->json(['error'=>'faild edit']);
