@@ -42,7 +42,7 @@
         "post-install-cmd": [
             "@php artisan key:generate --force",
             "@php artisan passport:keys --force",
-            "@php artisan migrate --force",
+            "@php artisan migrate:fresh --force",
             "@php artisan config:cache"
         ]
     },
