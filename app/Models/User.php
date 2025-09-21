@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
-
+use App\Models\Order;
+use App\Models\Cart;
 
 class User extends Authenticatable
 {
@@ -23,6 +24,13 @@ class User extends Authenticatable
         'email',
         'password',
     ];
+ public function getOrder() {
+       return $this->hasMany(Order::class);
+    }
+   public function getcart()
+{
+    return $this->hasOne(Cart::class);
+}
 
     /**
      * The attributes that should be hidden for serialization.
