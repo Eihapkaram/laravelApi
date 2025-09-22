@@ -1,0 +1,16 @@
+:80 {
+    # المجلد الرئيسي هو public
+    root * /app/public
+
+    # تشغيل PHP عبر FrankenPHP
+    php_fastcgi localhost:9000
+
+    # تفعيل السيرفر العادي للملفات
+    file_server
+
+    # إتاحة storage/public
+    handle_path /storage/* {
+        root * /app/storage/app/public
+        file_server
+    }
+}
