@@ -20,7 +20,7 @@ return new class extends Migration
             $table->smallInteger('votes');
             $table->string('url');
             $table->string('img')->nullable();
-            $table->string('images_url')->nullable();
+            $table->json('images_url')->nullable();
             $table->decimal('price', 10, 2);
             $table->integer('stock')->default(0);
             $table->unsignedBigInteger('category_id')->nullable();

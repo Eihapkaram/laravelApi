@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use App\Models\Order;
 use App\Models\Cart;
+use App\Models\Review;
 
 class User extends Authenticatable
 {
@@ -30,6 +31,10 @@ class User extends Authenticatable
    public function getcart()
 {
     return $this->hasOne(Cart::class);
+}
+ public function userReviwes()
+{
+    return $this->hasMany(Review::class);
 }
 
     /**
