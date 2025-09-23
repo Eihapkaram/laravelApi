@@ -1,29 +1,20 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Starting Laravel build..."
+echo "Starting build-app.sh..."
 
-# 1. Clear config and cache
+# تنظيف الكاش
 php artisan config:clear
 php artisan cache:clear
 
-# 2. Generate application key (force to overwrite)
-php artisan key:generate --force
-
-# 3. Run migrations
-php artisan migrate --force
-
-# 4. Install Passport keys
-php artisan passport:install --force
-
-# 5. Set permissions
-chmod -R 775 storage bootstrap/cache
-
-# 6. Remove old storage links
+# إزالة روابط قديمة للـ storage
 rm -rf public/storage
 rm -rf public/storagepublic
 
-# 7. Create symbolic link
+# إنشاء رابط جديد للـ storage
 php artisan storage:link --force
 
-echo "✅ Laravel build completed successfully!"
+# Passport install (يولد المفاتيح)
+php artisan passport:install --force
+
+echo "Build completed."
