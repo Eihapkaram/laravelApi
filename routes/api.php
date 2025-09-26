@@ -76,7 +76,6 @@ Route::middleware(['auth:api', 'UserRole'])->group(function () {
         Route::post('update/{id}', [ProductController::class, 'update']);
         Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
         Route::delete('categorie/{id}', [CategorieController::class, 'DeleteCate']);
-        Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
         Route::post('page/Update/{id}', [PageController::class, 'UpdatePage']);
         Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
         Route::delete('categorie/delete/{id}', [CategorieController::class, 'DeleteCate']);
