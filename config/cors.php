@@ -16,7 +16,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'], // ✅ يسمح لكل الـ origins
+    'allowed_origins' => ['http://192.168.1.8:8080'],
 
     'allowed_origins_patterns' => [],
 
