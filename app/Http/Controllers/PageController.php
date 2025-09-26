@@ -12,13 +12,15 @@ class PageController extends Controller
         $request->validate([
             'slug' => 'required',
         ]);
-        Page::create([, 'slug' => $request->slug,
 
-        ]);
-        $pro = Page::all();
+
+        Page::create(['slug' => $request->slug]);
+
+
+        $pro = Page::get();
 
         return response()->json([
-            'massege' => 'add categore done',
+            'massege' => 'add page done',
             'pro' => $pro,
         ]);
     }
@@ -28,7 +30,7 @@ class PageController extends Controller
         $pro = Page::with('pageproducts')->get();
 
         return response()->json([
-            'massege' => 'show all categore prodcts',
+            'massege' => 'show all page prodcts',
             'pro' => $pro,
         ]);
     }
@@ -46,16 +48,14 @@ class PageController extends Controller
 
     public function UpdatePage(Request $request, $id)
     {
-        $request->validate([, 'slug' => 'required',
-        ]);
+        $request->validate(['slug' => 'required']);
         if (! $request || ! $id) {
             return response()->json([
                 'massege' => 'update Page not done',
             ]);
         }
         $pro = Page::find($id);
-        $pro->update([, 'slug' => $request->slug,
-        ]);
+        $pro->update(['slug' => $request->slug]);
 
         return response()->json([
             'massege' => 'update Page is done',
