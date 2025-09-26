@@ -31,11 +31,6 @@ class UserController extends Controller
             'img' => $path,
         ]);
 
-        // تسجيل الدخول
-        Auth::login($user);
-
-        // إرسال رسالة التحقق
-        $user->sendEmailVerificationNotification();
 
         // إنشاء التوكن
         $token = $user->createToken('eihapkaramvuejs')->accessToken;
@@ -45,6 +40,46 @@ class UserController extends Controller
             'token' => $token,
         ], 200);
     }
+
+
+public function userUpdate(Request $request,$id)
+    {
+        $this->validate($request, [
+            'name' => 'required',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|min:8',
+            'last_name' => 'required',
+        ]);
+
+        if ($request->hasFile('img')) {
+            $imge = $request->file('img')->getClientOriginalName();
+            $path = $request->file('img')->storeAs('users', $imge, 'public');
+        }
+$user =User::find($id) ;
+if(!$user){
+    return response()->json([
+            'message' => 'المستخدم غير موجود',
+        ], 404);
+}
+
+
+       $user->update([
+            'name' => $request->name,
+            'last_name' => $request->last_name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'role' => $request->role ?? 'customer',
+            'img' => $path,
+        ]);
+
+
+        return response()->json([
+            'message' => 'تم تعديل بنجاح',
+            'user' => $user ,
+        ], 200);
+    }
+
+
 
     public function Login(Request $Request)
     {
