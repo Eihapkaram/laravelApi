@@ -37,6 +37,7 @@ Route::post('/email/verification-notification', function (Request $request) {
 Route::post('register', [UserController::class, 'register']);
 Route::post('login', [UserController::class, 'Login'])->name('login');
 Route::get('pro', [ProductController::class, 'index']);
+Route::get('usersinfo', [UserController::class, 'userinfo'])->name('userinfo');
 Route::get('pageProducts/show', [PageController::class, 'showPageProduct']);
 Route::get('categorie/show', [CategorieController::class, 'showCateProduct']);
 Route::get('show/{id}', [ProductController::class, 'show']);
@@ -71,8 +72,8 @@ Route::middleware(['auth:api', 'UserRole'])->group(function () {
         Route::post('categorie/add', [CategorieController::class, 'AddCate']);
         Route::post('page/add', [PageController::class, 'AddPage']);
 
-       
-        Route::get('usersinfo', [UserController::class, 'userinfo'])->name('userinfo');
+
+
         Route::post('update/{id}', [ProductController::class, 'update']);
         Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
         Route::delete('categorie/{id}', [CategorieController::class, 'DeleteCate']);
