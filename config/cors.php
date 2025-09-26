@@ -2,21 +2,11 @@
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Cross-Origin Resource Sharing (CORS) Configuration
-    |--------------------------------------------------------------------------
-    |
-    | هنا تقدر تحدد إعدادات CORS الخاصة بتطبيقك.
-    | أي دومين أو Origin هيكون مسموح بيه لما تستخدم ['*'].
-    |
-    */
-
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://192.168.1.8:8080'],
+    'allowed_origins' => ['http://192.168.1.8:8080', '*'],
 
     'allowed_origins_patterns' => [],
 
@@ -26,6 +16,5 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true, // ✅ لو هتحتاج Cookies أو Tokens
-
+    'supports_credentials' => true,
 ];
