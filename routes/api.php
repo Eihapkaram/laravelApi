@@ -71,8 +71,7 @@ Route::middleware(['auth:api', 'UserRole'])->group(function () {
         Route::post('categorie/add', [CategorieController::class, 'AddCate']);
         Route::post('page/add', [PageController::class, 'AddPage']);
 
-        Route::delete('page/Delete/{id}', [PageController::class, 'DeletePage']);
-
+       
         Route::get('usersinfo', [UserController::class, 'userinfo'])->name('userinfo');
         Route::post('update/{id}', [ProductController::class, 'update']);
         Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
@@ -82,6 +81,7 @@ Route::middleware(['auth:api', 'UserRole'])->group(function () {
         Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
         Route::delete('categorie/delete/{id}', [CategorieController::class, 'DeleteCate']);
         Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
+         Route::delete('page/Delete/{id}', [PageController::class, 'DeletePage']);
     });
 
     Route::post('cart/add', [AddToController::class, 'addfun']);
