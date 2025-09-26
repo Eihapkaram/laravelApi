@@ -2,16 +2,20 @@
 
 return [
 
-    'default' => env('MAIL_MAILER', 'smtp'),
+    'default' => env('MAIL_MAILER', 'sendgrid'),
 
     'mailers' => [
+        'sendgrid' => [
+            'transport' => 'sendgrid',
+        ],
+
         'smtp' => [
             'transport' => 'smtp',
             'host' => env('MAIL_HOST', 'smtp.sendgrid.net'),
             'port' => env('MAIL_PORT', 587),
             'encryption' => env('MAIL_ENCRYPTION', 'tls'),
             'username' => env('MAIL_USERNAME', 'apikey'), // ثابت
-            'password' => env('MAIL_PASSWORD'), // هنا بتحط الـ API Key
+            'password' => env('MAIL_PASSWORD'),           // هنا بتحط الـ API Key
             'timeout' => null,
             'local_domain' => env('MAIL_EHLO_DOMAIN'),
         ],
@@ -45,7 +49,7 @@ return [
         'failover' => [
             'transport' => 'failover',
             'mailers' => [
-                'smtp',
+                'sendgrid',
                 'log',
             ],
         ],
