@@ -25,11 +25,17 @@ class UserController extends Controller
             'role'     => $request->role ?? 'customer',
         ]);
 
+        // تسجيل الدخول
+        Auth::login($user);
+
+        // إرسال رسالة التحقق
+        $user->sendEmailVerificationNotification();
+
         // إنشاء التوكن
         $token = $user->createToken('eihapkaramvuejs')->accessToken;
 
         return response()->json([
-            'message' => 'تم التسجيل بنجاح، برجاء ',
+            'message' => 'تم التسجيل بنجاح، برجاء التحقق من بريدك الإلكتروني',
             'token'   => $token,
         ], 200);
     }
