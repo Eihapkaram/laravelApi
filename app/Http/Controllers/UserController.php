@@ -28,7 +28,7 @@ class UserController extends Controller
             'email' => $request->email,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
-            'img' => $path,
+            'img' => $path ?? 'null',
         ]);
 
 
@@ -69,7 +69,7 @@ if(!$user){
             'email' => $request->email,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
-            'img' => $path,
+            'img' => $path ?? 'null',
         ]);
 
 
