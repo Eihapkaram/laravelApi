@@ -8,6 +8,7 @@ use App\Http\Controllers\AddToController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\CategorieController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\PageController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Storage;
 
@@ -67,9 +68,19 @@ Route::middleware('auth:api')->group(function () {
 Route::prefix('dashboard')->group(function () {
     Route::post('create',[ProductController::class, 'create']);
      Route::post('categorie/add', [CategorieController::class, 'AddCate']);
+      Route::post('page/add', [PageController::class, 'AddPage']);
+    Route::get('pageProducts/show', [PageController::class, 'showPageProduct']);
+    Route::delete('page/Delete/{id}', [PageController::class, 'DeletePage']);
+     Route::get('categorie/show', [CategorieController::class, 'showCateProduct']);
       Route::get('usersinfo', [UserController::class, 'userinfo'])->name('userinfo');
     Route::post('update/{id}',[ProductController::class, 'update']);
     Route::delete('destroy/{id}',[ProductController::class, 'destroy']);
+    Route::delete('categorie/{id}', [CategorieController::class, 'DeleteCate']);
+    Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
+    Route::post('page/Update/{id}', [PageController::class, 'UpdatePage']);
+    Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
+     Route::delete('categorie/delete/{id}', [CategorieController::class, 'DeleteCate']);
+      Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
 });
 
 
@@ -85,7 +96,6 @@ Route::get('cart/show', [AddToController::class, 'CartShow']);
      Route::post('add/reviweForProdict/{id}', [ReviewController::class, 'AddReviwes']);
      Route::post('update/reviwe/{id}', [ReviewController::class, 'UpdateReviwes']);
      Route::delete('delete/reviwe/{id}/{reviweid}', [ReviewController::class, 'DeleteReviwes']);
-Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
-     Route::delete('categorie/delete/{id}', [CategorieController::class, 'DeleteCate']);
-     Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
+
+
 });
