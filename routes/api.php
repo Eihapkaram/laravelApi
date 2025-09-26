@@ -58,21 +58,7 @@ Route::get('/products/{filename}', function ($filename) {
         ], 404);
     }
 
-    // فك الترميز من الرابط
-    $filename = urldecode($filename);
-
-    // منع الأحرف الغير مسموح بها
-    $filename = preg_replace('/[^A-Za-z0-9\-\_\.]/', '_', $filename);
-
-    $path2 = 'users/'.$filename;
-
-    if (! Storage::disk('public')->exists($path)) {
-        return response()->json([
-            'message' => 'الصورة غير موجودة',
-        ], 404);
-    }
-
-    return response()->file(storage_path('app/public/'.$path2));
+    return response()->file(storage_path('app/public/'.$path));
 })->where('filename', '.*');
 
 Route::middleware('auth:api')->group(function () {
