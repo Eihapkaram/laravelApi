@@ -61,6 +61,24 @@ Route::get('/products/{filename}', function ($filename) {
     return response()->file(storage_path('app/public/'.$path));
 })->where('filename', '.*');
 
+Route::get('/users/{filename}', function ($filename) {
+    // فك الترميز من الرابط
+    $filename = urldecode($filename);
+
+    // منع الأحرف الغير مسموح بها
+    $filename = preg_replace('/[^A-Za-z0-9\-\_\.]/', '_', $filename);
+
+    $path = 'users/'.$filename;
+
+    if (! Storage::disk('public')->exists($path)) {
+        return response()->json([
+            'message' => 'الصورة غير موجودة',
+        ], 404);
+    }
+
+    return response()->file(storage_path('app/public/'.$path));
+})->where('filename', '.*');
+
 Route::middleware('auth:api')->group(function () {
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('logoutFromAll', [UserController::class, 'logoutAll']);
