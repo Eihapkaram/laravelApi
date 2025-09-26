@@ -56,7 +56,7 @@ class UserController extends Controller
 
     public function userinfo()
     {
-        $userdata = auth()->user();
+        $userdata =User::get();
         return response()->json(['user' => $userdata], 200);
     }
     public function logout(Request $request)
