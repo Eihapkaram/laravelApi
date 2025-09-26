@@ -9,6 +9,7 @@ use App\Models\categorie;
 use App\Models\Order_item;
 use App\Models\Image;
 use App\Models\Review;
+use App\Models\Page;
 class product extends Model
 {
      public function proditels() {
@@ -16,6 +17,9 @@ class product extends Model
     }
     public function categorie() {
         return $this->belongsTo(categorie::class);
+    }
+     public function page() {
+        return $this->belongsTo(page::class);
     }
     public function orderdetils() {
        return $this->hasMany(Order_item::class);
@@ -34,6 +38,8 @@ public function productReviwes() {
         'titel',
         'description',
         'votes',
+        'brand',
+        'page_id',
         'url',
         'img',
         'updated_at',

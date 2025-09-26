@@ -41,6 +41,8 @@ class ProductController extends Controller
         'price'=> 'required',
         'stock'=> 'required',
         'category_id'=> 'required|min:1',
+        'page_id' => 'required|min:1',
+        'brand'=> 'required',
         ]
             );
 
@@ -57,6 +59,7 @@ class ProductController extends Controller
     }
 
 
+
     $product = Product::create([
         'titel'       => $request->titel,
         'description' => $request->description,
@@ -67,6 +70,8 @@ class ProductController extends Controller
         'stock'       => $request->stock,
         'category_id' => $request->category_id,
         'images_url'=> $imagePath,
+        'page_id' => $request->page_id,
+        'brand'=> $request->brand
     ]);
      // إضافة الصور في جدول منفصل
 if ($request->hasFile('images_url')) {
@@ -79,7 +84,7 @@ foreach ($request->file('images_url') as $image) {
 }
 
 
-$data = Product::with('productReviwes','images')->get();
+$data = Product::with('productReviwes','images','page')->get();
 
         return response()->json([
             'sucsse'=>'true',
@@ -98,7 +103,7 @@ $data = Product::with('productReviwes','images')->get();
    public function show($id)
     {
         $product = Product::find($id);
-        $data = Product::with('productReviwes','images')->find($id);
+        $data = Product::with('productReviwes','images','page')->find($id);
         if(is_null($product)) {
 return response()->json([
 'fail'=>"feild",
@@ -143,6 +148,8 @@ return response()->json([
         'price'=> 'required',
         'stock'=> 'required',
         'category_id'=> 'required|min:1',
+         'page_id' => 'required|min:1',
+        'brand'=> 'required',
         ]
             );
 
@@ -168,6 +175,8 @@ return response()->json([
         'price'=> $request->price,
         'stock'=> $request->stock,
         'category_id'=> $request->category_id,
+        'page_id' => $request->page_id,
+        'brand'=> $request->brand
         ]);
           // إضافة الصور في جدول منفصل
 $product = Product::findOrFail($id);

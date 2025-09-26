@@ -19,12 +19,14 @@ return new class extends Migration
             $table->longText('description');
             $table->smallInteger('votes');
             $table->string('url');
+            $table->string('brand');
             $table->string('img')->nullable();
             $table->json('images_url')->nullable();
             $table->decimal('price', 10, 2);
             $table->integer('stock')->default(0);
             $table->unsignedBigInteger('category_id')->nullable();
             $table->foreign('category_id')->references('id')->on('categories')->onDelete('set null');
+            $table->foreignId('page_id')->references('id')->on('pages')->cascadeOnDelete();
             $table->timestamps();
         });
     }

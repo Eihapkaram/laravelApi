@@ -1,43 +1,91 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function register(Request $Request){
-        $this->validate($Request,[
-
-            'name'=> 'required',
-            'email'=> 'required|email',
-            'password'=> 'required|min:8',
+    public function register(Request $request)
+    {
+        $this->validate($request, [
+            'name'     => 'required',
+            'email'    => 'required|email|unique:users',
+            'password' => 'required|min:8',
+            'last_name' =>'required'
         ]);
-$user = User::create([
-    'name'=> $Request->name,
-            'email'=> $Request->email,
-            'password'=> bcrypt($Request->password),
-]);
-$token = $user->createToken('eihapkaramvuejs')->accessToken;
-return response()->json(['Token'=> $token ],200);
+
+        $user = User::create([
+            'name'     => $request->name,
+            'last_name'=>$request->last_name,
+            'email'    => $request->email,
+            'password' => bcrypt($request->password),
+            'role'     => $request->role ?? 'customer',
+        ]);
+
+        // تسجيل الدخول
+        Auth::login($user);
+
+        // إرسال رسالة التحقق
+        $user->sendEmailVerificationNotification();
+
+        // إنشاء التوكن
+        $token = $user->createToken('eihapkaramvuejs')->accessToken;
+
+        return response()->json([
+            'message' => 'تم التسجيل بنجاح، برجاء التحقق من بريدك الإلكتروني',
+            'token'   => $token,
+        ], 200);
     }
-    public function Login(Request $Request){
+
+    public function Login(Request $Request)
+    {
         $data = [
-        'email' => $Request->email,
-        'password' => $Request->password,
+            'email' => $Request->email,
+            'password' => $Request->password,
         ];
-if(auth()->attempt($data)){
-    $token = auth()->user()->createToken('eihapkaramvuejs')->accessToken;
-    return response()->json(['token'=>$token],200);
-
-}
-else{
-return response()->json(['error'=>"field login"],401);
-}
+        if (auth()->attempt($data)) {
+            $token = auth()->user()->createToken('eihapkaramvuejs')->accessToken;
+            return response()->json(['token' => $token], 200);
+        } else {
+            return response()->json(['error' => "field login"], 401);
+        }
     }
 
-    public function userinfo(){
-    $userdata = auth()->user();
-    return response()->json(['user'=> $userdata],200);
+    public function userinfo()
+    {
+        $userdata = auth()->user();
+        return response()->json(['user' => $userdata], 200);
+    }
+    public function logout(Request $request)
+    {
+        $request->user()->token()->revoke();
+
+        return response()->json([
+            'message' => 'تم تسجيل الخروج بنجاح'
+        ]);
+    }
+
+    public function logoutAll(Request $request)
+    {
+        $request->user()->token()->revoke();
+
+        return response()->json([
+            'message' => 'تم تسجيل الخروج'
+        ]);
+    }
+    public function UserDelete($id)
+    {
+        if(!User::find($id)) {
+            return response()->json([
+            'message' => 'لم يتم ايجاد حساب المستخدم'
+        ]);
+        }
+        User::find($id)->delete();
+        return response()->json([
+            'message' => 'تم ازاله حساب  المستخدم'
+        ]);
     }
 }

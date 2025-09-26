@@ -31,4 +31,35 @@ return response()->json([
             'pro' => $pro
         ]);
     }
+    public function DeleteCate($id) {
+        $pro=categorie::find($id);
+        $pro->delete();
+return response()->json([
+    'massege' =>'delete categorie is done',
+    'data' => categorie::get()
+]);
+    }
+    public function UpdateCate(Request $request ,$id) {
+        $request->validate([
+    'name'=>'required'
+    ,'slug'=>'required'
+    ,'description'=>'required'
+]);
+if (!$request||!$id) {
+     return response()->json([
+    'massege' =>'update categorie not done'
+]);
+}
+        $pro=categorie::find($id);
+        $pro->update([
+            'name'=>$request->name
+    ,'slug'=>$request->slug
+    ,'description'=>$request->description
+        ]);
+        return response()->json([
+    'massege' =>'update categorie is done',
+    'data' => categorie::get()
+]);
+
+    }
 }
