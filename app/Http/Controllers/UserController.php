@@ -46,7 +46,6 @@ public function userUpdate(Request $request,$id)
     {
         $this->validate($request, [
             'name' => 'required',
-            'email' => 'required|email',
             'password' => 'required|min:8',
             'last_name' => 'required',
             'img' => 'image|mimes:jpeg,png,jpg,gif,webp'
@@ -67,7 +66,7 @@ if(!$user){
        $user->update([
             'name' => $request->name,
             'last_name' => $request->last_name,
-            'email' => $request->email,
+            'email' => auth()->user()->email,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
             'img' => $path ?? 'null',
