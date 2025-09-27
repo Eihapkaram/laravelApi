@@ -100,7 +100,7 @@ class ProductController extends Controller
    {
        $product = Product::find($id);
        $categorie = $product->categorie()->slug;
-       $data = Product::with('productReviwes', 'images', 'page')->find($id);
+       $data = Product::with('productReviwes', 'images', 'page', 'categorie')->find($id);
        if (is_null($product)) {
            return response()->json([
                'fail' => 'feild',
