@@ -99,7 +99,8 @@ class ProductController extends Controller
    public function show($id)
    {
        $product = Product::find($id);
-       $data = $product->with('productReviwes', 'images', 'page', 'categorie')->get();
+       $categorie = $product->with('categorie');
+       $data = Product::with('productReviwes', 'images', 'page', 'categorie')->find($id);
        if (is_null($product)) {
            return response()->json([
                'fail' => 'feild',
@@ -111,6 +112,7 @@ class ProductController extends Controller
            'succss' => 'true',
            'message' => 'product is found',
            'data' => $data,
+           'categorie' => $categorie,
        ]);
    }
 
