@@ -103,7 +103,7 @@ $data = Product::with('productReviwes','images','page')->get();
    public function show($id)
     {
         $product = Product::find($id);
-        $data = Product::with('productReviwes','images','page')->find($id);
+        $data = Product::with('productReviwes','images','page','categorie')->find($id);
         if(is_null($product)) {
 return response()->json([
 'fail'=>"feild",
