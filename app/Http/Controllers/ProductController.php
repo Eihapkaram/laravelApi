@@ -111,7 +111,8 @@ class ProductController extends Controller
        return response()->json([
            'succss' => 'true',
            'message' => 'product is found',
-           'data' => $data,$categorie,
+           'data' => $data,
+           'categorie' => $categorie,
        ]);
    }
 
