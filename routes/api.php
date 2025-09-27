@@ -83,6 +83,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('logoutFromAll', [UserController::class, 'logoutAll']);
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
+    Route::post('add/reviweForProdict/{id}', [ReviewController::class, 'AddReviwes']);
 });
 Route::middleware(['auth:api', 'UserRole'])->group(function () {
     Route::prefix('dashboard')->group(function () {
@@ -110,7 +111,7 @@ Route::middleware(['auth:api', 'UserRole'])->group(function () {
     Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
     Route::delete('order/delete/{id}', [OrderController::class, 'deleteOrder']);
     Route::delete('cart/delete/{id}', [AddToController::class, 'deleteCartItem']);
-    Route::post('add/reviweForProdict/{id}', [ReviewController::class, 'AddReviwes']);
+
     Route::post('update/reviwe/{id}', [ReviewController::class, 'UpdateReviwes']);
     Route::delete('delete/reviwe/{id}/{reviweid}', [ReviewController::class, 'DeleteReviwes']);
 });
