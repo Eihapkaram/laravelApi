@@ -102,6 +102,12 @@ if(!$user){
 
         return response()->json(['user' => $userdata], 200);
     }
+     public function OneUserinfo($id)
+    {
+        $userdata = User::find($id);
+
+        return response()->json(['user' => $userdata], 200);
+    }
 
     public function logout(Request $request)
     {
