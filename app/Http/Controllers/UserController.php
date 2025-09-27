@@ -46,7 +46,6 @@ public function userUpdate(Request $request,$id)
     {
         $this->validate($request, [
             'name' => 'required',
-            'email' => 'required|email|unique:users',
             'password' => 'required|min:8',
             'last_name' => 'required',
             'img' => 'image|mimes:jpeg,png,jpg,gif,webp'
