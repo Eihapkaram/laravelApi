@@ -66,7 +66,7 @@ if(!$user){
        $user->update([
             'name' => $request->name,
             'last_name' => $request->last_name,
-            'email' => auth()->user()->email,
+            'email' => auth()->user()->find($id)->email,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
             'img' => $path ?? 'null',
