@@ -99,7 +99,7 @@ class ProductController extends Controller
    public function show($id)
    {
        $product = Product::find($id);
-       $categorie = $product->categorie()->slug;
+       $categorie = $product->categorie()->get();
        $data = Product::with('productReviwes', 'images', 'page', 'categorie')->find($id);
        if (is_null($product)) {
            return response()->json([
