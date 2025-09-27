@@ -82,8 +82,8 @@ Route::get('/users/{filename}', function ($filename) {
 Route::middleware('auth:api')->group(function () {
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('logoutFromAll', [UserController::class, 'logoutAll']);
+    Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
 });
-
 Route::middleware(['auth:api', 'UserRole'])->group(function () {
     Route::prefix('dashboard')->group(function () {
         Route::post('create', [ProductController::class, 'create']);
