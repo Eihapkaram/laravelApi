@@ -14,12 +14,12 @@ return [
     |
     */
 
-    'mailgun' => [
-        'domain' => env('MAILGUN_DOMAIN'),
-        'secret' => env('MAILGUN_SECRET'),
-        'endpoint' => env('MAILGUN_ENDPOINT', 'api.mailgun.net'),
-        'scheme' => 'https',
-    ],
+    'paymob' => [
+    'api_key' => env('PAYMOB_API_KEY'),
+    'integration_id' => env('PAYMOB_INTEGRATION_ID'),
+    'iframe_id' => env('PAYMOB_IFRAME_ID'),
+],
+
 
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),

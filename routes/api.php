@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddToController;
 use App\Http\Controllers\CategorieController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReviewController;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +24,7 @@ use Illuminate\Support\Facades\Storage;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill();
 
@@ -50,7 +53,7 @@ Route::get('/products/{filename}', function ($filename) {
     // منع الأحرف الغير مسموح بها
     $filename = preg_replace('/[^A-Za-z0-9\-\_\.]/', '_', $filename);
 
-    $path = 'products/'.$filename;
+    $path = 'products/' . $filename;
 
     if (! Storage::disk('public')->exists($path)) {
         return response()->json([
@@ -58,7 +61,7 @@ Route::get('/products/{filename}', function ($filename) {
         ], 404);
     }
 
-    return response()->file(storage_path('app/public/'.$path));
+    return response()->file(storage_path('app/public/' . $path));
 })->where('filename', '.*');
 
 Route::get('/users/{filename}', function ($filename) {
@@ -68,7 +71,7 @@ Route::get('/users/{filename}', function ($filename) {
     // منع الأحرف الغير مسموح بها
     $filename = preg_replace('/[^A-Za-z0-9\-\_\.]/', '_', $filename);
 
-    $path = 'users/'.$filename;
+    $path = 'users/' . $filename;
 
     if (! Storage::disk('public')->exists($path)) {
         return response()->json([
@@ -76,12 +79,14 @@ Route::get('/users/{filename}', function ($filename) {
         ], 404);
     }
 
-    return response()->file(storage_path('app/public/'.$path));
+
+    return response()->file(storage_path('app/public/' . $path));
 })->where('filename', '.*');
 
 Route::middleware('auth:api')->group(function () {
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('logoutFromAll', [UserController::class, 'logoutAll']);
+     Route::post('/pay', [PaymentController::class, 'pay']);
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
     Route::post('add/reviweForProdict/{id}', [ReviewController::class, 'AddReviwes']);
 });
@@ -111,7 +116,7 @@ Route::middleware(['auth:api', 'UserRole'])->group(function () {
     Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
     Route::delete('order/delete/{id}', [OrderController::class, 'deleteOrder']);
     Route::delete('cart/delete/{id}', [AddToController::class, 'deleteCartItem']);
-
+   
     Route::post('update/reviwe/{id}', [ReviewController::class, 'UpdateReviwes']);
     Route::delete('delete/reviwe/{id}/{reviweid}', [ReviewController::class, 'DeleteReviwes']);
 });
