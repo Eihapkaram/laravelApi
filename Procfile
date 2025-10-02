@@ -1,3 +1,3 @@
-release: php artisan key:generate --force && php artisan migrate:fresh --force && php artisan passport:install --force &&composer require symfony/sendgrid-mailer&& chmod -R 775 storage bootstrap/cache
-web: php artisan serve --host=0.0.0.0 --port=8080
+release: php artisan key:generate --force && php artisan migrate --force && php artisan passport:install --force && chmod -R 775 storage bootstrap/cache && php artisan config:clear && php artisan cache:clear
 
+web: php artisan serve --host=0.0.0.0 --port=$PORT
