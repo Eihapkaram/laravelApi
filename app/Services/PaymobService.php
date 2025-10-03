@@ -9,14 +9,13 @@ class PaymobService
     private $apiKey;
     private $integrationId;
     private $iframeId;
-    
+
 
     public function __construct()
     {
         $this->apiKey = config('services.paymob.api_key');
         $this->integrationId = config('services.paymob.integration_id');
         $this->iframeId = config('services.paymob.iframe_id');
-        
     }
 
     // 1. Generate Authentication Token
@@ -30,14 +29,14 @@ class PaymobService
     }
 
     // 2. Register Order
-    public function createOrder($token, $amount, $currency = 'EGP')
+    public function createOrder($token, $amount, $currency = 'EGP', $items = [])
     {
         $response = Http::post('https://accept.paymob.com/api/ecommerce/orders', [
             'auth_token' => $token,
             'delivery_needed' => 'false',
             'amount_cents' => $amount * 100, // amount in cents
             'currency' => $currency,
-            'items' => []
+            'items' => $items
         ]);
 
         return $response->json();
