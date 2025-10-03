@@ -8,7 +8,7 @@ use App\Services\PaymobService;
 
 class PaymentController extends Controller
 {
-       private $paymob;
+    private $paymob;
 
     public function __construct(PaymobService $paymob)
     {
@@ -19,24 +19,39 @@ class PaymentController extends Controller
     {
         $token = $this->paymob->authenticate();
 
-        $order = $this->paymob->createOrder($token, $request->amount);
+        // المنتجات جاية من الـ request كـ Array جاهزة
+       $items = json_decode($request->items, true);
 
-       $billingData = [
-    "apartment"     => "NA",
-    "email"         => $request->email ?? "example@test.com",
-    "floor"         => "NA",
-    "first_name"    => $request->first_name ?? "NA",
-    "street"        => $request->street ?? "NA",
-    "building"      => "NA",
-    "phone_number"  => $request->phone_number ?? "NA",
-    "shipping_method"=> "NA",
-    "postal_code"   => "NA",
-    "city"          => $request->city ?? "NA",
-    "country"       => $request->country ?? "EG",
-    "last_name"     => $request->last_name ?? "NA",
-    "state"         => "NA"
-];
+        $order = $this->paymob->createOrder(
+            $token,
+            $request->amount,
+            'EGP',
+            $items,
+        );
 
+        if (!isset($order['id'])) {
+            return response()->json([
+                'error' => true,
+                'message' => 'Order creation failed',
+                'response' => $order
+            ], 500);
+        }
+
+        $billingData = [
+            "apartment"     => "NA",
+            "email"         => $request->email ?? "example@test.com",
+            "floor"         => "NA",
+            "first_name"    => $request->first_name ?? "NA",
+            "street"        => $request->street ?? "NA",
+            "building"      => "NA",
+            "phone_number"  => $request->phone_number ?? "NA",
+            "shipping_method" => "NA",
+            "postal_code"   => "NA",
+            "city"          => $request->city ?? "NA",
+            "country"       => $request->country ?? "EG",
+            "last_name"     => $request->last_name ?? "NA",
+            "state"         => "NA"
+        ];
 
         $paymentKey = $this->paymob->generatePaymentKey(
             $token,
@@ -47,6 +62,10 @@ class PaymentController extends Controller
 
         $iframeUrl = $this->paymob->getIframeUrl($paymentKey);
 
-        return response()->json(['url' => $iframeUrl]);
+        return response()->json([
+            'url'   => $iframeUrl,
+            'order' => $order,
+            'items' => $items,
+        ]);
     }
 }
