@@ -20,7 +20,7 @@ class PaymentController extends Controller
         $token = $this->paymob->authenticate();
 
         // المنتجات جاية من الـ request كـ Array جاهزة
-       $items = json_decode($request->items, true);
+       $items = $request->items; 
 
         $order = $this->paymob->createOrder(
             $token,
