@@ -10,11 +10,10 @@ use Laravel\Passport\HasApiTokens;
 use App\Models\Order;
 use App\Models\Cart;
 use App\Models\Review;
-use Laravel\Paddle\Billable;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, Billable;
+    use HasApiTokens, HasFactory, Notifiable;
     /**
      * The attributes that are mass assignable.
      *
