@@ -13,30 +13,24 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
-
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
 */
 
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill();
-
     return response()->json(['message' => 'Email verified successfully']);
 })->middleware(['auth:api', 'signed'])->name('verification.verify');
 
 Route::post('/email/verification-notification', function (Request $request) {
     $request->user()->sendEmailVerificationNotification();
-
     return response()->json(['message' => 'Verification link sent!']);
 })->middleware(['auth:api', 'throttle:6,1'])->name('verification.send');
 
+
+// 🔹 Authentication & Public Routes
 Route::post('register', [UserController::class, 'register']);
 Route::post('login', [UserController::class, 'Login'])->name('login');
 Route::get('pro', [ProductController::class, 'index']);
@@ -46,56 +40,58 @@ Route::get('categorie/show', [CategorieController::class, 'showCateProduct']);
 Route::get('show/{id}', [ProductController::class, 'show']);
 Route::get('categorie/proshow', [CategorieController::class, 'showCateProduct']);
 Route::get('show/reviwe/{id}', [ReviewController::class, 'showProReviwes']);
+
+
+// ✅ عرض صور المنتجات من storage
 Route::get('/products/{filename}', function ($filename) {
-    // فك الترميز من الرابط
     $filename = urldecode($filename);
-
-    // منع الأحرف الغير مسموح بها
-    $filename = preg_replace('/[^A-Za-z0-9\-\_\.]/', '_', $filename);
-
     $path = 'products/' . $filename;
 
-    if (! Storage::disk('public')->exists($path)) {
-        return response()->json([
-            'message' => 'الصورة غير موجودة',
-        ], 404);
+    // لو الصورة مش موجودة
+    if (!Storage::disk('public')->exists($path)) {
+        return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
-    return response()->file(storage_path('app/public/' . $path));
+    // إرجاع الصورة مع نوع الميديا الصحيح
+    $mime = Storage::disk('public')->mimeType($path);
+    $file = Storage::disk('public')->get($path);
+
+    return response($file, 200)->header('Content-Type', $mime);
 })->where('filename', '.*');
 
+
+// ✅ عرض صور المستخدمين من storage
 Route::get('/users/{filename}', function ($filename) {
-    // فك الترميز من الرابط
     $filename = urldecode($filename);
-
-    // منع الأحرف الغير مسموح بها
-    $filename = preg_replace('/[^A-Za-z0-9\-\_\.]/', '_', $filename);
-
     $path = 'users/' . $filename;
 
-    if (! Storage::disk('public')->exists($path)) {
-        return response()->json([
-            'message' => 'الصورة غير موجودة',
-        ], 404);
+    if (!Storage::disk('public')->exists($path)) {
+        return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
+    $mime = Storage::disk('public')->mimeType($path);
+    $file = Storage::disk('public')->get($path);
 
-    return response()->file(storage_path('app/public/' . $path));
+    return response($file, 200)->header('Content-Type', $mime);
 })->where('filename', '.*');
 
+
+// 🔐 Authenticated Routes
 Route::middleware('auth:api')->group(function () {
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('logoutFromAll', [UserController::class, 'logoutAll']);
-     Route::post('/pay', [PaymentController::class, 'pay']);
+    Route::post('/pay', [PaymentController::class, 'pay']);
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
     Route::post('add/reviweForProdict/{id}', [ReviewController::class, 'AddReviwes']);
 });
+
+
+// 🧑‍💻 Admin Routes
 Route::middleware(['auth:api', 'UserRole'])->group(function () {
     Route::prefix('dashboard')->group(function () {
         Route::post('create', [ProductController::class, 'create']);
         Route::post('categorie/add', [CategorieController::class, 'AddCate']);
         Route::post('page/add', [PageController::class, 'AddPage']);
-
         Route::post('update/{id}', [ProductController::class, 'update']);
         Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
         Route::delete('categorie/{id}', [CategorieController::class, 'DeleteCate']);
@@ -116,7 +112,6 @@ Route::middleware(['auth:api', 'UserRole'])->group(function () {
     Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
     Route::delete('order/delete/{id}', [OrderController::class, 'deleteOrder']);
     Route::delete('cart/delete/{id}', [AddToController::class, 'deleteCartItem']);
-   
     Route::post('update/reviwe/{id}', [ReviewController::class, 'UpdateReviwes']);
     Route::delete('delete/reviwe/{id}/{reviweid}', [ReviewController::class, 'DeleteReviwes']);
 });
