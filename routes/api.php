@@ -46,7 +46,7 @@ Route::get('categorie/show', [CategorieController::class, 'showCateProduct']);
 Route::get('show/{id}', [ProductController::class, 'show']);
 Route::get('categorie/proshow', [CategorieController::class, 'showCateProduct']);
 Route::get('show/reviwe/{id}', [ReviewController::class, 'showProReviwes']);
-Route::get('/storage/{filename}', function ($filename) {
+Route::get('/products/{filename}', function ($filename) {
     // فك الترميز من الرابط
     $filename = urldecode($filename);
 
