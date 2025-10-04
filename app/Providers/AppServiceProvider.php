@@ -4,13 +4,14 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 
 class AppServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
      */
-    public function register()
+    public function register(): void
     {
         //
     }
@@ -18,15 +19,15 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot()
+    public function boot(): void
     {
-        // إنشاء symlink بين storage/public و public/storage لو مش موجود
+        // تأكد إننا في بيئة production أو local فقط
         if (!file_exists(public_path('storage'))) {
             try {
                 Artisan::call('storage:link');
+                Log::info('✅ تم إنشاء رابط storage بنجاح.');
             } catch (\Exception $e) {
-                // ممكن تكتب لوج هنا لو حابب
-                \Log::error('فشل إنشاء رابط storage: ' . $e->getMessage());
+                Log::error('❌ فشل إنشاء رابط storage: ' . $e->getMessage());
             }
         }
     }
