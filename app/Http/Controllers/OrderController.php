@@ -51,7 +51,7 @@ if (!$cart || $cart->proCItem->isEmpty()) {
 
 public function showOrder() {
     $user=auth()->user();
-     $order = $user->getOrder()->with('orderdetels.product')->get();
+     $order = $user->getOrder()->with('orderdetels.product','userorder')->get();
         return response()->json([
         'message' => 'youer Order show  successfully',
         'order'   => $order,
@@ -62,7 +62,7 @@ public function showOrder() {
 public function showlatestOrder() {
     $user=auth()->user();
      $order = $user->getOrder()->with('orderdetels.product')->get();
-     $orderlatest = $user->getOrder()->with('orderdetels.product')->latest()->first();
+     $orderlatest = $user->getOrder()->with('orderdetels.product','userorder')->latest()->first();
         return response()->json([
         'message' => 'youer Order show  successfully',
         'order'   => $order,
