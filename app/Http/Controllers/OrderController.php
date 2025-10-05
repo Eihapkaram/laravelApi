@@ -51,12 +51,10 @@ if (!$cart || $cart->proCItem->isEmpty()) {
 
 public function showOrder() {
     $user=auth()->user();
-     $order = $user->getOrder()->with('orderdetels.product')->get();
-     $userOrder = $user->getOrder()->with('userorder')->get();
+     $order = $user->getOrder()->with('userorder.getOrder.orderdetels.product')->get();
         return response()->json([
         'message' => 'youer Order show  successfully',
         'order'   => $order,
-        'userOrder' =>$userOrder,
     ], 201);
 
 
