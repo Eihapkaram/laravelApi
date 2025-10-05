@@ -107,8 +107,8 @@ Route::middleware(['auth:api', 'UserRole'])->group(function () {
     Route::get('cart/show', [AddToController::class, 'CartShow']);
     Route::delete('cart/deleteAll', [AddToController::class, 'deleteAllCartItems']);
     Route::post('order/add', [OrderController::class, 'createOrder']);
-    Route::post('order/show', [OrderController::class, 'showOrder']);
-    Route::post('order/show/latest', [OrderController::class, 'showlatestOrder']);
+    Route::get('order/show', [OrderController::class, 'showOrder']);
+    Route::get('order/show/latest', [OrderController::class, 'showlatestOrder']);
     Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
     Route::delete('order/delete/{id}', [OrderController::class, 'deleteOrder']);
     Route::delete('cart/delete/{id}', [AddToController::class, 'deleteCartItem']);
