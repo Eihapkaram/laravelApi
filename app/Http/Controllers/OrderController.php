@@ -63,10 +63,12 @@ public function showlatestOrder() {
     $user=auth()->user();
      $order = $user->getOrder()->with('orderdetels.product')->get();
      $orderlatest = $user->getOrder()->with('orderdetels.product')->latest()->first();
+     $useerorder = $user->getOrder()->with('userorder')->get();
         return response()->json([
         'message' => 'youer Order show  successfully',
         'order'   => $order,
-        'orderlatest' => $orderlatest
+        'orderlatest' => $orderlatest,
+        'user' => $useerorder
     ], 201);
 
 
