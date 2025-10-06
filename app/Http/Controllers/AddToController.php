@@ -7,31 +7,27 @@ use Illuminate\Http\Request;
 use App\Models\Cart;
 use App\Models\Cart_item;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
 
 class AddToController extends Controller
 {
     public function addfun(Request $request)
     {
         try {
-            $validator = Validator::make($request->all(), [
+            $request->validate([
                 'product_id' => 'required|exists:products,id',
                 'quantity'   => 'nullable|integer|min:1'
             ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'message' => 'Validation failed',
-                    'errors'  => $validator->errors(),
-                ], 422);
-            }
+            $user = auth()->user(); // User model
 
-            $user = auth()->user();
             if (!$user) {
-                return response()->json(['message' => 'Unauthorized'], 401);
+                return response()->json([
+                    'message' => 'User not authenticated',
+                ], 401);
             }
 
-            $cart = $user->getcart()->firstOrCreate([]);
+            $cart = $user->getcart()->firstOrCreate([]); // Cart model
+
             $CartItem = $cart->proCItem()->where('product_id', $request->product_id)->first();
 
             if ($CartItem) {
@@ -40,46 +36,69 @@ class AddToController extends Controller
             } else {
                 $cart->proCItem()->create([
                     'product_id' => $request->product_id,
-                    'quantity'   => $request->quantity ?? 1
+                    'quantity' => $request->quantity ?? 1
                 ]);
             }
 
             return response()->json([
                 'message' => 'Product added to cart successfully!',
-                'cart'    => $cart->load('proCItem.product')
-            ], 200);
-
+                'cart' => $cart->load('proCItem.product')
+            ]);
         } catch (\Exception $e) {
-            Log::error('Add to cart error: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Server error',
-                'error'   => $e->getMessage()
+                'error' => $e->getMessage()
             ], 500);
         }
     }
 
     public function CartShow()
     {
-        try {
-            $user = auth()->user();
-            if (!$user) {
-                return response()->json([
-                    'message' => 'Sign in to use cart',
-                ], 401);
-            }
+        $user = auth()->user();
 
-            $cart = $user->getcart()->firstOrCreate([]);
-            $cart->load('proCItem.product');
-
+        if (!$user) {
             return response()->json([
-                'message' => 'Cart retrieved successfully',
-                'cart'    => $cart,
-                'user'    => $user
-            ], 200);
+                'message' => 'sign in for use cart',
+            ], 401);
+        }
 
-        } catch (\Exception $e) {
-            Log::error('Cart show error: ' . $e->getMessage());
+        $cart = $user->getcart()->firstOrCreate([]);
+        $cart->load('proCItem.product');
+
+        return response()->json([
+            'message' => 'Cart retrieved successfully',
+            'cart'    => $cart,
+            'user' => $user
+        ], 200);
+    }
+
+    public function deleteCartItem($id)
+    {
+        $user = auth()->user();
+        $cart = $user->getcart()->firstOrCreate([]);
+        $CartItem = $cart->proCItem()->find($id);
+
+        if (!$CartItem) {
             return response()->json([
-                'message' => 'Server error',
-                'error'   => $e->getMessage()
-            ],
+                'message' => 'Cart item not found',
+            ], 404);
+        }
+
+        $CartItem->delete();
+
+        return response()->json([
+            'message' => 'CartItem deleted successfully',
+        ], 200);
+    }
+
+    public function deleteAllCartItems()
+    {
+        $user = auth()->user();
+        $cart = $user->getcart()->firstOrCreate([]);
+        $cart->proCItem()->delete();
+
+        return response()->json([
+            'message' => 'All cart items deleted successfully',
+        ], 200);
+    }
+}
