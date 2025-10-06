@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
 |--------------------------------------------------------------------------
 */
 
+// ✅ Email Verification
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill();
     return response()->json(['message' => 'Email verified successfully']);
@@ -29,8 +30,7 @@ Route::post('/email/verification-notification', function (Request $request) {
     return response()->json(['message' => 'Verification link sent!']);
 })->middleware(['auth:api', 'throttle:6,1'])->name('verification.send');
 
-
-// 🔹 Authentication & Public Routes
+// 🔹 Public Routes
 Route::post('register', [UserController::class, 'register']);
 Route::post('login', [UserController::class, 'Login'])->name('login');
 Route::get('pro', [ProductController::class, 'index']);
@@ -41,26 +41,22 @@ Route::get('show/{id}', [ProductController::class, 'show']);
 Route::get('categorie/proshow', [CategorieController::class, 'showCateProduct']);
 Route::get('show/reviwe/{id}', [ReviewController::class, 'showProReviwes']);
 
-
-// ✅ عرض صور المنتجات من storage
+// ✅ Product Images
 Route::get('/products/{filename}', function ($filename) {
     $filename = urldecode($filename);
     $path = 'products/' . $filename;
 
-    // لو الصورة مش موجودة
     if (!Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
-    // إرجاع الصورة مع نوع الميديا الصحيح
     $mime = Storage::disk('public')->mimeType($path);
     $file = Storage::disk('public')->get($path);
 
     return response($file, 200)->header('Content-Type', $mime);
 })->where('filename', '.*');
 
-
-// ✅ عرض صور المستخدمين من storage
+// ✅ User Images
 Route::get('/users/{filename}', function ($filename) {
     $filename = urldecode($filename);
     $path = 'users/' . $filename;
@@ -75,43 +71,54 @@ Route::get('/users/{filename}', function ($filename) {
     return response($file, 200)->header('Content-Type', $mime);
 })->where('filename', '.*');
 
-
 // 🔐 Authenticated Routes
 Route::middleware('auth:api')->group(function () {
+    // User
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('logoutFromAll', [UserController::class, 'logoutAll']);
-    Route::post('/pay', [PaymentController::class, 'pay']);
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
-    Route::post('add/reviweForProdict/{id}', [ReviewController::class, 'AddReviwes']);
-});
 
-
-// 🧑‍💻 Admin Routes
-Route::middleware(['auth:api', 'UserRole'])->group(function () {
-    Route::prefix('dashboard')->group(function () {
-        Route::post('create', [ProductController::class, 'create']);
-        Route::post('categorie/add', [CategorieController::class, 'AddCate']);
-        Route::post('page/add', [PageController::class, 'AddPage']);
-        Route::post('update/{id}', [ProductController::class, 'update']);
-        Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
-        Route::delete('categorie/{id}', [CategorieController::class, 'DeleteCate']);
-        Route::post('page/Update/{id}', [PageController::class, 'UpdatePage']);
-        Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
-        Route::delete('categorie/delete/{id}', [CategorieController::class, 'DeleteCate']);
-        Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
-        Route::post('user/update/{id}', [UserController::class, 'userUpdate']);
-        Route::delete('page/Delete/{id}', [PageController::class, 'DeletePage']);
-    });
-
+    // Cart
     Route::post('cart/add', [AddToController::class, 'addfun']);
     Route::get('cart/show', [AddToController::class, 'CartShow']);
+    Route::delete('cart/delete/{id}', [AddToController::class, 'deleteCartItem']);
     Route::delete('cart/deleteAll', [AddToController::class, 'deleteAllCartItems']);
+
+    // Order
     Route::post('order/add', [OrderController::class, 'createOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
     Route::get('order/show/latest', [OrderController::class, 'showlatestOrder']);
-    Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
     Route::delete('order/delete/{id}', [OrderController::class, 'deleteOrder']);
-    Route::delete('cart/delete/{id}', [AddToController::class, 'deleteCartItem']);
+    Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
+
+    // Payment
+    Route::post('/pay', [PaymentController::class, 'pay']);
+
+    // Review
+    Route::post('add/reviweForProdict/{id}', [ReviewController::class, 'AddReviwes']);
     Route::post('update/reviwe/{id}', [ReviewController::class, 'UpdateReviwes']);
     Route::delete('delete/reviwe/{id}/{reviweid}', [ReviewController::class, 'DeleteReviwes']);
+});
+
+// 🧑‍💻 Admin Routes
+Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function () {
+    // Product
+    Route::post('create', [ProductController::class, 'create']);
+    Route::post('update/{id}', [ProductController::class, 'update']);
+    Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
+
+    // Category
+    Route::post('categorie/add', [CategorieController::class, 'AddCate']);
+    Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
+    Route::delete('categorie/{id}', [CategorieController::class, 'DeleteCate']);
+    Route::delete('categorie/delete/{id}', [CategorieController::class, 'DeleteCate']);
+
+    // Page
+    Route::post('page/add', [PageController::class, 'AddPage']);
+    Route::post('page/Update/{id}', [PageController::class, 'UpdatePage']);
+    Route::delete('page/Delete/{id}', [PageController::class, 'DeletePage']);
+
+    // User
+    Route::post('user/update/{id}', [UserController::class, 'userUpdate']);
+    Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
 });
