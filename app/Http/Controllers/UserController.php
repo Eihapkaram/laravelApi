@@ -196,12 +196,6 @@ class UserController extends Controller
             'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010او  011 أو 012 أو 015',
         ]);
 
-        $data = [
-            'phone' => $request->phone,
-            'password' => bcrypt($request->password),
-        ];
-
-
         $user = User::where('phone', $request->phone)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
@@ -218,22 +212,6 @@ class UserController extends Controller
             'user' => $user,
             'token' => $token,
         ], 200);
-
-
-
-        if (auth()->attempt($data)) {
-            $token = auth()->user()->createToken('eihapkaramvuejs')->accessToken;
-
-            return response()->json(['token' => $token], 200);
-        } else {
-            return response()->json(['error' => 'field login'], 401);
-        }
-
-        return response()->json([
-            'success' => true,
-            'user' => $user,
-            'token' => $token,
-        ]);
     }
 
     // ✅ تسجيل الخروج (يتطلب auth:api)
