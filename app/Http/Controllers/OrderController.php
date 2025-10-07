@@ -100,10 +100,12 @@ class OrderController extends Controller
     public function getAllOrders()
     {
         $orders = Order::with('orderdetels.product', 'userorder')->get();
+        $user = User::find($orders->user_id);
 
         return response()->json([
             'message' => 'All orders fetched successfully',
             'orders' => $orders,
+              'user' =>$user,                 
         ], 200);
     }
 
