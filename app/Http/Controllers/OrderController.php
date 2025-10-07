@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Order;
-use App\Models\User;
 
 class OrderController extends Controller
 {
-    public function createOrder()
+    public function createOrder(Request $request)
     {
         $user = auth()->user();
 
@@ -16,38 +15,42 @@ class OrderController extends Controller
             return response()->json(['message' => 'Unauthorized. Please login first.'], 401);
         }
 
-        $cart = $user->getcart()->with('proCItem.product')->first(); // ترجع cart ب عناصرها
+        $cart = $user->getcart()->with('proCItem.product')->first(); //ترجع cart ب عناصرها
+
 
         if (!$cart || $cart->proCItem->isEmpty()) {
             return response()->json([
                 'message' => 'Cart is empty'
             ], 400);
         }
-
-        $total = $cart->proCItem->sum(function($item) {
+        $total = $cart->proCItem->sum(function ($item) {
             return $item->quantity * $item->product->price;
         });
 
         $order = Order::create([
             'user_id' => $user->id,
-            'total_price' => $total,
-            'status' => 'pending',
+            'total_price'   => $total,
+            'status'  => 'pending',
+            'city' => $request->city,
+            'governorate' => $request->governorate,
+            'street' => $request->street,
+            'phone' => $request->phone,
+            'store_name' => $request->store_name,
         ]);
-
         foreach ($cart->proCItem as $item) {
             $order->orderdetels()->create([
                 'product_id' => $item->product_id,
-                'quantity' => $item->quantity,
-                'price' => $item->product->price,
+                'quantity'   => $item->quantity,
+                'price'      => $item->product->price,
             ]);
         }
 
-        // بعد إنشاء الطلب، يمكن مسح cart-items
+        // بعد إنشاء الطلب،addorder ممكن تمسح السلة يحذف cart-items
         $cart->proCItem()->truncate();
 
         return response()->json([
             'message' => 'Order created successfully',
-            'order' => $order->load('orderdetels.product')
+            'order'   => $order->load('orderdetels.product')
         ], 201);
     }
 
@@ -55,67 +58,38 @@ class OrderController extends Controller
     {
         $user = auth()->user();
         $order = $user->getOrder()->with('orderdetels.product')->get();
-
         return response()->json([
-            'message' => 'Your orders fetched successfully',
-            'order' => $order,
+            'message' => 'youer Order show  successfully',
+            'order'   => $order,
         ], 201);
     }
-
-    public function showLatestOrder()
+    public function showlatestOrder()
     {
         $user = auth()->user();
         $order = $user->getOrder()->with('orderdetels.product')->get();
-        $orderLatest = $user->getOrder()->with('orderdetels.product')->latest()->first();
-
+        $orderlatest = $user->getOrder()->with('orderdetels.product')->latest()->first();
         return response()->json([
-            'message' => 'Your orders fetched successfully',
-            'order' => $order,
-            'orderLatest' => $orderLatest,
+            'message' => 'youer Order show  successfully',
+            'order'   => $order,
+            'orderlatest' => $orderlatest,
         ], 201);
     }
-
     public function deleteOrder(Request $request)
     {
         $user = auth()->user();
-        $order = $user->getOrder()->first();
+        $order = $user->getOrder->first();
         $order->destroy($request->id);
-
         return response()->json([
-            'message' => 'Order deleted successfully',
+            'message' => 'done delete Order successfully',
         ], 201);
     }
-
     public function deleteAllOrder()
     {
         $user = auth()->user();
         $order = $user->getOrder();
         $order->truncate();
-
         return response()->json([
-            'message' => 'All orders deleted successfully',
+            'message' => 'done delete All Order successfully',
         ], 201);
-    }
-
-    // 🔹 دالة لجلب كل الطلبات لجميع المستخدمين
-    public function getAllOrders()
-    {
-        $orders = Order::with('orderdetels.product', 'userorder')->get();
-
-        return response()->json([
-            'message' => 'All orders fetched successfully',
-            'orders' => $orders,                
-        ], 200);
-    }
-
-    // 🔹 دالة لجلب أحدث طلب تم إنشاؤه
-    public function getLatestOrder()
-    {
-        $latestOrder = Order::with('orderdetels.product', 'userorder')->latest()->first();
-
-        return response()->json([
-            'message' => 'Latest order fetched successfully',
-            'latestOrder' => $latestOrder,
-        ], 200);
     }
 }
