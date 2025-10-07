@@ -100,14 +100,11 @@ class OrderController extends Controller
     // 🔹 دالة لجلب كل الطلبات لجميع المستخدمين
     public function getAllOrders()
     {
-        $user = auth()->user();
         $orders = Order::with('orderdetels.product', 'userorder')->get();
-        $user = User::find($user->getOrder()->user_id);
 
         return response()->json([
             'message' => 'All orders fetched successfully',
-            'orders' => $orders,
-              'user' =>$user,                 
+            'orders' => $orders,                
         ], 200);
     }
 
