@@ -99,7 +99,7 @@ class OrderController extends Controller
     // 🔹 دالة لجلب كل الطلبات لجميع المستخدمين
     public function getAllOrders()
     {
-        $orders = Order::with('orderdetels.product', 'user')->get();
+        $orders = Order::with('orderdetels.product', 'userorder')->get();
 
         return response()->json([
             'message' => 'All orders fetched successfully',
@@ -110,7 +110,7 @@ class OrderController extends Controller
     // 🔹 دالة لجلب أحدث طلب تم إنشاؤه
     public function getLatestOrder()
     {
-        $latestOrder = Order::with('orderdetels.product', 'user')->latest()->first();
+        $latestOrder = Order::with('orderdetels.product', 'userorder')->latest()->first();
 
         return response()->json([
             'message' => 'Latest order fetched successfully',
