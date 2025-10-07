@@ -33,6 +33,7 @@ Route::post('/email/verification-notification', function (Request $request) {
 // 🔹 Public Routes
 Route::post('register', [UserController::class, 'register']);
 Route::post('login', [UserController::class, 'Login'])->name('login');
+Route::post('/login-phone', [UserController::class, 'loginWithPhone']);
 Route::get('pro', [ProductController::class, 'index']);
 Route::get('usersinfo', [UserController::class, 'userinfo'])->name('userinfo');
 Route::get('pageProducts/show', [PageController::class, 'showPageProduct']);
@@ -76,6 +77,7 @@ Route::middleware('auth:api')->group(function () {
     // User
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('logoutFromAll', [UserController::class, 'logoutAll']);
+    Route::post('/login-phone', [UserController::class, 'logoutphone']);
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
 
     // Cart
@@ -102,7 +104,6 @@ Route::middleware('auth:api')->group(function () {
 
 // 🧑‍💻 Admin Routes
 Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function () {
-    Route::get('order/show/all', [OrderController::class, 'getAllOrders']);
     // Product
     Route::post('create', [ProductController::class, 'create']);
     Route::post('update/{id}', [ProductController::class, 'update']);
