@@ -197,7 +197,7 @@ if(!$user){
 
         $data = [
             'phone' => $request->phone,
-            'password' =>  bcrypt($request->password),
+            'password' => bcrypt($request->password),
         ];
         if (auth()->attempt($data)) {
             $token = auth()->user()->createToken('eihapkaramvuejs')->accessToken;
