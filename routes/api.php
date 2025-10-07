@@ -32,6 +32,7 @@ Route::post('/email/verification-notification', function (Request $request) {
 
 // 🔹 Public Routes
 Route::post('register', [UserController::class, 'register']);
+Route::post('/register-phone', [UserController::class, 'registerWithPhone']);
 Route::post('login', [UserController::class, 'Login'])->name('login');
 Route::post('/login-phone', [UserController::class, 'loginWithPhone']);
 Route::get('pro', [ProductController::class, 'index']);
@@ -77,7 +78,7 @@ Route::middleware('auth:api')->group(function () {
     // User
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('logoutFromAll', [UserController::class, 'logoutAll']);
-    Route::post('//logout-phone', [UserController::class, 'logoutphone']);
+    Route::post('/logout-phone', [UserController::class, 'logoutphone']);
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
 
     // Cart
