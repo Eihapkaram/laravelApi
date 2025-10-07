@@ -166,7 +166,7 @@ if(!$user){
             $user = User::create([
                 'phone' => $request->phone,
                 'name' => $request->name,
-                'password' => $request->name,
+                'password' => $request->password,
             ]);
         }
 
@@ -196,7 +196,7 @@ if(!$user){
         ]); 
 
         $data = [
-            'phone' => $request->email,
+            'phone' => $request->phone,
             'password' => $request->password,
         ];
         if (auth()->attempt($data)) {
