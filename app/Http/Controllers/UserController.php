@@ -142,18 +142,21 @@ if(!$user){
         ]);
     }
 
-      // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
-    public function loginWithPhone(Request $request)
+
+  // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
+    public function registerWithPhone(Request $request)
     {
         $request->validate([
+             'name' => 'required',
+            'password' => 'required|min:8',
             'phone' => [
                 'required',
                 'regex:/^(011|012|015|010)[0-9]{8}$/'
             ],
         ], [
             'phone.required' => 'رقم الهاتف مطلوب',
-            'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 011 أو 012 أو 015',
-        ]);
+            'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010او  011 أو 012 أو 015',
+        ]); 
 
         // البحث عن المستخدم
         $user = User::where('phone', $request->phone)->first();
@@ -162,12 +165,47 @@ if(!$user){
         if (!$user) {
             $user = User::create([
                 'phone' => $request->phone,
-                'name' => 'User-' . substr($request->phone, -4),
+                'name' => $request->name,
+                'password' => $request->name,
             ]);
         }
 
         // إنشاء token للمستخدم
         $token = $user->createToken('API Token')->accessToken;
+
+        return response()->json([
+            'success' => true,
+            'user' => $user,
+            'token' => $token,
+        ]);
+    }
+
+
+      // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
+    public function loginWithPhone(Request $request)
+    {
+        $request->validate([
+            'password' => 'required|min:8',
+            'phone' => [
+                'required',
+                'regex:/^(011|012|015|010)[0-9]{8}$/'
+            ],
+        ], [
+            'phone.required' => 'رقم الهاتف مطلوب',
+            'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010او  011 أو 012 أو 015',
+        ]); 
+
+        $data = [
+            'phone' => $request->email,
+            'password' => $request->password,
+        ];
+        if (auth()->attempt($data)) {
+            $token = auth()->user()->createToken('eihapkaramvuejs')->accessToken;
+
+            return response()->json(['token' => $token], 200);
+        } else {
+            return response()->json(['error' => 'field login'], 401);
+        }
 
         return response()->json([
             'success' => true,
