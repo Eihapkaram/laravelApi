@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -42,7 +43,7 @@ class UserController extends Controller
     }
 
 
-public function userUpdate(Request $request,$id)
+    public function userUpdate(Request $request, $id)
     {
         $this->validate($request, [
             'name' => 'required',
@@ -55,15 +56,15 @@ public function userUpdate(Request $request,$id)
             $imge = $request->file('img')->getClientOriginalName();
             $path = $request->file('img')->storeAs('users', $imge, 'public');
         }
-$user =User::find($id) ;
-if(!$user){
-    return response()->json([
-            'message' => 'المستخدم غير موجود',
-        ], 404);
-}
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json([
+                'message' => 'المستخدم غير موجود',
+            ], 404);
+        }
 
 
-       $user->update([
+        $user->update([
             'name' => $request->name,
             'last_name' => $request->last_name,
             'email' => auth()->user()->find($id)->email,
@@ -76,7 +77,7 @@ if(!$user){
 
         return response()->json([
             'message' => 'تم تعديل بنجاح',
-            'user' => $user ,
+            'user' => $user,
         ], 200);
     }
 
@@ -103,7 +104,7 @@ if(!$user){
 
         return response()->json(['user' => $userdata], 200);
     }
-     public function OneUserinfo($id)
+    public function OneUserinfo($id)
     {
         $userdata = User::find($id);
 
@@ -143,11 +144,11 @@ if(!$user){
     }
 
 
-  // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
+    // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
     public function registerWithPhone(Request $request)
     {
         $request->validate([
-             'name' => 'required',
+            'name' => 'required',
             'password' => 'required|min:8',
             'phone' => [
                 'required',
@@ -156,7 +157,7 @@ if(!$user){
         ], [
             'phone.required' => 'رقم الهاتف مطلوب',
             'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010او  011 أو 012 أو 015',
-        ]); 
+        ]);
 
         // البحث عن المستخدم
         $user = User::where('phone', $request->phone)->first();
@@ -166,7 +167,7 @@ if(!$user){
             $user = User::create([
                 'phone' => $request->phone,
                 'name' => $request->name,
-                'password' =>  bcrypt($request->password),
+                'password' => bcrypt($request->password),
             ]);
         }
 
@@ -181,7 +182,7 @@ if(!$user){
     }
 
 
-      // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
+    // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
     public function loginWithPhone(Request $request)
     {
         $request->validate([
@@ -193,12 +194,33 @@ if(!$user){
         ], [
             'phone.required' => 'رقم الهاتف مطلوب',
             'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010او  011 أو 012 أو 015',
-        ]); 
+        ]);
 
         $data = [
             'phone' => $request->phone,
             'password' => bcrypt($request->password),
         ];
+
+
+        $user = User::where('phone', $request->phone)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => true,
+                'user' => 'الرقم غير مسجل او تاكد من كلمه المرور',
+            ], 401);
+        }
+
+        $token = $user->createToken('API Token')->accessToken;
+
+        return response()->json([
+            'success' => true,
+            'user' => $user,
+            'token' => $token,
+        ], 200);
+
+
+
         if (auth()->attempt($data)) {
             $token = auth()->user()->createToken('eihapkaramvuejs')->accessToken;
 
