@@ -166,7 +166,7 @@ if(!$user){
             $user = User::create([
                 'phone' => $request->phone,
                 'name' => $request->name,
-                'password' => $request->password,
+                'password' =>  bcrypt($request->password),
             ]);
         }
 
@@ -197,7 +197,7 @@ if(!$user){
 
         $data = [
             'phone' => $request->phone,
-            'password' => $request->password,
+            'password' =>  bcrypt($request->password),,
         ];
         if (auth()->attempt($data)) {
             $token = auth()->user()->createToken('eihapkaramvuejs')->accessToken;
