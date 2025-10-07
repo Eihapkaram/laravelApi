@@ -67,6 +67,7 @@ if(!$user){
             'name' => $request->name,
             'last_name' => $request->last_name,
             'email' => auth()->user()->find($id)->email,
+            'phone' => auth()->user()->find($id)->phone,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
             'img' => $path ?? 'null',
@@ -138,6 +139,52 @@ if(!$user){
 
         return response()->json([
             'message' => 'تم ازاله حساب  المستخدم',
+        ]);
+    }
+
+      // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
+    public function loginWithPhone(Request $request)
+    {
+        $request->validate([
+            'phone' => [
+                'required',
+                'regex:/^(011|012|015)[0-9]{8}$/'
+            ],
+        ], [
+            'phone.required' => 'رقم الهاتف مطلوب',
+            'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 011 أو 012 أو 015',
+        ]);
+
+        // البحث عن المستخدم
+        $user = User::where('phone', $request->phone)->first();
+
+        // لو مش موجود، نعمل حساب جديد
+        if (!$user) {
+            $user = User::create([
+                'phone' => $request->phone,
+                'name' => 'User-' . substr($request->phone, -4),
+            ]);
+        }
+
+        // إنشاء token للمستخدم
+        $token = $user->createToken('API Token')->accessToken;
+
+        return response()->json([
+            'success' => true,
+            'user' => $user,
+            'token' => $token,
+        ]);
+    }
+
+    // ✅ تسجيل الخروج (يتطلب auth:api)
+    public function logoutphone(Request $request)
+    {
+        // إلغاء صلاحية التوكن الحالي
+        $request->user()->token()->revoke();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تسجيل الخروج بنجاح',
         ]);
     }
 }
