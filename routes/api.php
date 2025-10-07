@@ -77,7 +77,7 @@ Route::middleware('auth:api')->group(function () {
     // User
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('logoutFromAll', [UserController::class, 'logoutAll']);
-    Route::post('/login-phone', [UserController::class, 'logoutphone']);
+    Route::post('//logout-phone', [UserController::class, 'logoutphone']);
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
 
     // Cart
