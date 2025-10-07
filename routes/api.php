@@ -102,6 +102,7 @@ Route::middleware('auth:api')->group(function () {
 
 // 🧑‍💻 Admin Routes
 Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function () {
+    Route::get('order/show/all', [OrderController::class, 'getAllOrders']);
     // Product
     Route::post('create', [ProductController::class, 'create']);
     Route::post('update/{id}', [ProductController::class, 'update']);
