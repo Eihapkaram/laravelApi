@@ -148,7 +148,7 @@ if(!$user){
         $request->validate([
             'phone' => [
                 'required',
-                'regex:/^(011|012|015)[0-9]{8}$/'
+                'regex:/^(011|012|015|010)[0-9]{8}$/'
             ],
         ], [
             'phone.required' => 'رقم الهاتف مطلوب',
