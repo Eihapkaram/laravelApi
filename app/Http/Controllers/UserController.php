@@ -149,7 +149,6 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'password' => 'required|min:8',
             'phone' => [
                 'required',
                 'regex:/^(011|012|015|010)[0-9]{8}$/'
@@ -167,7 +166,6 @@ class UserController extends Controller
             $user = User::create([
                 'phone' => $request->phone,
                 'name' => $request->name,
-                'password' => bcrypt($request->password),
             ]);
         }
 
@@ -186,7 +184,6 @@ class UserController extends Controller
     public function loginWithPhone(Request $request)
     {
         $request->validate([
-            'password' => 'required|min:8',
             'phone' => [
                 'required',
                 'regex:/^(011|012|015|010)[0-9]{8}$/'
@@ -198,10 +195,10 @@ class UserController extends Controller
 
         $user = User::where('phone', $request->phone)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user) {
             return response()->json([
                 'success' => true,
-                'user' => 'الرقم غير مسجل او تاكد من كلمه المرور',
+                'user' => 'الرقم غير مسجل او تاكد من ',
             ], 401);
         }
 
