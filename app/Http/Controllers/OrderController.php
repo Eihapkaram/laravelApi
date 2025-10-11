@@ -85,7 +85,7 @@ class OrderController extends Controller
     // 🔹 عرض جميع الطلبات لكل المستخدمين (للمشرفين)
     public function showAllOrders()
     {
-        $orders = Order::with(['orderdetels.product', 'getuser'])->latest()->get();
+        $orders = Order::with(['orderdetels.product', 'userorder'])->latest()->get();
 
         return response()->json([
             'message' => 'All orders fetched successfully',
