@@ -17,7 +17,6 @@ class OrderController extends Controller
             return response()->json(['message' => 'Unauthorized. Please login first.'], 401);
         }
 
-        // ✅ التحقق من المدخلات
         $validator = Validator::make($request->all(), [
             'city'         => 'required|string|max:100',
             'governorate'  => 'required|string|max:100',
@@ -40,12 +39,8 @@ class OrderController extends Controller
             return response()->json(['message' => 'Cart is empty'], 400);
         }
 
-        // حساب الإجمالي
-        $total = $cart->proCItem->sum(function ($item) {
-            return $item->quantity * $item->product->price;
-        });
+        $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
 
-        // إنشاء الطلب
         $order = Order::create([
             'user_id'      => $user->id,
             'total_price'  => $total,
@@ -85,7 +80,7 @@ class OrderController extends Controller
         ], 200);
     }
 
-    // عرض آخر طلب تم إنشاؤه
+    // عرض آخر طلب
     public function showlatestOrder()
     {
         $user = auth()->user();
@@ -97,9 +92,15 @@ class OrderController extends Controller
         ], 200);
     }
 
-    // عرض جميع الطلبات (للمشرفين)
+    // عرض جميع الطلبات (لـ admin فقط)
     public function showAllOrders()
     {
+        $user = auth()->user();
+
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized - Admin only'], 403);
+        }
+
         $orders = Order::with(['orderdetels.product', 'userorder'])->latest()->get();
 
         return response()->json([
@@ -108,7 +109,7 @@ class OrderController extends Controller
         ], 200);
     }
 
-    // ✅ تعديل حالة الطلب
+    // تعديل حالة الطلب
     public function updateOrderStatus(Request $request, $id)
     {
         $user = auth()->user();
@@ -118,7 +119,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'Order not found'], 404);
         }
 
-        if ($order->user_id !== $user->id && !$user->is_admin) {
+        if ($order->user_id !== $user->id && $user->role !== 'admin') {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -141,42 +142,37 @@ class OrderController extends Controller
         ], 200);
     }
 
-    // ✅ حذف طلب معين (مسموح للمستخدم أو admin)
-    public function deleteOrder(Request $request)
+    // حذف طلب (للمستخدم أو admin)
+    public function deleteOrder($id)
     {
         $user = auth()->user();
-        $order = Order::find($request->id);
+        $order = Order::find($id);
 
         if (!$order) {
             return response()->json(['message' => 'Order not found'], 404);
         }
 
-        // يسمح فقط لصاحب الطلب أو للمشرف بالحذف
-        if ($order->user_id !== $user->id && !$user->is_admin) {
+        if ($order->user_id !== $user->id && $user->role !== 'admin') {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $order->delete();
 
-        return response()->json([
-            'message' => 'Order deleted successfully',
-        ], 200);
+        return response()->json(['message' => 'Order deleted successfully'], 200);
     }
 
-    // ✅ حذف كل الطلبات الخاصة بالمستخدم الحالي (أو كل الطلبات إن كان admin)
+    // حذف كل الطلبات (للمستخدم أو admin)
     public function deleteAllOrder()
     {
         $user = auth()->user();
 
-        if ($user->is_admin) {
-            Order::truncate(); // حذف كل الطلبات
+        if ($user->role === 'admin') {
+            Order::truncate();
             return response()->json(['message' => 'All orders deleted by admin'], 200);
         }
 
         $user->getOrder()->delete();
 
-        return response()->json([
-            'message' => 'All your orders deleted successfully',
-        ], 200);
+        return response()->json(['message' => 'All your orders deleted successfully'], 200);
     }
 }
