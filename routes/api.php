@@ -124,4 +124,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     // User
     Route::post('user/update/{id}', [UserController::class, 'userUpdate']);
     Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
+
+    // ✅ Orders (خاص بالمشرف)
+    Route::get('orders/show/all', [OrderController::class, 'showAllOrders']);
 });
