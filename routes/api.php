@@ -127,4 +127,5 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
 
     // ✅ Orders (خاص بالمشرف)
     Route::get('orders/show/all', [OrderController::class, 'showAllOrders']);
+    Route::put('/orders/{id}/status', [OrderController::class, 'updateOrderStatus']);
 });
