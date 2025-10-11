@@ -24,13 +24,14 @@ class OrderController extends Controller
             'street'       => 'required|string|max:255',
             'phone'        => ['required', 'regex:/^(010|011|012|015)[0-9]{8}$/'],
             'store_name'   => 'nullable|string|max:255',
-            'status'       => 'nullable|string|in:pending,processing,completed,cancelled',
+            'status'       => 'nullable|string|in:pending,paid,shipped,completed,cancelled',
         ], [
             'city.required'         => 'City field is required.',
             'governorate.required'  => 'Governorate field is required.',
             'street.required'       => 'Street field is required.',
             'phone.required'        => 'Phone number is required.',
             'phone.regex'           => 'Phone number must be 11 digits and start with 010, 011, 012, or 015.',
+            'status.in'             => 'Invalid status value. Allowed: pending, paid, shipped, completed, cancelled.',
         ]);
 
         if ($validator->fails()) {
@@ -40,7 +41,7 @@ class OrderController extends Controller
             ], 422);
         }
 
-        $cart = $user->getcart()->with('proCItem.product')->first(); // ترجع cart بعناصرها
+        $cart = $user->getcart()->with('proCItem.product')->first();
 
         if (!$cart || $cart->proCItem->isEmpty()) {
             return response()->json([
@@ -109,7 +110,7 @@ class OrderController extends Controller
         ], 200);
     }
 
-    // 🔹 عرض جميع الطلبات لكل المستخدمين (للمشرفين)
+    // 🔹 عرض جميع الطلبات (للمشرفين)
     public function showAllOrders()
     {
         $orders = Order::with(['orderdetels.product', 'userorder'])->latest()->get();
@@ -137,10 +138,10 @@ class OrderController extends Controller
 
         // التحقق من الحالة الجديدة
         $validator = Validator::make($request->all(), [
-            'status' => 'required|string|in:pending,processing,completed,cancelled',
+            'status' => 'required|string|in:pending,paid,shipped,completed,cancelled',
         ], [
             'status.required' => 'Status is required.',
-            'status.in' => 'Invalid status value. Allowed: pending, processing, completed, cancelled.',
+            'status.in' => 'Invalid status value. Allowed: pending, paid, shipped, completed, cancelled.',
         ]);
 
         if ($validator->fails()) {
