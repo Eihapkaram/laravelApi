@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use App\Models\Order;
 
 class OrderController extends Controller
@@ -16,6 +17,29 @@ class OrderController extends Controller
             return response()->json(['message' => 'Unauthorized. Please login first.'], 401);
         }
 
+        // ✅ التحقق من المدخلات
+        $validator = Validator::make($request->all(), [
+            'city'         => 'required|string|max:100',
+            'governorate'  => 'required|string|max:100',
+            'street'       => 'required|string|max:255',
+            'phone'        => ['required', 'regex:/^(010|011|012|015)[0-9]{8}$/'],
+            'store_name'   => 'nullable|string|max:255',
+            'status'       => 'nullable|string|in:pending,processing,completed,cancelled',
+        ], [
+            'city.required'         => 'City field is required.',
+            'governorate.required'  => 'Governorate field is required.',
+            'street.required'       => 'Street field is required.',
+            'phone.required'        => 'Phone number is required.',
+            'phone.regex'           => 'Phone number must be 11 digits and start with 010, 011, 012, or 015.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation error',
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
         $cart = $user->getcart()->with('proCItem.product')->first(); // ترجع cart بعناصرها
 
         if (!$cart || $cart->proCItem->isEmpty()) {
@@ -24,10 +48,12 @@ class OrderController extends Controller
             ], 400);
         }
 
+        // حساب إجمالي السعر
         $total = $cart->proCItem->sum(function ($item) {
             return $item->quantity * $item->product->price;
         });
 
+        // إنشاء الطلب
         $order = Order::create([
             'user_id'      => $user->id,
             'total_price'  => $total,
@@ -39,6 +65,7 @@ class OrderController extends Controller
             'store_name'   => $request->store_name,
         ]);
 
+        // إضافة تفاصيل الطلب
         foreach ($cart->proCItem as $item) {
             $order->orderdetels()->create([
                 'product_id' => $item->product_id,
