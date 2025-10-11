@@ -120,6 +120,46 @@ class OrderController extends Controller
         ], 200);
     }
 
+    // ✅ تعديل حالة الطلب
+    public function updateOrderStatus(Request $request, $id)
+    {
+        $user = auth()->user();
+        $order = Order::find($id);
+
+        if (!$order) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        // المستخدم يقدر يعدل فقط أو المشرف
+        if ($order->user_id !== $user->id && !$user->is_admin) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // التحقق من الحالة الجديدة
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|string|in:pending,processing,completed,cancelled',
+        ], [
+            'status.required' => 'Status is required.',
+            'status.in' => 'Invalid status value. Allowed: pending, processing, completed, cancelled.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $order->update([
+            'status' => $request->status,
+        ]);
+
+        return response()->json([
+            'message' => 'Order status updated successfully',
+            'order'   => $order,
+        ], 200);
+    }
+
     // حذف طلب معين
     public function deleteOrder(Request $request)
     {
