@@ -10,6 +10,6 @@ class Page extends Model
     use HasFactory;
     protected $fillable=['slug'];
     public function pageproducts() {
-        return $this->hasMany(product::class);
+        return $this->hasMany(product::class,'page_id');
     }
 }

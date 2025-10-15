@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Notifications\WelcomeUser;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -31,9 +33,12 @@ class UserController extends Controller
             'img' => $path ?? 'null',
         ]);
 
+ 
 
         // إنشاء التوكن
         $token = $user->createToken('eihapkaramvuejs')->accessToken;
+        // 🔔 إرسال إشعار ترحيبي للمستخدم
+    $user->notify(new WelcomeUser($user));
 
         return response()->json([
             'message' => 'تم التسجيل بنجاح، برجاء التحقق من بريدك الإلكتروني',
@@ -42,7 +47,7 @@ class UserController extends Controller
     }
 
 
-public function userUpdate(Request $request,$id)
+    public function userUpdate(Request $request, $id)
     {
         $this->validate($request, [
             'name' => 'required',
@@ -55,18 +60,19 @@ public function userUpdate(Request $request,$id)
             $imge = $request->file('img')->getClientOriginalName();
             $path = $request->file('img')->storeAs('users', $imge, 'public');
         }
-$user =User::find($id) ;
-if(!$user){
-    return response()->json([
-            'message' => 'المستخدم غير موجود',
-        ], 404);
-}
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json([
+                'message' => 'المستخدم غير موجود',
+            ], 404);
+        }
 
 
-       $user->update([
+        $user->update([
             'name' => $request->name,
             'last_name' => $request->last_name,
             'email' => auth()->user()->find($id)->email,
+            'phone' => auth()->user()->find($id)->phone,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
             'img' => $path ?? 'null',
@@ -75,7 +81,7 @@ if(!$user){
 
         return response()->json([
             'message' => 'تم تعديل بنجاح',
-            'user' => $user ,
+            'user' => $user,
         ], 200);
     }
 
@@ -102,7 +108,7 @@ if(!$user){
 
         return response()->json(['user' => $userdata], 200);
     }
-     public function OneUserinfo($id)
+    public function OneUserinfo($id)
     {
         $userdata = User::find($id);
 
@@ -138,6 +144,86 @@ if(!$user){
 
         return response()->json([
             'message' => 'تم ازاله حساب  المستخدم',
+        ]);
+    }
+
+
+    // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
+    public function registerWithPhone(Request $request)
+    {
+        $request->validate([
+            'name' => 'required',
+            'phone' => [
+                'required',
+                'regex:/^(011|012|015|010)[0-9]{8}$/'
+            ],
+        ], [
+            'phone.required' => 'رقم الهاتف مطلوب',
+            'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010او  011 أو 012 أو 015',
+        ]);
+
+        // البحث عن المستخدم
+        $user = User::where('phone', $request->phone)->first();
+
+        // لو مش موجود، نعمل حساب جديد
+        if (!$user) {
+            $user = User::create([
+                'phone' => $request->phone,
+                'name' => $request->name,
+            ]);
+        }
+
+        // إنشاء token للمستخدم
+        $token = $user->createToken('API Token')->accessToken;
+
+        return response()->json([
+            'success' => true,
+            'user' => $user,
+            'token' => $token,
+        ]);
+    }
+
+
+    // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
+    public function loginWithPhone(Request $request)
+    {
+        $request->validate([
+            'phone' => [
+                'required',
+                'regex:/^(011|012|015|010)[0-9]{8}$/'
+            ],
+        ], [
+            'phone.required' => 'رقم الهاتف مطلوب',
+            'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010او  011 أو 012 أو 015',
+        ]);
+
+        $user = User::where('phone', $request->phone)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => true,
+                'user' => 'الرقم غير مسجل او تاكد من ',
+            ], 401);
+        }
+
+        $token = $user->createToken('API Token')->accessToken;
+
+        return response()->json([
+            'success' => true,
+            'user' => $user,
+            'token' => $token,
+        ], 200);
+    }
+
+    // ✅ تسجيل الخروج (يتطلب auth:api)
+    public function logoutphone(Request $request)
+    {
+        // إلغاء صلاحية التوكن الحالي
+        $request->user()->token()->revoke();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تسجيل الخروج بنجاح',
         ]);
     }
 }

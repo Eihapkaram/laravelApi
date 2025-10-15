@@ -9,10 +9,20 @@ use App\Models\User;
 class Cart extends Model
 {
     use HasFactory;
-    public function proCItem() {
-       return $this->hasMany(Cart_item::class,'cart_id');
+
+    protected $fillable = [
+        'user_id',
+    ];
+
+    // ✅ كل سلة فيها عناصر
+    public function proCItem()
+    {
+        return $this->hasMany(Cart_item::class, 'cart_id');
     }
-    public function getUser() {
-       return $this->belongsTo(User::class);
+
+    // ✅ كل سلة تخص مستخدم واحد
+    public function getUser()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

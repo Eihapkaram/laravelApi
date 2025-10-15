@@ -9,12 +9,32 @@ use App\Models\User;
 
 class Order extends Model
 {
-    protected $fillable = ['user_id','status','total_price','shipping_address','payment_method','product_id'];
     use HasFactory;
-     public function orderdetels() {
-       return $this->hasMany(Order_item::class);
+
+    protected $fillable = [
+        'id',
+        'user_id',
+        'status',
+        'total_price',
+        'shipping_address',
+        'payment_method',
+        'product_id',
+        'city',
+        'governorate',
+        'street',
+        'phone',
+        'store_name'
+    ];
+
+    // ✅ تعريف العلاقة مع تفاصيل الطلب
+    public function orderdetels()
+    {
+        return $this->hasMany(Order_item::class, 'order_id');
     }
-    public function userorder() {
-       return $this->belongsTo(User::class);
+
+    // ✅ تعريف العلاقة مع المستخدم
+    public function userorder()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }
