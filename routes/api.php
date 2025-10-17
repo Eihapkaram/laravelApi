@@ -10,6 +10,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use App\Http\Controllers\OfferController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -38,9 +39,11 @@ Route::post('login', [UserController::class, 'Login'])->name('login');
 Route::post('/login-phone', [UserController::class, 'loginWithPhone']);
 Route::get('pro', [ProductController::class, 'index']);
 Route::get('/search', [ProductController::class, 'search']);
-Route::get('usersinfo', [UserController::class, 'userinfo'])->name('userinfo');
 Route::get('pageProducts/show', [PageController::class, 'showPageProduct']);
 Route::get('categorie/show', [CategorieController::class, 'showCateProduct']);
+Route::get('/offers/active', [OfferController::class, 'activeOffers']);
+Route::get('/offers', [OfferController::class, 'index']);
+Route::get('/offers/{id}', [OfferController::class, 'show']);
 Route::get('show/{id}', [ProductController::class, 'show']);
 Route::get('categorie/proshow', [CategorieController::class, 'showCateProduct']);
 Route::get('show/reviwe/{id}', [ReviewController::class, 'showProReviwes']);
@@ -96,7 +99,8 @@ Route::middleware('auth:api')->group(function () {
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('logoutFromAll', [UserController::class, 'logoutAll']);
     Route::post('/logout-phone', [UserController::class, 'logoutphone']);
-    Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
+    Route::get('user/info', [UserController::class, 'info']);
+    Route::post('user/addPhoto', [UserController::class, 'addimg']);
 
     // Cart
     Route::post('cart/add', [AddToController::class, 'addfun']);
@@ -107,19 +111,23 @@ Route::middleware('auth:api')->group(function () {
     // Order
     Route::post('order/add', [OrderController::class, 'createOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
+    Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
     Route::get('order/show/latest', [OrderController::class, 'showlatestOrder']);
+    Route::post('/orders/seller-create', [OrderController::class, 'createBySeller']);
+    Route::post('/orders/{id}/approve', [OrderController::class, 'approveOrder']);
+    Route::post('/orders/{id}/reject', [OrderController::class, 'rejectOrder']);
     Route::put('order/update/{id}', [OrderController::class, 'updateOrderStatus']);
     Route::delete('order/delete/{id}', [OrderController::class, 'deleteOrder']);
-    Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
+
 
     // Payment
     Route::post('/pay', [PaymentController::class, 'pay']);
 
     // Review
     Route::post('add/reviweForProdict/{id}', [ReviewController::class, 'AddReviwes']);
-    Route::post('update/reviwe/{id}', [ReviewController::class, 'UpdateReviwes']);
+    Route::put('update/reviwe/{id}', [ReviewController::class, 'UpdateReviwes']);
     Route::delete('delete/reviwe/{id}/{reviweid}', [ReviewController::class, 'DeleteReviwes']);
-// notification
+    // notification
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
@@ -130,24 +138,32 @@ Route::middleware('auth:api')->group(function () {
 Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function () {
     // Product
     Route::post('create', [ProductController::class, 'create']);
-    Route::post('update/{id}', [ProductController::class, 'update']);
+    Route::put('update/{id}', [ProductController::class, 'update']);
     Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
 
     // Category
     Route::post('categorie/add', [CategorieController::class, 'AddCate']);
-    Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
+    Route::put('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
     Route::delete('categorie/{id}', [CategorieController::class, 'DeleteCate']);
     Route::delete('categorie/delete/{id}', [CategorieController::class, 'DeleteCate']);
 
     // Page
     Route::post('page/add', [PageController::class, 'AddPage']);
-    Route::post('page/Update/{id}', [PageController::class, 'UpdatePage']);
+    Route::put('page/Update/{id}', [PageController::class, 'UpdatePage']);
     Route::delete('page/Delete/{id}', [PageController::class, 'DeletePage']);
 
     // User
     Route::get('orders/show/all', [OrderController::class, 'showAllOrders']);
-    Route::post('user/update/{id}', [UserController::class, 'userUpdate']);
+    Route::get('usersinfo', [UserController::class, 'userinfo'])->name('userinfo');
+    Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
+    Route::put('user/update/{id}', [UserController::class, 'userUpdate']);
     Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateOrderStatus']);
-   
+
+    // 🔥 مسار إرسال إشعار من الأدمن
+    Route::post('/notifications/send', [NotificationController::class, 'sendByAdmin']);
+    //offers
+    Route::post('/offers', [OfferController::class, 'store']);
+    Route::put('/offers/{id}', [OfferController::class, 'update']);
+    Route::delete('/offers/{id}', [OfferController::class, 'destroy']);
 });

@@ -14,6 +14,7 @@ class Order extends Model
     protected $fillable = [
         'id',
         'user_id',
+         'seller_id',
         'status',
         'total_price',
         'shipping_address',
@@ -23,7 +24,9 @@ class Order extends Model
         'governorate',
         'street',
         'phone',
-        'store_name'
+        'store_name',
+        'approval_status',
+        'approved_at',
     ];
 
     // ✅ تعريف العلاقة مع تفاصيل الطلب
@@ -36,5 +39,10 @@ class Order extends Model
     public function userorder()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+     // ✅ البائع اللي أنشأ الطلب
+    public function seller()
+    {
+        return $this->belongsTo(User::class, 'seller_id');
     }
 }

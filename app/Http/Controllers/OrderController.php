@@ -10,6 +10,10 @@ use App\Notifications\NewOrderNotification;
 use App\Notifications\UpdateOrder;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Notifications\Notifiable;
+use App\Notifications\OrderCreatedBySellerNotification;
+use App\Notifications\OrderApprovedNotification;
+use App\Notifications\OrderRejectedNotification;
 class OrderController extends Controller
 {
     // إنشاء طلب جديد
@@ -82,6 +86,87 @@ class OrderController extends Controller
             'message' => 'تم إنشاء الطلب بنجاح',
             'order'   => $order->load('orderdetels.product')
         ], 201);
+    }
+
+
+
+     // ✅ إنشاء طلب بواسطة بائع
+    public function createBySeller(Request $request)
+    {
+        $seller =auth()->user();
+
+        if ($seller->role !== 'seller') {
+            return response()->json(['error' => 'غير مصرح لك بإنشاء طلبات'], 403);
+        }
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'total_price' => 'required|numeric',
+            'shipping_address' => 'required|string',
+            'city' => 'nullable|string',
+            'governorate' => 'nullable|string',
+            'street' => 'nullable|string',
+            'phone' => 'nullable|string',
+        ]);
+
+        $customer = User::find($request->user_id);
+
+        if ($customer->role !== 'customer') {
+            return response()->json(['error' => 'يمكنك فقط إنشاء طلبات لعملاء'], 400);
+        }
+
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'seller_id' => $seller->id,
+            'total_price' => $request->total_price,
+            'shipping_address' => $request->shipping_address,
+            'city' => $request->city,
+            'governorate' => $request->governorate,
+            'street' => $request->street,
+            'phone' => $request->phone,
+            'status' => 'pending',
+            'approval_status' => 'pending',
+        ]);
+     $customer->notify(new OrderCreatedBySellerNotification($order, $seller));
+        return response()->json([
+            'message' => 'تم إنشاء الطلب بنجاح في انتظار موافقة العميل',
+            'order' => $order->load('orderdetels.product','userorder'),
+        ], 201);
+    }
+
+
+// ✅ موافقة العميل على الطلب
+    public function approveOrder($id)
+    {
+        $user = auth()->user();
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== $user->id) {
+            return response()->json(['error' => 'ليس لديك صلاحية للموافقة على هذا الطلب'], 403);
+        }
+
+        $order->update([
+            'approval_status' => 'approved',
+            'approved_at' => now(),
+        ]);
+       $order->seller->notify(new OrderApprovedNotification($order, $user));
+        return response()->json(['message' => 'تمت الموافقة على الطلب', 'order' => $order->load('orderdetels.product','userorder'),]);
+    }
+// ✅ رفض الطلب
+    public function rejectOrder($id)
+    {
+        $user = auth()->user();
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== $user->id) {
+            return response()->json(['error' => 'ليس لديك صلاحية لرفض هذا الطلب'], 403);
+        }
+
+        $order->update(['approval_status' => 'rejected']);
+        $order->seller->notify(new OrderRejectedNotification($order, $user));
+
+
+        return response()->json(['message' => 'تم رفض الطلب', 'order' => $order->load('orderdetels.product','userorder'),]);
     }
 
     // عرض طلبات المستخدم الحالي

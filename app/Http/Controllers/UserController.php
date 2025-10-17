@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Notifications\WelcomeUser;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -85,6 +86,41 @@ class UserController extends Controller
         ], 200);
     }
 
+     public function addimg(Request $request)
+    {
+        $this->validate($request, [
+            'img' => 'image|mimes:jpeg,png,jpg,gif,webp'
+        ]);
+
+        if ($request->hasFile('img')) {
+            $imge = $request->file('img')->getClientOriginalName();
+            $path = $request->file('img')->storeAs('users', $imge, 'public');
+        }
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'المستخدم غير موجود',
+            ], 404);
+        }
+
+
+        $user->update([
+            'name' => auth()->user()->name,
+            'last_name' => auth()->user()->last_name,
+            'email' => auth()->user()->email,
+            'phone' => auth()->user()->phone,
+            'password' => bcrypt(auth()->user()->password),
+            'role' => auth()->user()->role ?? 'customer',
+            'img' => $path ?? 'null',
+        ]);
+
+
+        return response()->json([
+            'message' => 'تم اضافه صورة  بنجاح',
+            'user' => $user,
+        ], 200);
+    }
+
 
 
     public function Login(Request $Request)
@@ -111,6 +147,12 @@ class UserController extends Controller
     public function OneUserinfo($id)
     {
         $userdata = User::find($id);
+
+        return response()->json(['user' => $userdata], 200);
+    }
+public function info()
+    {
+        $userdata = auth()->user();
 
         return response()->json(['user' => $userdata], 200);
     }
@@ -171,6 +213,8 @@ class UserController extends Controller
                 'phone' => $request->phone,
                 'name' => $request->name,
             ]);
+            // 🔔 إرسال إشعار ترحيبي للمستخدم
+    $user->notify(new WelcomeUser($user));
         }
 
         // إنشاء token للمستخدم

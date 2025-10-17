@@ -29,8 +29,13 @@ class User extends Authenticatable
         'img',
     ];
  public function getOrder() {
-       return $this->hasMany(Order::class);
+       return $this->hasMany(Order::class, 'user_id');
     }
+    public function sales()
+{
+    // الطلبات اللي أنشأها المستخدم كـ "بائع"
+    return $this->hasMany(Order::class, 'seller_id');
+}
    public function getcart()
 {
     return $this->hasOne(Cart::class);
