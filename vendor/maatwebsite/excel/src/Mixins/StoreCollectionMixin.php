@@ -7,14 +7,14 @@ use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 
-class StoreCollection
+class StoreCollectionMixin
 {
     /**
      * @return callable
      */
     public function storeExcel()
     {
-        return function (string $filePath, string $disk = null, string $writerType = null, $withHeadings = false) {
+        return function (string $filePath, ?string $disk = null, ?string $writerType = null, $withHeadings = false) {
             $export = new class($this, $withHeadings) implements FromCollection, WithHeadings
             {
                 use Exportable;

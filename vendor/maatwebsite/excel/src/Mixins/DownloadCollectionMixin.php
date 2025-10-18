@@ -9,14 +9,14 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Sheet;
 
-class DownloadCollection
+class DownloadCollectionMixin
 {
     /**
      * @return callable
      */
     public function downloadExcel()
     {
-        return function (string $fileName, string $writerType = null, $withHeadings = false, array $responseHeaders = []) {
+        return function (string $fileName, ?string $writerType = null, $withHeadings = false, array $responseHeaders = []) {
             $export = new class($this, $withHeadings) implements FromCollection, WithHeadings
             {
                 use Exportable;
