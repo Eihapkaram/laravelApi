@@ -39,6 +39,7 @@ class OrderApprovedNotification extends Notification
         return [
             'message' => "{$this->customer->name} وافق على الطلب رقم {$this->order->id}.",
             'order_id' => $this->order->id,
+            'orderDetels' => $this->order->with('orderdetels.product')->get(),
         ];
     }
 }

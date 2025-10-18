@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use App\Notifications\WelcomeUser;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\Notifiable;
+use App\Imports\UsersImport;
+use App\Exports\UsersExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -269,5 +272,19 @@ public function info()
             'success' => true,
             'message' => 'تم تسجيل الخروج بنجاح',
         ]);
+    }
+     public function importUsers(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,csv'
+        ]);
+
+        Excel::import(new UsersImport, $request->file('file'));
+
+        return response()->json(['message' => 'Users imported successfully!']);
+    }
+    public function export()
+    {
+        return Excel::download(new UsersExport, 'products.xlsx');
     }
 }

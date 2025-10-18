@@ -11,6 +11,9 @@ use App\Notifications\NewProduct;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use App\Exports\ProductsExport;
+use App\Imports\ProductsImport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductController extends Controller
 {
@@ -32,6 +35,7 @@ class ProductController extends Controller
             'description' => 'required',
             'votes' => 'required',
             'url' => 'required',
+            'inCount'=> 'required',
             'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
             'price' => 'required',
             'stock' => 'required',
@@ -65,6 +69,7 @@ class ProductController extends Controller
             'images_url' => $imagePath,
             'page_id' => $request->page_id,
             'brand' => $request->brand,
+            'inCount' => $request->inCount
         ]);
          $user = auth()->user();
          if ($product) {
@@ -223,4 +228,20 @@ class ProductController extends Controller
             'result' => $products,
         ], 200);
     }
+    public function export()
+    {
+        return Excel::download(new ProductsExport, 'products.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        Excel::import(new ProductsImport, $request->file('file'));
+
+        return response()->json(['message' => 'Products imported successfully']);
+    }
+
 }

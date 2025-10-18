@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('titel', 200);
             $table->longText('description');
             $table->smallInteger('votes');
+            $table->string('inCount');
             $table->string('url');
             $table->string('brand');
             $table->string('img')->nullable();

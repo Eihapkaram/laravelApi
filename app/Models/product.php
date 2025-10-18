@@ -30,7 +30,8 @@ class Product extends Model
         'images_url',
         'price',
         'stock',
-        'category_id'
+        'category_id',
+        'inCount',
     ];
 
     protected $casts = [

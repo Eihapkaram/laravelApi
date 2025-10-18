@@ -14,6 +14,10 @@ use Illuminate\Notifications\Notifiable;
 use App\Notifications\OrderCreatedBySellerNotification;
 use App\Notifications\OrderApprovedNotification;
 use App\Notifications\OrderRejectedNotification;
+use App\Imports\OrdersImport;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\OrdersExport;
+
 class OrderController extends Controller
 {
     // إنشاء طلب جديد
@@ -50,7 +54,7 @@ class OrderController extends Controller
         }
 
         $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
-
+        
         $order = Order::create([
             'user_id'        => $user->id,
             'total_price'    => $total,
@@ -61,16 +65,17 @@ class OrderController extends Controller
             'phone'          => $request->phone,
             'store_name'     => $request->store_name,
             'payment_method' => $request->payment_method,
+            
         ]);
-        if ( $order ) {
-    // جيب كل المستخدمين اللي رولهم أدمن
-    $admins = User::where('role', 'admin')->get();
+        if ($order) {
+            // جيب كل المستخدمين اللي رولهم أدمن
+            $admins = User::where('role', 'admin')->get();
 
-    // ابعت الإشعار ليهم
-    Notification::send($admins, new CreatOrder($user,$order));
-     // 🔔 إرسال إشعار للمستخدم نفسه
-    $user->notify(new NewOrderNotification($order));
-}
+            // ابعت الإشعار ليهم
+            Notification::send($admins, new CreatOrder($user, $order));
+            // 🔔 إرسال إشعار للمستخدم نفسه
+            $user->notify(new NewOrderNotification($order));
+        }
 
         foreach ($cart->proCItem as $item) {
             $order->orderdetels()->create([
@@ -90,10 +95,10 @@ class OrderController extends Controller
 
 
 
-     // ✅ إنشاء طلب بواسطة بائع
+    // ✅ إنشاء طلب بواسطة بائع
     public function createBySeller(Request $request)
     {
-        $seller =auth()->user();
+        $seller = auth()->user();
 
         if ($seller->role !== 'seller') {
             return response()->json(['error' => 'غير مصرح لك بإنشاء طلبات'], 403);
@@ -107,12 +112,19 @@ class OrderController extends Controller
             'governorate' => 'nullable|string',
             'street' => 'nullable|string',
             'phone' => 'nullable|string',
+            'store_banner' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
         ]);
 
         $customer = User::find($request->user_id);
 
         if ($customer->role !== 'customer') {
             return response()->json(['error' => 'يمكنك فقط إنشاء طلبات لعملاء'], 400);
+        }
+        // رفع الصورة الرئيسية
+        $path = null;
+        if ($request->hasFile('banner')) {
+            $image = $request->file('banner')->getClientOriginalName();
+            $path = $request->file('banner')->storeAs('storebanners', $image, 'public');
         }
 
         $order = Order::create([
@@ -126,8 +138,9 @@ class OrderController extends Controller
             'phone' => $request->phone,
             'status' => 'pending',
             'approval_status' => 'pending',
+            'store_banner' => $path,
         ]);
-     $customer->notify(new OrderCreatedBySellerNotification($order, $seller));
+        $customer->notify(new OrderCreatedBySellerNotification($order, $seller));
         return response()->json([
             'message' => 'تم إنشاء الطلب بنجاح في انتظار موافقة العميل',
             'order' => $order->load('orderdetels.product','userorder'),
@@ -135,7 +148,7 @@ class OrderController extends Controller
     }
 
 
-// ✅ موافقة العميل على الطلب
+    // ✅ موافقة العميل على الطلب
     public function approveOrder($id)
     {
         $user = auth()->user();
@@ -149,10 +162,10 @@ class OrderController extends Controller
             'approval_status' => 'approved',
             'approved_at' => now(),
         ]);
-       $order->seller->notify(new OrderApprovedNotification($order, $user));
-        return response()->json(['message' => 'تمت الموافقة على الطلب', 'order' => $order->load('orderdetels.product','userorder'),]);
+        $order->seller->notify(new OrderApprovedNotification($order, $user));
+        return response()->json(['message' => 'تمت الموافقة على الطلب', 'order' => $order->load('orderdetels.product', 'userorder'),]);
     }
-// ✅ رفض الطلب
+    // ✅ رفض الطلب
     public function rejectOrder($id)
     {
         $user = auth()->user();
@@ -166,14 +179,25 @@ class OrderController extends Controller
         $order->seller->notify(new OrderRejectedNotification($order, $user));
 
 
-        return response()->json(['message' => 'تم رفض الطلب', 'order' => $order->load('orderdetels.product','userorder'),]);
+        return response()->json(['message' => 'تم رفض الطلب', 'order' => $order->load('orderdetels.product', 'userorder'),]);
     }
 
+    // عرض  عدد طلبات المستخدم الحالي
+    public function OrderCount()
+    {
+        $user = auth()->user();
+        $order = $user->getOrder()->count();
+
+        return response()->json([
+            'message' => 'تم جلب  عدد الطلبات الخاصة بك بنجاح',
+            'orderCount'   => $order,
+        ], 200);
+    }
     // عرض طلبات المستخدم الحالي
     public function showOrder()
     {
         $user = auth()->user();
-        $order = $user->getOrder()->with('orderdetels.product')->get();
+        $order = $user->getOrder()->with('orderdetels.product','seller')->get();
 
         return response()->json([
             'message' => 'تم جلب الطلبات الخاصة بك بنجاح',
@@ -185,7 +209,7 @@ class OrderController extends Controller
     public function showlatestOrder()
     {
         $user = auth()->user();
-        $orderlatest = $user->getOrder()->with('orderdetels.product')->latest()->first();
+        $orderlatest = $user->getOrder()->with('orderdetels.product','seller')->latest()->first();
 
         return response()->json([
             'message' => 'تم جلب آخر طلب بنجاح',
@@ -202,7 +226,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'غير مصرح - فقط للمديرين'], 403);
         }
 
-        $orders = Order::with(['orderdetels.product', 'userorder'])->latest()->get();
+        $orders = Order::with(['orderdetels.product', 'userorder','seller'])->latest()->get();
 
         return response()->json([
             'message' => 'تم جلب جميع الطلبات بنجاح',
@@ -259,14 +283,13 @@ class OrderController extends Controller
             'message' => 'تم تحديث حالة الطلب بنجاح',
             'order'   => $order,
         ], 200);
-         if ( $order) {
-    // جيب كل المستخدمين اللي رولهم أدمن
-    $admins = User::where('role', 'admin')->get();
+        if ($order) {
+            // جيب كل المستخدمين اللي رولهم أدمن
+            $admins = User::where('role', 'admin')->get();
 
-    // ابعت الإشعار ليهم
-    Notification::send($admins, new UpdateOrder($user));
-}
-
+            // ابعت الإشعار ليهم
+            Notification::send($admins, new UpdateOrder($user));
+        }
     }
 
     // حذف طلب (للمستخدم أو admin)
@@ -302,4 +325,14 @@ class OrderController extends Controller
 
         return response()->json(['message' => 'تم حذف جميع طلباتك بنجاح'], 200);
     }
+    public function import(Request $request)
+{
+    $request->validate([
+        'file' => 'required|mimes:xlsx,xls,csv'
+    ]);
+
+    Excel::import(new OrdersImport, $request->file('file'));
+
+    return response()->json(['message' => '✅ تم استيراد الطلبات بنجاح']);
+}
 }

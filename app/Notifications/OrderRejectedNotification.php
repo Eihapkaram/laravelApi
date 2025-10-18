@@ -38,6 +38,7 @@ class OrderRejectedNotification extends Notification
         return [
             'message' => "{$this->customer->name} رفض الطلب رقم {$this->order->id}.",
             'order_id' => $this->order->id,
+            'orderDetels' => $this->order->with('orderdetels.product')->get(),
         ];
     }
 }

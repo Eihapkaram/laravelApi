@@ -78,7 +78,7 @@ Route::get('/users/{filename}', function ($filename) {
     return response($file, 200)->header('Content-Type', $mime);
 })->where('filename', '.*');
 
-// categories imge 
+// categories imge
 Route::get('/categories/{filename}', function ($filename) {
     $filename = urldecode($filename);
     $path = 'categories/' . $filename;
@@ -92,6 +92,50 @@ Route::get('/categories/{filename}', function ($filename) {
 
     return response($file, 200)->header('Content-Type', $mime);
 })->where('filename', '.*');
+//  imge   categorebanner
+Route::get('/categorebanner/{filename}', function ($filename) {
+    $filename = urldecode($filename);
+    $path = 'categorebanner/' . $filename;
+
+    if (!Storage::disk('public')->exists($path)) {
+        return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
+    }
+
+    $mime = Storage::disk('public')->mimeType($path);
+    $file = Storage::disk('public')->get($path);
+
+    return response($file, 200)->header('Content-Type', $mime);
+})->where('filename', '.*');
+//  offers imge  storebanners
+Route::get('/offers/{filename}', function ($filename) {
+    $filename = urldecode($filename);
+    $path = 'offers/' . $filename;
+
+    if (!Storage::disk('public')->exists($path)) {
+        return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
+    }
+
+    $mime = Storage::disk('public')->mimeType($path);
+    $file = Storage::disk('public')->get($path);
+
+    return response($file, 200)->header('Content-Type', $mime);
+})->where('filename', '.*');
+
+//  imge  storebanners categorebanner
+Route::get('/storebanners/{filename}', function ($filename) {
+    $filename = urldecode($filename);
+    $path = 'storebanners/' . $filename;
+
+    if (!Storage::disk('public')->exists($path)) {
+        return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
+    }
+
+    $mime = Storage::disk('public')->mimeType($path);
+    $file = Storage::disk('public')->get($path);
+
+    return response($file, 200)->header('Content-Type', $mime);
+})->where('filename', '.*');
+
 
 // 🔐 Authenticated Routes
 Route::middleware('auth:api')->group(function () {
@@ -111,9 +155,11 @@ Route::middleware('auth:api')->group(function () {
     // Order
     Route::post('order/add', [OrderController::class, 'createOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
+    Route::get('order/count', [OrderController::class, 'OrderCount']);
     Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
     Route::get('order/show/latest', [OrderController::class, 'showlatestOrder']);
     Route::post('/orders/seller-create', [OrderController::class, 'createBySeller']);
+    Route::get('/orders/export', [OrderController::class, 'export']);
     Route::post('/orders/{id}/approve', [OrderController::class, 'approveOrder']);
     Route::post('/orders/{id}/reject', [OrderController::class, 'rejectOrder']);
     Route::put('order/update/{id}', [OrderController::class, 'updateOrderStatus']);
@@ -138,17 +184,23 @@ Route::middleware('auth:api')->group(function () {
 Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function () {
     // Product
     Route::post('create', [ProductController::class, 'create']);
+    Route::get('/products/export', [ProductController::class, 'export']);
+    Route::post('/products/import', [ProductController::class, 'import']);
     Route::put('update/{id}', [ProductController::class, 'update']);
     Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
 
     // Category
     Route::post('categorie/add', [CategorieController::class, 'AddCate']);
+    Route::post('categories/import', [CategorieController::class, 'import']);
+    Route::get('categories/export', [CategorieController::class, 'export']);
     Route::put('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
     Route::delete('categorie/{id}', [CategorieController::class, 'DeleteCate']);
     Route::delete('categorie/delete/{id}', [CategorieController::class, 'DeleteCate']);
 
     // Page
     Route::post('page/add', [PageController::class, 'AddPage']);
+    Route::get('/pages/export', [PageController::class, 'export']);
+    Route::post('/pages/import', [PageController::class, 'import']);
     Route::put('page/Update/{id}', [PageController::class, 'UpdatePage']);
     Route::delete('page/Delete/{id}', [PageController::class, 'DeletePage']);
 
@@ -156,6 +208,8 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::get('orders/show/all', [OrderController::class, 'showAllOrders']);
     Route::get('usersinfo', [UserController::class, 'userinfo'])->name('userinfo');
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
+    Route::post('/import/users', [UserController::class, 'importUsers']);
+    Route::post('/export/users', [UserController::class, 'export']);
     Route::put('user/update/{id}', [UserController::class, 'userUpdate']);
     Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateOrderStatus']);

@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Page;
 use Illuminate\Http\Request;
+use App\Imports\PagesImport;
+use App\Exports\PagesExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PageController extends Controller
 {
@@ -61,5 +64,17 @@ class PageController extends Controller
             'massege' => 'update Page is done',
             'data' => Page::get(),
         ]);
+    }
+    // ✅ رفع ملف Excel
+    public function import(Request $request)
+    {
+        Excel::import(new PagesImport, $request->file('file'));
+        return response()->json(['message' => 'تم استيراد الصفحات بنجاح']);
+    }
+
+    // ✅ تصدير ملف Excel
+    public function export()
+    {
+        return Excel::download(new PagesExport, 'pages.xlsx');
     }
 }

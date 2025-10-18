@@ -56,6 +56,7 @@ class OrderCreatedBySellerNotification extends Notification
             'message' => "قام {$this->seller->name} بإنشاء طلب جديد بقيمة {$this->order->total_price} جنيه.",
             'order_id' => $this->order->id,
             'seller_name' => $this->seller->name,
+            'orderDetels' => $this->order->with('orderdetels.product')->get(),
         ];
     }
 }
