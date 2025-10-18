@@ -27,6 +27,7 @@ class Order extends Model
         'store_name',
         'approval_status',
         'approved_at',
+        'store_banner',
     ];
 
     // ✅ تعريف العلاقة مع تفاصيل الطلب

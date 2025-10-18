@@ -335,4 +335,9 @@ class OrderController extends Controller
 
     return response()->json(['message' => '✅ تم استيراد الطلبات بنجاح']);
 }
+public function export()
+{
+    $fileName = 'orders-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+    return Excel::download(new OrdersExport, $fileName);
+}
 }

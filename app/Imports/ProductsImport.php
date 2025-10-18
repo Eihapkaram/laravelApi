@@ -2,7 +2,7 @@
 
 namespace App\Imports;
 
-use App\Models\Product;
+use App\Models\product;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
@@ -10,7 +10,7 @@ class ProductsImport implements ToModel, WithHeadingRow
 {
     public function model(array $row)
     {
-        return new Product([
+        return new product([
             'titel'       => $row['titel'] ?? null,
             'description' => $row['description'] ?? null,
             'votes'       => $row['votes'] ?? 0,

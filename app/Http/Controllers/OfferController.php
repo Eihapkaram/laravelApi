@@ -60,11 +60,26 @@ public function activeOffers()
             'is_active' => 'boolean',
         ]);
 
+        // رفع الصورة الرئيسية
+        $path = null;
         if ($request->hasFile('banner')) {
-            $data['banner'] = $request->file('banner')->store('offers', 'public');
+            $image = $request->file('banner')->getClientOriginalName();
+            $path = $request->file('banner')->storeAs('offers', $image, 'public');
         }
 
-        $offer = Offer::create($data);
+        $offer = Offer::create([
+             
+            'title' => $request->title,
+            'description' => $request->description,
+            'banner' => $request-> $path,
+            'product_id' => $request->product_id,
+            'discount_value' => $request->discount_value,
+            'discount_type' =>$request->discount_type,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'is_active' => $request->is_active,
+      
+        ]);
 
         return response()->json([
             'message' => 'تم إنشاء العرض بنجاح',
@@ -93,7 +108,11 @@ public function activeOffers()
             if ($offer->banner) {
                 Storage::disk('public')->delete($offer->banner);
             }
-            $data['banner'] = $request->file('banner')->store('offers', 'public');
+             // رفع الصورة الرئيسية
+        $path = null;
+            $image = $request->file('banner')->getClientOriginalName();
+            $path = $request->file('banner')->storeAs('offers', $image, 'public');
+            $data['banner'] = $path;
         }
 
         $offer->update($data);
