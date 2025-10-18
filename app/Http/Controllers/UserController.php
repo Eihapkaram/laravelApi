@@ -285,6 +285,6 @@ public function info()
     }
     public function export()
     {
-        return Excel::download(new UsersExport, 'products.xlsx');
+        return Excel::download(new UsersExport, 'users.xlsx');
     }
 }
