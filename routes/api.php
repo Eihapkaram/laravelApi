@@ -209,7 +209,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::get('usersinfo', [UserController::class, 'userinfo'])->name('userinfo');
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
     Route::post('/import/users', [UserController::class, 'importUsers']);
-    Route::post('/export/users', [UserController::class, 'export']);
+    Route::get('/export/users', [UserController::class, 'export']);
     Route::put('user/update/{id}', [UserController::class, 'userUpdate']);
     Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateOrderStatus']);
