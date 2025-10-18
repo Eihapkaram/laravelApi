@@ -14,9 +14,9 @@ use Illuminate\Notifications\Notifiable;
 use App\Notifications\OrderCreatedBySellerNotification;
 use App\Notifications\OrderApprovedNotification;
 use App\Notifications\OrderRejectedNotification;
-use App\Imports\OrdersImport;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\OrdersExport;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class OrderController extends Controller
 {
@@ -325,19 +325,86 @@ class OrderController extends Controller
 
         return response()->json(['message' => 'تم حذف جميع طلباتك بنجاح'], 200);
     }
+    // ✅ استيراد الطلبات باستخدام PhpSpreadsheet
     public function import(Request $request)
-{
-    $request->validate([
-        'file' => 'required|mimes:xlsx,xls,csv'
-    ]);
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
 
-    Excel::import(new OrdersImport, $request->file('file'));
+        $file = $request->file('file');
+        $spreadsheet = IOFactory::load($file->getPathname());
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
 
-    return response()->json(['message' => '✅ تم استيراد الطلبات بنجاح']);
-}
-public function export()
-{
-    $fileName = 'orders-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-    return Excel::download(new OrdersExport, $fileName);
-}
+        // تخطي الصف الأول (العناوين)
+        foreach (array_slice($rows, 1) as $row) {
+            if (!empty($row[1])) { // تأكد من وجود user_id مثلاً
+                Order::updateOrCreate(
+                    ['id' => $row[0] ?? null],
+                    [
+                        'user_id'        => $row[1] ?? null,
+                        'seller_id'      => $row[2] ?? null,
+                        'total_price'    => $row[3] ?? 0,
+                        'status'         => $row[4] ?? 'pending',
+                        'city'           => $row[5] ?? null,
+                        'governorate'    => $row[6] ?? null,
+                        'street'         => $row[7] ?? null,
+                        'phone'          => $row[8] ?? null,
+                        'payment_method' => $row[9] ?? null,
+                        'approval_status'=> $row[10] ?? 'pending',
+                    ]
+                );
+            }
+        }
+
+        return response()->json(['message' => '✅ تم استيراد الطلبات بنجاح باستخدام PhpSpreadsheet']);
+    }
+
+    // ✅ تصدير الطلبات باستخدام PhpSpreadsheet
+    public function export()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // رؤوس الأعمدة
+        $sheet->setCellValue('A1', 'ID');
+        $sheet->setCellValue('B1', 'User ID');
+        $sheet->setCellValue('C1', 'Seller ID');
+        $sheet->setCellValue('D1', 'Total Price');
+        $sheet->setCellValue('E1', 'Status');
+        $sheet->setCellValue('F1', 'City');
+        $sheet->setCellValue('G1', 'Governorate');
+        $sheet->setCellValue('H1', 'Street');
+        $sheet->setCellValue('I1', 'Phone');
+        $sheet->setCellValue('J1', 'Payment Method');
+        $sheet->setCellValue('K1', 'Approval Status');
+
+        // جلب الطلبات
+        $orders = Order::with(['userorder', 'seller'])->get();
+        $row = 2;
+
+        foreach ($orders as $order) {
+            $sheet->setCellValue('A' . $row, $order->id);
+            $sheet->setCellValue('B' . $row, $order->user_id);
+            $sheet->setCellValue('C' . $row, $order->seller_id);
+            $sheet->setCellValue('D' . $row, $order->total_price);
+            $sheet->setCellValue('E' . $row, $order->status);
+            $sheet->setCellValue('F' . $row, $order->city);
+            $sheet->setCellValue('G' . $row, $order->governorate);
+            $sheet->setCellValue('H' . $row, $order->street);
+            $sheet->setCellValue('I' . $row, $order->phone);
+            $sheet->setCellValue('J' . $row, $order->payment_method);
+            $sheet->setCellValue('K' . $row, $order->approval_status);
+            $row++;
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $fileName = 'orders-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        $filePath = storage_path('app/public/' . $fileName);
+
+        $writer->save($filePath);
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
+    }
 }

@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\categorie;
-use App\Imports\CategoryImport;
-use App\Exports\CategoryExport;
-use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class CategorieController extends Controller
 {
@@ -104,19 +104,70 @@ class CategorieController extends Controller
             'data' => categorie::get()
         ]);
     }
+   // ✅ تصدير البيانات إلى Excel
+    public function export()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // رؤوس الأعمدة
+        $sheet->setCellValue('A1', 'ID');
+        $sheet->setCellValue('B1', 'Name');
+        $sheet->setCellValue('C1', 'Slug');
+        $sheet->setCellValue('D1', 'Description');
+        $sheet->setCellValue('E1', 'Img');
+        $sheet->setCellValue('F1', 'Banner');
+
+        // جلب البيانات
+        $categories = Categorie::all();
+        $row = 2;
+
+        foreach ($categories as $cat) {
+            $sheet->setCellValue('A' . $row, $cat->id);
+            $sheet->setCellValue('B' . $row, $cat->name);
+            $sheet->setCellValue('C' . $row, $cat->slug);
+            $sheet->setCellValue('D' . $row, $cat->description);
+            $sheet->setCellValue('E' . $row, $cat->img);
+            $sheet->setCellValue('F' . $row, $cat->banner);
+            $row++;
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $fileName = 'categories.xlsx';
+        $filePath = storage_path('app/public/' . $fileName);
+
+        $writer->save($filePath);
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
+    }
+
+    // ✅ استيراد البيانات من Excel
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls',
+            'file' => 'required|mimes:xlsx,xls'
         ]);
 
-        Excel::import(new CategoryImport, $request->file('file'));
+        $file = $request->file('file');
+        $spreadsheet = IOFactory::load($file->getPathname());
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
 
-        return back()->with('success', 'تم استيراد التصنيفات بنجاح ✅');
-    }
+        // تخطي الصف الأول (الرؤوس)
+        foreach (array_slice($rows, 1) as $row) {
+            if (!empty($row[1])) { // name موجود
+                Categorie::updateOrCreate(
+                    ['slug' => $row[2]], // مفتاح فريد
+                    [
+                        'name' => $row[1],
+                        'description' => $row[3] ?? '',
+                        'img' => $row[4] ?? null,
+                        'banner' => $row[5] ?? null,
+                    ]
+                );
+            }
+        }
 
-    public function export()
-    {
-        return Excel::download(new CategoryExport, 'categories.xlsx');
+        return response()->json(['message' => 'Categories imported successfully ✅']);
     }
 }

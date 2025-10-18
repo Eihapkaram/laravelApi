@@ -12,6 +12,7 @@
         "laravel/sanctum": "^3.0",
         "laravel/tinker": "^2.7",
         "maatwebsite/excel": "3.1.48",
+        "phpoffice/phpspreadsheet": "^1.30",
         "spatie/laravel-query-builder": "^5.7"
     },
     "require-dev": {

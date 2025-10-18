@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 use App\Notifications\WelcomeUser;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\Notifiable;
-use App\Imports\UsersImport;
-use App\Exports\UsersExport;
-use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -273,18 +273,78 @@ public function info()
             'message' => 'تم تسجيل الخروج بنجاح',
         ]);
     }
-     public function importUsers(Request $request)
+      // ✅ استيراد المستخدمين من ملف Excel
+    public function importUsers(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,csv'
+            'file' => 'required|mimes:xlsx,xls'
         ]);
 
-        Excel::import(new UsersImport, $request->file('file'));
+        $filePath = $request->file('file')->getRealPath();
+        $spreadsheet = IOFactory::load($filePath);
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
 
-        return response()->json(['message' => 'Users imported successfully!']);
+        // نفترض أول صف عناوين الأعمدة
+        foreach (array_slice($rows, 1) as $row) {
+            // مثال على ترتيب الأعمدة داخل الملف:
+            // [0 => id, 1 => name, 2 => last_name, 3 => email, 4 => phone, 5 => role, 6 => password, 7 => img]
+
+            if (empty($row[1]) && empty($row[3])) {
+                continue; // تجاهل الصفوف الفارغة
+            }
+
+            User::updateOrCreate(
+                ['email' => $row[3] ?? null],
+                [
+                    'name' => $row[1] ?? null,
+                    'last_name' => $row[2] ?? null,
+                    'phone' => $row[4] ?? null,
+                    'role' => $row[5] ?? 'customer',
+                    'password' => isset($row[6]) ? Hash::make($row[6]) : Hash::make('12345678'),
+                    'img' => $row[7] ?? null,
+                ]
+            );
+        }
+
+        return response()->json(['message' => 'تم استيراد المستخدمين بنجاح']);
     }
-    public function export()
+
+    // ✅ تصدير المستخدمين إلى ملف Excel
+    public function exportUsers()
     {
-        return Excel::download(new UsersExport, 'users.xlsx');
+        $users = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'password', 'img')->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // العناوين
+        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img'];
+        $sheet->fromArray([$headers], null, 'A1');
+
+        // البيانات
+        $data = [];
+        foreach ($users as $user) {
+            $data[] = [
+                $user->id,
+                $user->name,
+                $user->last_name,
+                $user->email,
+                $user->phone,
+                $user->role,
+                '********', // 🔒 ما نصدرش الباسورد الأصلي
+                $user->img,
+            ];
+        }
+
+        $sheet->fromArray($data, null, 'A2');
+
+        // حفظ الملف مؤقتًا
+        $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
+        $tempPath = storage_path('app/' . $fileName);
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath)->deleteFileAfterSend(true);
     }
 }

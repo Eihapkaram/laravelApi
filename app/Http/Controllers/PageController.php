@@ -4,9 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Page;
 use Illuminate\Http\Request;
-use App\Imports\PagesImport;
-use App\Exports\PagesExport;
-use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PageController extends Controller
 {
@@ -65,16 +66,65 @@ class PageController extends Controller
             'data' => Page::get(),
         ]);
     }
-    // ✅ رفع ملف Excel
-    public function import(Request $request)
-    {
-        Excel::import(new PagesImport, $request->file('file'));
-        return response()->json(['message' => 'تم استيراد الصفحات بنجاح']);
-    }
-
-    // ✅ تصدير ملف Excel
+     // ✅ تصدير البيانات إلى Excel
     public function export()
     {
-        return Excel::download(new PagesExport, 'pages.xlsx');
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // رؤوس الأعمدة
+        $sheet->setCellValue('A1', 'ID');
+        $sheet->setCellValue('B1', 'Slug');
+        $sheet->setCellValue('C1', 'Created At');
+
+        // البيانات
+        $pages = Page::all();
+        $row = 2;
+        foreach ($pages as $page) {
+            $sheet->setCellValue('A' . $row, $page->id);
+            $sheet->setCellValue('B' . $row, $page->slug);
+            $sheet->setCellValue('C' . $row, $page->created_at);
+            $row++;
+        }
+
+        $writer = new Xlsx($spreadsheet);
+
+        // تحميل مباشر للملف في المتصفح
+        $response = new StreamedResponse(function () use ($writer) {
+            $writer->save('php://output');
+        });
+
+        $response->headers->set(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        $response->headers->set('Content-Disposition', 'attachment;filename="pages.xlsx"');
+        $response->headers->set('Cache-Control', 'max-age=0');
+
+        return $response;
+    }
+
+    // ✅ استيراد البيانات من Excel
+    public function import(Request $request)
+    {
+        $request->validate(['file' => 'required|mimes:xlsx,xls']);
+
+        $path = $request->file('file')->getRealPath();
+
+        $spreadsheet = IOFactory::load($path);
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray(null, true, true, true);
+
+        // تخطي أول صف (العناوين)
+        foreach ($rows as $index => $row) {
+            if ($index == 1) continue;
+
+            $slug = $row['B'] ?? null;
+            if ($slug) {
+                Page::create(['slug' => $slug]);
+            }
+        }
+
+        return response()->json(['message' => 'تم استيراد الصفحات بنجاح']);
     }
 }

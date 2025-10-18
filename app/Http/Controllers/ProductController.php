@@ -11,9 +11,9 @@ use App\Notifications\NewProduct;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
-use App\Exports\ProductsExport;
-use App\Imports\ProductsImport;
-use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ProductController extends Controller
 {
@@ -228,20 +228,78 @@ class ProductController extends Controller
             'result' => $products,
         ], 200);
     }
+    
+     // ✅ تصدير المنتجات إلى Excel
     public function export()
     {
-        return Excel::download(new ProductsExport, 'products.xlsx');
-    }
+        $products = Product::with('page')->get();
 
-    public function import(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv'
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // العناوين
+        $sheet->fromArray([
+            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID']
         ]);
 
-        Excel::import(new ProductsImport, $request->file('file'));
+        // البيانات
+        $rows = [];
+        foreach ($products as $product) {
+            $rows[] = [
+                $product->id,
+                $product->titel,
+                $product->description,
+                $product->votes,
+                $product->inCount,
+                $product->url,
+                $product->brand,
+                $product->price,
+                $product->stock,
+                $product->category_id,
+                $product->page_id,
+            ];
+        }
+        $sheet->fromArray($rows, null, 'A2');
 
-        return response()->json(['message' => 'Products imported successfully']);
+        // حفظ الملف مؤقتًا وإرساله
+        $fileName = 'products.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        $tempPath = storage_path('app/' . $fileName);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath)->deleteFileAfterSend(true);
+    }
+
+    // ✅ استيراد المنتجات من Excel
+    public function import(Request $request)
+    {
+        $request->validate(['file' => 'required|mimes:xlsx,xls']);
+        $file = $request->file('file')->getRealPath();
+
+        $spreadsheet = IOFactory::load($file);
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
+
+        // تخطي أول صف (العناوين)
+        foreach (array_slice($rows, 1) as $row) {
+            Product::updateOrCreate(
+                ['id' => $row[0] ?? null],
+                [
+                    'titel' => $row[1] ?? '',
+                    'description' => $row[2] ?? '',
+                    'votes' => $row[3] ?? 0,
+                    'inCount' => $row[4] ?? '',
+                    'url' => $row[5] ?? '',
+                    'brand' => $row[6] ?? '',
+                    'price' => $row[7] ?? 0,
+                    'stock' => $row[8] ?? 0,
+                    'category_id' => $row[9] ?? null,
+                    'page_id' => $row[10] ?? null,
+                ]
+            );
+        }
+
+        return response()->json(['message' => 'تم استيراد المنتجات بنجاح']);
     }
 
 }
