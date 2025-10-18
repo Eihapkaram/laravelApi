@@ -22,7 +22,19 @@ class UsersExport implements FromCollection, WithHeadings, WithMapping
      */
     public function headings(): array
     {
-        return ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Created At'];
+        return [
+            'ID',
+            'Name',
+            'Last Name',
+            'Email',
+            'Phone',
+            'Email Verified At',
+            'Role',
+            'Img',
+            'Last Seen',
+            'Created At',
+            'Updated At'
+        ];
     }
 
     /**
@@ -36,8 +48,12 @@ class UsersExport implements FromCollection, WithHeadings, WithMapping
             $user->last_name,
             $user->email,
             "'".$user->phone, // نجمة صغيرة لجعل الرقم كنص (يحافظ على الأصفار)
+            $user->email_verified_at ? $user->email_verified_at->format('Y-m-d H:i:s') : '',
             $user->role,
+            $user->img,
+            $user->last_seen ? $user->last_seen->format('Y-m-d H:i:s') : '',
             $user->created_at ? $user->created_at->format('Y-m-d H:i:s') : '',
+            $user->updated_at ? $user->updated_at->format('Y-m-d H:i:s') : ''
         ];
     }
 }
