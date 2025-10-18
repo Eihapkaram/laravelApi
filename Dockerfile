@@ -1,4 +1,4 @@
-# استخدم نسخة PHP CLI رسمية مع Composer
+# استخدم نسخة PHP CLI رسمية
 FROM php:8.2-cli
 
 # تثبيت مكتبات النظام وامتدادات PHP الضرورية
@@ -17,8 +17,11 @@ COPY . .
 # تثبيت Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# تثبيت كل الحزم بما فيها dev packages
+# تثبيت كل الحزم بما فيها dev packages أولاً
 RUN composer install --no-interaction --optimize-autoloader --no-scripts --ignore-platform-reqs
+
+# حذف dev packages لتقليل الحجم (اختياري للـ production)
+RUN composer install --no-dev --no-interaction --optimize-autoloader --no-scripts
 
 # فتح المنفذ 8080 (Railway يستخدمه)
 EXPOSE 8080
