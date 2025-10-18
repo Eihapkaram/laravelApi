@@ -5,48 +5,54 @@ namespace App\Exports;
 use App\Models\Product;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 
-class ProductsExport implements FromCollection, WithHeadings
+class ProductsExport implements FromCollection, WithHeadings, WithMapping
 {
     public function collection()
     {
-        return Product::select(
-            'id',
-            'titel',
-            'description',
-            'votes',
-            'inCount',
-            'url',
-            'brand',
-            'img',
-            'images_url',
-            'price',
-            'stock',
-            'category_id',
-            'page_id',
-            'created_at',
-            'updated_at'
-        )->get();
+        return Product::all();
     }
 
     public function headings(): array
     {
         return [
-            'id',
-            'titel',
-            'description',
-            'votes',
-            'inCount',
-            'url',
-            'brand',
-            'img',
-            'images_url',
-            'price',
-            'stock',
-            'category_id',
-            'page_id',
-            'created_at',
-            'updated_at',
+            'ID',
+            'Title',
+            'Description',
+            'Votes',
+            'In Count',
+            'URL',
+            'Brand',
+            'Main Image',
+            'Images URLs',
+            'Price',
+            'Stock',
+            'Category ID',
+            'Page ID',
+            'Created At',
+            'Updated At',
+        ];
+    }
+
+    public function map($product): array
+    {
+        return [
+            $product->id,
+            $product->titel,
+            $product->description,
+            $product->votes,
+            $product->inCount,
+            $product->url,
+            $product->brand,
+            $product->img,
+            $product->images_url ? json_encode($product->images_url) : '',
+            $product->price,
+            $product->stock,
+            $product->category_id,
+            $product->page_id,
+            $product->created_at ? $product->created_at->format('Y-m-d H:i:s') : '',
+            $product->updated_at ? $product->updated_at->format('Y-m-d H:i:s') : '',
         ];
     }
 }
