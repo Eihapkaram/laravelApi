@@ -17,8 +17,8 @@ COPY . .
 # تثبيت Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# تثبيت حزم PHP بدون dev packages لتجنب مشاكل phpunit
-RUN composer install --no-dev --no-interaction --optimize-autoloader --no-scripts
+# تثبيت كل الحزم بما فيها dev packages
+RUN composer install --no-interaction --optimize-autoloader --no-scripts --ignore-platform-reqs
 
 # فتح المنفذ 8080 (Railway يستخدمه)
 EXPOSE 8080
