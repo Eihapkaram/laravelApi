@@ -1,4 +1,4 @@
-# استخدم نسخة PHP CLI رسمية
+# استخدام نسخة PHP CLI رسمية
 FROM php:8.2-cli
 
 # تثبيت مكتبات النظام وامتدادات PHP الضرورية
@@ -11,16 +11,17 @@ RUN apt-get update && apt-get install -y \
 # تعيين مجلد العمل
 WORKDIR /app
 
-# نسخ ملفات المشروع
+# نسخ ملفات المشروع بدون مجلد vendor
 COPY . .
 
 # تثبيت Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# تثبيت كل الحزم بما فيها dev packages أولاً
-RUN composer install --no-interaction --optimize-autoloader --no-scripts --ignore-platform-reqs
+# تنظيف أي ملفات قديمة
+RUN rm -rf vendor composer.lock \
+    && composer clear-cache
 
-# حذف dev packages لتقليل الحجم (اختياري للـ production)
+# تثبيت جميع الحزم الأساسية فقط (بدون dev packages)
 RUN composer install --no-dev --no-interaction --optimize-autoloader --no-scripts
 
 # فتح المنفذ 8080 (Railway يستخدمه)
