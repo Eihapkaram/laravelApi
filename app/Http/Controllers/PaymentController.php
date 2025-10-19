@@ -18,16 +18,22 @@ class PaymentController extends Controller
     public function pay(Request $request)
     {
         $amount = $request->amount * 100; // تحويل جنيهات إلى قرش
+
+        // بيانات billing كاملة
         $billingData = [
-            "first_name" => $request->first_name ?? "Ahmed",
-            "last_name" => $request->last_name ?? "Ali",
-            "email" => $request->email ?? "ahmed@example.com",
-            "phone_number" => $request->phone_number ?? "201234567890",
+            "first_name"    => $request->first_name ?? "NA",
+            "last_name"     => $request->last_name ?? "NA",
+            "email"         => $request->email ?? "example@test.com",
+            "phone_number"  => $request->phone_number ?? "NA",
+            "country"       => $request->country ?? "EG",
+            "city"          => $request->city ?? "NA",
+            "street"        => $request->street ?? "NA",
         ];
 
         $response = $this->paymob->createIntention($amount, $billingData);
 
-        if (!isset($response['intention_detail']['client_secret'])) {
+        // التحقق بعدم وجود client_secret
+        if (empty($response) || !isset($response['client_secret'])) {
             return response()->json([
                 'error' => true,
                 'message' => 'Failed to create payment intention',
@@ -35,12 +41,17 @@ class PaymentController extends Controller
             ], 500);
         }
 
-        $clientSecret = $response['intention_detail']['client_secret'];
+        $clientSecret = $response['client_secret'];
+
+        // الحصول على رابط الدفع
         $checkoutUrl = $this->paymob->getCheckoutUrl($clientSecret);
 
         return response()->json([
+            'error' => false,
+            'message' => 'Payment intention created successfully',
             'checkout_url' => $checkoutUrl,
             'client_secret' => $clientSecret,
+            'response' => $response, // لإضافة التفاصيل في الواجهة
         ]);
     }
 
@@ -48,7 +59,7 @@ class PaymentController extends Controller
     public function webhook(Request $request)
     {
         \Log::info('Paymob Webhook:', $request->all());
-        // يمكنك حفظ البيانات في قاعدة البيانات هنا
+        // حفظ بيانات الدفع في قاعدة البيانات إذا أردت
         return response()->json(['status' => 'received']);
     }
 
@@ -58,11 +69,9 @@ class PaymentController extends Controller
         $data = $request->all();
         $status = $data['success'] ?? false;
 
-        if ($status) {
-            $message = "✅ تم الدفع بنجاح!";
-        } else {
-            $message = "❌ فشل الدفع، يرجى المحاولة مرة أخرى.";
-        }
+        $message = $status
+            ? "✅ تم الدفع بنجاح!"
+            : "❌ فشل الدفع، يرجى المحاولة مرة أخرى.";
 
         // يمكنك حفظ بيانات الدفع هنا إذا أردت
 
