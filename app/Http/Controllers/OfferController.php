@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Offer;
 use Illuminate\Http\Request;
+use App\Models\User;
+use App\Notifications\OfferCreatedNotification;
 use Illuminate\Support\Facades\Storage;
 
 class OfferController extends Controller
@@ -80,7 +82,11 @@ public function activeOffers()
             'is_active' => $request->is_active,
       
         ]);
+$users = User::where('role', '!=', 'admin')->get();
 
+foreach ($users as $user) {
+    $user->notify(new OfferCreatedNotification($offer));
+}
         return response()->json([
             'message' => 'تم إنشاء العرض بنجاح',
             'offer' => $offer

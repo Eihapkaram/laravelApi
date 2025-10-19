@@ -16,6 +16,7 @@ return new class extends Migration
         Schema::create('pages', function (Blueprint $table) {
             $table->id();
             $table->string('slug')->unique();
+            $table->string('img')->nullable();
             $table->timestamps();
         });
     }

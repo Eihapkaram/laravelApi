@@ -91,7 +91,9 @@ class PageController extends Controller
         // رؤوس الأعمدة
         $sheet->setCellValue('A1', 'ID');
         $sheet->setCellValue('B1', 'Slug');
-        $sheet->setCellValue('C1', 'Created At');
+         $sheet->setCellValue('C1', 'img');
+        $sheet->setCellValue('D1', 'Created At');
+        
 
         // البيانات
         $pages = Page::all();
@@ -99,7 +101,8 @@ class PageController extends Controller
         foreach ($pages as $page) {
             $sheet->setCellValue('A' . $row, $page->id);
             $sheet->setCellValue('B' . $row, $page->slug);
-            $sheet->setCellValue('C' . $row, $page->created_at);
+            $sheet->setCellValue('C' . $row, $page->img);
+            $sheet->setCellValue('D' . $row, $page->created_at);
             $row++;
         }
 

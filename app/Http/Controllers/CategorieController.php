@@ -18,6 +18,7 @@ class CategorieController extends Controller
             'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
             'banner' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
             'description' => 'required'
+            'page_id' => 'required'
         ]);
         // رفع الصورة
         $imagePath = null;
@@ -40,6 +41,7 @@ class CategorieController extends Controller
             'description' => $request->description,
             'img' => $path,
             'banner' => $path2,
+            'page_id' $request->page_id,
         ]);
         $pro = categorie::all();
         return response()->json([
@@ -49,7 +51,7 @@ class CategorieController extends Controller
     }
     public function showCateProduct()
     {
-        $pro = categorie::with('product')->get();
+        $pro = categorie::with('product','page')->get();
         return response()->json([
             'massege' => 'show all categore prodcts',
             'pro' => $pro
@@ -69,7 +71,10 @@ class CategorieController extends Controller
         $request->validate([
             'name' => 'required',
             'slug' => 'required',
-            'description' => 'required',
+            'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
+            'banner' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
+            'description' => 'required'
+            'page_id' => 'required'
         ]);
 
         if (!$request || !$id) {
@@ -98,6 +103,7 @@ class CategorieController extends Controller
             'description' => $request->description,
             'img' => $path,
             'banner' => $path2,
+            'page_id' $request->page_id,
         ]);
         return response()->json([
             'massege' => 'update categorie is done',
@@ -117,6 +123,7 @@ class CategorieController extends Controller
         $sheet->setCellValue('D1', 'Description');
         $sheet->setCellValue('E1', 'Img');
         $sheet->setCellValue('F1', 'Banner');
+        $sheet->setCellValue('G', 'page_id');
 
         // جلب البيانات
         $categories = Categorie::all();
@@ -129,6 +136,7 @@ class CategorieController extends Controller
             $sheet->setCellValue('D' . $row, $cat->description);
             $sheet->setCellValue('E' . $row, $cat->img);
             $sheet->setCellValue('F' . $row, $cat->banner);
+            $sheet->setCellValue('G' . $row, $cat->page_id);
             $row++;
         }
 
@@ -163,6 +171,7 @@ class CategorieController extends Controller
                         'description' => $row[3] ?? '',
                         'img' => $row[4] ?? null,
                         'banner' => $row[5] ?? null,
+                        'page_id' => $row[6] ?? null,
                     ]
                 );
             }
