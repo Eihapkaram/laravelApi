@@ -168,6 +168,8 @@ Route::middleware('auth:api')->group(function () {
 
     // Payment
     Route::post('/pay', [PaymentController::class, 'pay']);
+    Route::post('/paymob/webhook', [PaymentController::class, 'webhook']);
+    Route::get('/paymob/redirect', [PaymentController::class, 'redirect']);
 
     // Review
     Route::post('add/reviweForProdict/{id}', [ReviewController::class, 'AddReviwes']);

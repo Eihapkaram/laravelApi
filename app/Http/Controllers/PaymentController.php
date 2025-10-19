@@ -2,70 +2,74 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\PaymobService;
+use App\Services\UnifiedPaymobService;
 
 class PaymentController extends Controller
 {
     private $paymob;
 
-    public function __construct(PaymobService $paymob)
+    public function __construct(UnifiedPaymobService $paymob)
     {
         $this->paymob = $paymob;
     }
 
+    // إنشاء الدفع
     public function pay(Request $request)
     {
-        $token = $this->paymob->authenticate();
+        $amount = $request->amount * 100; // تحويل جنيهات إلى قرش
+        $billingData = [
+            "first_name" => $request->first_name ?? "Ahmed",
+            "last_name" => $request->last_name ?? "Ali",
+            "email" => $request->email ?? "ahmed@example.com",
+            "phone_number" => $request->phone_number ?? "201234567890",
+        ];
 
-        // المنتجات جاية من الـ request كـ Array جاهزة
-       $items = $request->items; 
+        $response = $this->paymob->createIntention($amount, $billingData);
 
-        $order = $this->paymob->createOrder(
-            $token,
-            $request->amount,
-            'EGP',
-            $items,
-        );
-
-        if (!isset($order['id'])) {
+        if (!isset($response['intention_detail']['client_secret'])) {
             return response()->json([
                 'error' => true,
-                'message' => 'Order creation failed',
-                'response' => $order
+                'message' => 'Failed to create payment intention',
+                'response' => $response
             ], 500);
         }
 
-        $billingData = [
-            "apartment"     => "NA",
-            "email"         => $request->email ?? "example@test.com",
-            "floor"         => "NA",
-            "first_name"    => $request->first_name ?? "NA",
-            "street"        => $request->street ?? "NA",
-            "building"      => "NA",
-            "phone_number"  => $request->phone_number ?? "NA",
-            "shipping_method" => "NA",
-            "postal_code"   => "NA",
-            "city"          => $request->city ?? "NA",
-            "country"       => $request->country ?? "EG",
-            "last_name"     => $request->last_name ?? "NA",
-            "state"         => "NA"
-        ];
-
-        $paymentKey = $this->paymob->generatePaymentKey(
-            $token,
-            $order['id'],
-            $request->amount,
-            $billingData
-        );
-
-        $iframeUrl = $this->paymob->getIframeUrl($paymentKey);
+        $clientSecret = $response['intention_detail']['client_secret'];
+        $checkoutUrl = $this->paymob->getCheckoutUrl($clientSecret);
 
         return response()->json([
-            'url'   => $iframeUrl,
-            'order' => $order,
-            'items' => $items,
+            'checkout_url' => $checkoutUrl,
+            'client_secret' => $clientSecret,
+        ]);
+    }
+
+    // Webhook لاستقبال تفاصيل الدفع
+    public function webhook(Request $request)
+    {
+        \Log::info('Paymob Webhook:', $request->all());
+        // يمكنك حفظ البيانات في قاعدة البيانات هنا
+        return response()->json(['status' => 'received']);
+    }
+
+    // Redirect بعد اكتمال الدفع
+    public function redirect(Request $request)
+    {
+        $data = $request->all();
+        $status = $data['success'] ?? false;
+
+        if ($status) {
+            $message = "✅ تم الدفع بنجاح!";
+        } else {
+            $message = "❌ فشل الدفع، يرجى المحاولة مرة أخرى.";
+        }
+
+        // يمكنك حفظ بيانات الدفع هنا إذا أردت
+
+        return response()->json([
+            'message' => $message,
+            'status' => $status,
+            'data' => $data
         ]);
     }
 }
