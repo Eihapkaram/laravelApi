@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\product;
+use App\Models\Page;
 
 class Categorie extends Model
 {
@@ -15,5 +16,9 @@ class Categorie extends Model
     public function product()
     {
         return $this->hasMany(product::class, 'category_id');
+    }
+    public function page()
+    {
+        return $this->belongsTo(Page::class);
     }
 }

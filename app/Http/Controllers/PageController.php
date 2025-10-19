@@ -15,10 +15,20 @@ class PageController extends Controller
     {
         $request->validate([
             'slug' => 'required',
+            'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
         ]);
+        // رفع الصورة
+        $imagePath = null;
+        if ($request->hasFile('img')) {
+            $image = $request->file('img')->getClientOriginalName();
+            $path = $request->file('img')->storeAs('pages', $image, 'public');
+            // => هيتخزن في storage/app/public/products
+        }
 
-
-        Page::create(['slug' => $request->slug]);
+        Page::create([
+            'slug' => $request->slug,
+            'img' => $path,
+        ]);
 
 
         $pro = Page::get();
@@ -31,7 +41,7 @@ class PageController extends Controller
 
     public function showPageProduct()
     {
-        $pro = Page::with('pageproducts')->get();
+        $pro = Page::with('pageproducts','categories')->get();
 
         return response()->json([
             'massege' => 'show all page prodcts',
@@ -52,21 +62,27 @@ class PageController extends Controller
 
     public function UpdatePage(Request $request, $id)
     {
-        $request->validate(['slug' => 'required']);
+        $request->validate(['slug' => 'required', 'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',]);
         if (! $request || ! $id) {
             return response()->json([
                 'massege' => 'update Page not done',
             ]);
         }
         $pro = Page::find($id);
-        $pro->update(['slug' => $request->slug]);
+        $imagePath = null;
+        if ($request->hasFile('img')) {
+            $image = $request->file('img')->getClientOriginalName();
+            $path = $request->file('img')->storeAs('pages', $image, 'public');
+            // => هيتخزن في storage/app/public/products
+        }
+        $pro->update(['slug' => $request->slug, 'img' => $path]);
 
         return response()->json([
             'massege' => 'update Page is done',
             'data' => Page::get(),
         ]);
     }
-     // ✅ تصدير البيانات إلى Excel
+    // ✅ تصدير البيانات إلى Excel
     public function export()
     {
         $spreadsheet = new Spreadsheet();
