@@ -17,8 +17,8 @@ class CategorieController extends Controller
             'slug' => 'required',
             'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
             'banner' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
-            'description' => 'required'
-            'page_id' => 'required'
+            'description' => 'required',
+            'page_id' => 'required',
         ]);
         // رفع الصورة
         $imagePath = null;
@@ -73,8 +73,8 @@ class CategorieController extends Controller
             'slug' => 'required',
             'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
             'banner' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
-            'description' => 'required'
-            'page_id' => 'required'
+            'description' => 'required',
+            'page_id' => 'required',
         ]);
 
         if (!$request || !$id) {
