@@ -8,6 +8,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\OfferController;
@@ -179,7 +180,8 @@ Route::middleware('auth:api')->group(function () {
     Route::put('order/update/{id}', [OrderController::class, 'updateOrderStatus']);
     Route::delete('order/delete/{id}', [OrderController::class, 'deleteOrder']);
 
-
+    // inquiries
+    Route::post('/inquiries', [InquiryController::class, 'store']);
     // Payment
     Route::post('/pay', [PaymentController::class, 'pay']);
     Route::post('/paymob/webhook', [PaymentController::class, 'webhook']);
@@ -236,4 +238,6 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('/offers', [OfferController::class, 'store']);
     Route::put('/offers/{id}', [OfferController::class, 'update']);
     Route::delete('/offers/{id}', [OfferController::class, 'destroy']);
+    Route::get('/inquiries', [InquiryController::class, 'index']);
+    Route::patch('/inquiries/{id}/status', [InquiryController::class, 'updateStatus']);
 });
