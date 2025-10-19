@@ -41,7 +41,7 @@ class CategorieController extends Controller
             'description' => $request->description,
             'img' => $path,
             'banner' => $path2,
-            'page_id' $request->page_id,
+            'page_id' => $request->page_id,
         ]);
         $pro = categorie::all();
         return response()->json([
@@ -103,7 +103,7 @@ class CategorieController extends Controller
             'description' => $request->description,
             'img' => $path,
             'banner' => $path2,
-            'page_id' $request->page_id,
+            'page_id' =>$request->page_id,
         ]);
         return response()->json([
             'massege' => 'update categorie is done',
