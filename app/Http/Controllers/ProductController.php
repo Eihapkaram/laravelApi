@@ -42,6 +42,9 @@ class ProductController extends Controller
             'category_id' => 'required|min:1',
             'page_id' => 'required|min:1',
             'brand' => 'required',
+            'Counttype' => 'required',
+            'inCounttype' => 'required',
+            'discount' => 'required',
         ]);
 
         if (!$request) {
@@ -69,7 +72,10 @@ class ProductController extends Controller
             'images_url' => $imagePath,
             'page_id' => $request->page_id,
             'brand' => $request->brand,
-            'inCount' => $request->inCount
+            'inCount' => $request->inCount,
+            'Counttype' => $request->Counttype,
+            'inCounttype' => $request->inCounttype,
+            'discount' =>  $request->discount,
         ]);
          $user = auth()->user();
          if ($product) {
@@ -136,6 +142,9 @@ class ProductController extends Controller
             'category_id' => 'required|min:1',
             'page_id' => 'required|min:1',
             'brand' => 'required',
+             'Counttype' => 'required',
+            'inCounttype' => 'required',
+            'discount' => 'required',
         ]);
 
         if (!$request) {
@@ -162,6 +171,9 @@ class ProductController extends Controller
             'category_id' => $request->category_id,
             'page_id' => $request->page_id,
             'brand' => $request->brand,
+             'Counttype' => $request->Counttype,
+            'inCounttype' => $request->inCounttype,
+            'discount' =>  $request->discount,
         ]);
 
         // تحديث الصور الإضافية
@@ -239,9 +251,9 @@ class ProductController extends Controller
 
         // العناوين
         $sheet->fromArray([
-            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID']
+            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID','Counttype','inCounttype','discount']
         ]);
-
+                    
         // البيانات
         $rows = [];
         foreach ($products as $product) {
@@ -257,6 +269,11 @@ class ProductController extends Controller
                 $product->stock,
                 $product->category_id,
                 $product->page_id,
+                $product->Counttype,
+                $product->inCounttype,
+                $product->discount,
+                
+        
             ];
         }
         $sheet->fromArray($rows, null, 'A2');
@@ -295,6 +312,9 @@ class ProductController extends Controller
                     'stock' => $row[8] ?? 0,
                     'category_id' => $row[9] ?? null,
                     'page_id' => $row[10] ?? null,
+                    'Counttype' => $row[11] ?? null,
+                   'inCounttype' => $row[12] ?? null,
+                    'discount' => $row[13] ?? null,
                 ]
             );
         }

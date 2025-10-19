@@ -19,6 +19,9 @@ return new class extends Migration
             $table->longText('description');
             $table->smallInteger('votes');
             $table->string('inCount');
+            $table->string('Counttype')->nullable();
+            $table->string('inCounttype')->nullable();
+            $table->string('discount')->nullable();
             $table->string('url');
             $table->string('brand');
             $table->string('img')->nullable();
