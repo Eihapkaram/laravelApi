@@ -73,7 +73,7 @@ public function activeOffers()
              
             'title' => $request->title,
             'description' => $request->description,
-            'banner' => $request-> $path,
+            'banner' => $path,
             'product_id' => $request->product_id,
             'discount_value' => $request->discount_value,
             'discount_type' =>$request->discount_type,
