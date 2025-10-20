@@ -109,9 +109,9 @@ Route::get('/categorebanner/{filename}', function ($filename) {
     return response($file, 200)->header('Content-Type', $mime);
 })->where('filename', '.*');
 //  offers imge  storebanners pages
-Route::get('/offers/{filename}', function ($filename) {
+Route::get('/offersbanner/{filename}', function ($filename) {
     $filename = urldecode($filename);
-    $path = 'offers/' . $filename;
+    $path = 'offersbanner/' . $filename;
 
     if (!Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
