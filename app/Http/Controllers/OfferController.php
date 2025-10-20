@@ -66,7 +66,7 @@ public function activeOffers()
         $path = null;
         if ($request->hasFile('banner')) {
             $image = $request->file('banner')->getClientOriginalName();
-            $path = $request->file('banner')->storeAs('offers', $image, 'public');
+            $path = $request->file('banner')->storeAs('offersbanner', $image, 'public');
         }
 
         $offer = Offer::create([
@@ -117,7 +117,7 @@ foreach ($users as $user) {
              // رفع الصورة الرئيسية
         $path = null;
             $image = $request->file('banner')->getClientOriginalName();
-            $path = $request->file('banner')->storeAs('offers', $image, 'public');
+            $path = $request->file('banner')->storeAs('offersbanner', $image, 'public');
             $data['banner'] = $path;
         }
 
