@@ -82,6 +82,20 @@ class PageController extends Controller
             'data' => Page::get(),
         ]);
     }
+     public function search(Request $request)
+    {
+        $products = QueryBuilder::for(Page::query())
+            ->allowedFilters([
+                'slug',
+            ])
+            ->allowedIncludes(['categories', 'pageproducts'])
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'result' => $products,
+        ], 200);
+    }
     // ✅ تصدير البيانات إلى Excel
     public function export()
     {
