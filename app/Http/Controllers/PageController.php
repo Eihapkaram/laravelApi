@@ -89,7 +89,7 @@ class PageController extends Controller
             ->allowedFilters([
                 'slug',
             ])
-            ->allowedIncludes(['categories', 'pageproducts'])
+            ->with(['categories', 'pageproducts'])
             ->get();
 
         return response()->json([
