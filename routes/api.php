@@ -237,7 +237,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('/notifications/send', [NotificationController::class, 'sendByAdmin']);
     //offers
     Route::post('/offers', [OfferController::class, 'store']);
-    Route::put('/offers/{id}', [OfferController::class, 'update']);
+    Route::post('/offers/{id}', [OfferController::class, 'update']);
     Route::delete('/offers/{id}', [OfferController::class, 'destroy']);
     Route::get('/inquiries', [InquiryController::class, 'index']);
     Route::patch('/inquiries/{id}/status', [InquiryController::class, 'updateStatus']);
