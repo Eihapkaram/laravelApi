@@ -297,70 +297,62 @@ class OrderController extends Controller
     {
         $order = Order::with('orderdetels.product', 'userorder')->findOrFail($id);
 
-        // 🖼️ الصور كـ Base64
+        // 🖼️ تحويل الصور إلى Base64 لو موجودة
         $logoPath = public_path('storage/logo.png');
         $signaturePath = public_path('storage/signature.png');
 
-        $logoBase64 = file_exists($logoPath) ? base64_encode(file_get_contents($logoPath)) : '';
-        $signatureBase64 = file_exists($signaturePath) ? base64_encode(file_get_contents($signaturePath)) : '';
+        $logoBase64 = file_exists($logoPath)
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath))
+            : '';
+        $signatureBase64 = file_exists($signaturePath)
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($signaturePath))
+            : '';
 
-        // 🇴 استخدم خط محلي عربي (Cairo)
+        // 🇴 تضمين الخط العربي المحلي
         $fontPath = public_path('fonts/Cairo-Regular.ttf');
 
         $html = '
+    <!DOCTYPE html>
     <html lang="ar" dir="rtl">
     <head>
         <meta charset="utf-8">
         <style>
             @font-face {
                 font-family: "Cairo";
-                src: url("' . $fontPath . '") format("truetype");
+                src: url("file://' . $fontPath . '") format("truetype");
             }
-
-            body { 
+            body {
                 font-family: "Cairo", DejaVu Sans, sans-serif;
-                direction: rtl; 
+                direction: rtl;
                 text-align: right;
                 color: #333;
+                font-size: 14px;
             }
             h2, h3 { text-align: center; color: #2c3e50; }
             .logo { text-align: center; margin-bottom: 20px; }
-            .logo img { max-width: 150px; }
+            .logo img { max-width: 120px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
             th { background-color: #3498db; color: #fff; }
             tr:nth-child(even) { background-color: #f9f9f9; }
-            tr:hover { background-color: #f1f1f1; }
             .total { font-weight: bold; font-size: 1.2em; text-align: left; margin-top: 20px; }
-            .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-            .header div { width: 48%; }
-            .signature { margin-top: 50px; text-align: left; }
-            .signature img { max-width: 200px; }
+            .signature { margin-top: 40px; text-align: left; }
+            .signature img { max-width: 150px; }
         </style>
     </head>
-    <body>
-        <div class="logo">';
+    <body>';
 
         if ($logoBase64) {
-            $html .= '<img src="data:image/png;base64,' . $logoBase64 . '" alt="شعار الشركة">';
+            $html .= '<div class="logo"><img src="' . $logoBase64 . '" alt="الشعار"></div>';
         }
 
         $html .= '
-        </div>
-
-        <div class="header">
-            <div>
-                <h3>فاتورة الطلب</h3>
-                <p><strong>رقم الطلب:</strong> ' . $order->id . '</p>
-                <p><strong>تاريخ الطلب:</strong> ' . $order->created_at->format('Y-m-d') . '</p>
-            </div>
-            <div>
-                <h3>معلومات العميل</h3>
-                <p><strong>الاسم:</strong> ' . $order->userorder->name . '</p>
-                <p><strong>الهاتف:</strong> ' . $order->phone . '</p>
-                <p><strong>العنوان:</strong> ' . $order->street . ', ' . $order->city . ', ' . $order->governorate . '</p>
-            </div>
-        </div>
+        <h3>فاتورة الطلب</h3>
+        <p><strong>رقم الطلب:</strong> ' . $order->id . '</p>
+        <p><strong>تاريخ الطلب:</strong> ' . $order->created_at->format('Y-m-d') . '</p>
+        <p><strong>العميل:</strong> ' . $order->userorder->name . '</p>
+        <p><strong>الهاتف:</strong> ' . $order->phone . '</p>
+        <p><strong>العنوان:</strong> ' . $order->street . ', ' . $order->city . ', ' . $order->governorate . '</p>
 
         <table>
             <thead>
@@ -374,29 +366,27 @@ class OrderController extends Controller
             <tbody>';
 
         foreach ($order->orderdetels as $item) {
-            $html .= '<tr>
-                    <td>' . $item->product->name . '</td>
-                    <td>' . $item->quantity . '</td>
-                    <td>' . number_format($item->price, 2) . ' جنيه</td>
-                    <td>' . number_format($item->price * $item->quantity, 2) . ' جنيه</td>
-                  </tr>';
-        }
-
-        $html .= '</tbody></table>
-              <p class="total">المجموع الكلي: ' . number_format($order->total_price, 2) . ' جنيه</p>
-
-              <div class="signature">
-                <p>توقيع الشركة:</p>';
-
-        if ($signatureBase64) {
-            $html .= '<img src="data:image/png;base64,' . $signatureBase64 . '" alt="توقيع">';
+            $html .= '
+            <tr>
+                <td>' . $item->product->name . '</td>
+                <td>' . $item->quantity . '</td>
+                <td>' . number_format($item->price, 2) . ' جنيه</td>
+                <td>' . number_format($item->price * $item->quantity, 2) . ' جنيه</td>
+            </tr>';
         }
 
         $html .= '
-              </div>
-            </body>
-            </html>';
+            </tbody>
+        </table>
+        <p class="total">الإجمالي الكلي: ' . number_format($order->total_price, 2) . ' جنيه</p>';
 
+        if ($signatureBase64) {
+            $html .= '<div class="signature"><p>توقيع الشركة:</p><img src="' . $signatureBase64 . '" alt="التوقيع"></div>';
+        }
+
+        $html .= '</body></html>';
+
+        // 🔹 تحميل الـHTML وتحويله إلى PDF
         $pdf = Pdf::loadHTML($html)->setPaper('A4', 'portrait');
 
         return response()->streamDownload(
