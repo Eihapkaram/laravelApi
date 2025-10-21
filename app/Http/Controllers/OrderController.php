@@ -1,7 +1,8 @@
 <?php
 
 namespace App\Http\Controllers;
-use Barryvdh\DomPDF\Facade\Pdf; 
+
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Order;
@@ -54,7 +55,7 @@ class OrderController extends Controller
         }
 
         $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
-        
+
         $order = Order::create([
             'user_id'        => $user->id,
             'total_price'    => $total,
@@ -65,7 +66,7 @@ class OrderController extends Controller
             'phone'          => $request->phone,
             'store_name'     => $request->store_name,
             'payment_method' => $request->payment_method,
-            
+
         ]);
         if ($order) {
             // جيب كل المستخدمين اللي رولهم أدمن
@@ -143,7 +144,7 @@ class OrderController extends Controller
         $customer->notify(new OrderCreatedBySellerNotification($order, $seller));
         return response()->json([
             'message' => 'تم إنشاء الطلب بنجاح في انتظار موافقة العميل',
-            'order' => $order->load('orderdetels.product','userorder'),
+            'order' => $order->load('orderdetels.product', 'userorder'),
         ], 201);
     }
 
@@ -197,7 +198,7 @@ class OrderController extends Controller
     public function showOrder()
     {
         $user = auth()->user();
-        $order = $user->getOrder()->with('orderdetels.product','seller')->get();
+        $order = $user->getOrder()->with('orderdetels.product', 'seller')->get();
 
         return response()->json([
             'message' => 'تم جلب الطلبات الخاصة بك بنجاح',
@@ -209,7 +210,7 @@ class OrderController extends Controller
     public function showlatestOrder()
     {
         $user = auth()->user();
-        $orderlatest = $user->getOrder()->with('orderdetels.product','seller')->latest()->first();
+        $orderlatest = $user->getOrder()->with('orderdetels.product', 'seller')->latest()->first();
 
         return response()->json([
             'message' => 'تم جلب آخر طلب بنجاح',
@@ -226,7 +227,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'غير مصرح - فقط للمديرين'], 403);
         }
 
-        $orders = Order::with(['orderdetels.product', 'userorder','seller'])->latest()->get();
+        $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])->latest()->get();
 
         return response()->json([
             'message' => 'تم جلب جميع الطلبات بنجاح',
@@ -292,20 +293,36 @@ class OrderController extends Controller
         }
     }
     //فاتور
-public function generateInvoice($id)
-{
-    $order = Order::with('orderdetels.product','userorder')->findOrFail($id);
+    public function generateInvoice($id)
+    {
+        $order = Order::with('orderdetels.product', 'userorder')->findOrFail($id);
 
-    // ضع رابط شعار الشركة هنا (يمكن رابط خارجي أو مسار من storage)
-    $logoUrl = asset('storage/logo.png'); 
-    $signatureUrl = asset('storage/signature.png'); // توقيع إلكتروني إذا موجود
+        // 🖼️ الصور كـ Base64
+        $logoPath = public_path('storage/logo.png');
+        $signaturePath = public_path('storage/signature.png');
 
-    $html = '
-    <html>
+        $logoBase64 = file_exists($logoPath) ? base64_encode(file_get_contents($logoPath)) : '';
+        $signatureBase64 = file_exists($signaturePath) ? base64_encode(file_get_contents($signaturePath)) : '';
+
+        // 🇴 استخدم خط محلي عربي (Cairo)
+        $fontPath = public_path('fonts/Cairo-Regular.ttf');
+
+        $html = '
+    <html lang="ar" dir="rtl">
     <head>
         <meta charset="utf-8">
         <style>
-            body { font-family: DejaVu Sans, sans-serif; direction: rtl; color: #333; }
+            @font-face {
+                font-family: "Cairo";
+                src: url("' . $fontPath . '") format("truetype");
+            }
+
+            body { 
+                font-family: "Cairo", DejaVu Sans, sans-serif;
+                direction: rtl; 
+                text-align: right;
+                color: #333;
+            }
             h2, h3 { text-align: center; color: #2c3e50; }
             .logo { text-align: center; margin-bottom: 20px; }
             .logo img { max-width: 150px; }
@@ -314,7 +331,7 @@ public function generateInvoice($id)
             th { background-color: #3498db; color: #fff; }
             tr:nth-child(even) { background-color: #f9f9f9; }
             tr:hover { background-color: #f1f1f1; }
-            .total { font-weight: bold; font-size: 1.2em; text-align: right; margin-top: 20px; }
+            .total { font-weight: bold; font-size: 1.2em; text-align: left; margin-top: 20px; }
             .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
             .header div { width: 48%; }
             .signature { margin-top: 50px; text-align: left; }
@@ -322,21 +339,26 @@ public function generateInvoice($id)
         </style>
     </head>
     <body>
-        <div class="logo">
-            <img src="'.$logoUrl.'" alt="شعار الشركة">
+        <div class="logo">';
+
+        if ($logoBase64) {
+            $html .= '<img src="data:image/png;base64,' . $logoBase64 . '" alt="شعار الشركة">';
+        }
+
+        $html .= '
         </div>
 
         <div class="header">
             <div>
                 <h3>فاتورة الطلب</h3>
-                <p><strong>رقم الطلب:</strong> '.$order->id.'</p>
-                <p><strong>تاريخ الطلب:</strong> '.$order->created_at->format('Y-m-d').'</p>
+                <p><strong>رقم الطلب:</strong> ' . $order->id . '</p>
+                <p><strong>تاريخ الطلب:</strong> ' . $order->created_at->format('Y-m-d') . '</p>
             </div>
             <div>
                 <h3>معلومات العميل</h3>
-                <p><strong>الاسم:</strong> '.$order->userorder->name.'</p>
-                <p><strong>الهاتف:</strong> '.$order->phone.'</p>
-                <p><strong>العنوان:</strong> '.$order->street.', '.$order->city.', '.$order->governorate.'</p>
+                <p><strong>الاسم:</strong> ' . $order->userorder->name . '</p>
+                <p><strong>الهاتف:</strong> ' . $order->phone . '</p>
+                <p><strong>العنوان:</strong> ' . $order->street . ', ' . $order->city . ', ' . $order->governorate . '</p>
             </div>
         </div>
 
@@ -351,32 +373,37 @@ public function generateInvoice($id)
             </thead>
             <tbody>';
 
-    foreach($order->orderdetels as $item) {
-        $html .= '<tr>
-                    <td>'.$item->product->name.'</td>
-                    <td>'.$item->quantity.'</td>
-                    <td>'.number_format($item->price,2).' جنيه</td>
-                    <td>'.number_format($item->price * $item->quantity,2).' جنيه</td>
+        foreach ($order->orderdetels as $item) {
+            $html .= '<tr>
+                    <td>' . $item->product->name . '</td>
+                    <td>' . $item->quantity . '</td>
+                    <td>' . number_format($item->price, 2) . ' جنيه</td>
+                    <td>' . number_format($item->price * $item->quantity, 2) . ' جنيه</td>
                   </tr>';
-    }
+        }
 
-    $html .= '</tbody></table>
-              <p class="total">المجموع الكلي: '.number_format($order->total_price,2).' جنيه</p>
+        $html .= '</tbody></table>
+              <p class="total">المجموع الكلي: ' . number_format($order->total_price, 2) . ' جنيه</p>
 
               <div class="signature">
-                <p>توقيع الشركة:</p>
-                <img src="'.$signatureUrl.'" alt="توقيع">
+                <p>توقيع الشركة:</p>';
+
+        if ($signatureBase64) {
+            $html .= '<img src="data:image/png;base64,' . $signatureBase64 . '" alt="توقيع">';
+        }
+
+        $html .= '
               </div>
             </body>
             </html>';
 
-    $pdf = Pdf::loadHTML($html)->setPaper('A4', 'portrait');
+        $pdf = Pdf::loadHTML($html)->setPaper('A4', 'portrait');
 
-    return response()->streamDownload(
-        fn() => print($pdf->output()),
-        "invoice-{$order->id}.pdf"
-    );
-}
+        return response()->streamDownload(
+            fn() => print($pdf->output()),
+            "invoice-{$order->id}.pdf"
+        );
+    }
     // حذف طلب (للمستخدم أو admin)
     public function deleteOrder($id)
     {
@@ -437,7 +464,7 @@ public function generateInvoice($id)
                         'street'         => $row[7] ?? null,
                         'phone'          => $row[8] ?? null,
                         'payment_method' => $row[9] ?? null,
-                        'approval_status'=> $row[10] ?? 'pending',
+                        'approval_status' => $row[10] ?? 'pending',
                     ]
                 );
             }
