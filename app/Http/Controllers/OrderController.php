@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Barryvdh\DomPDF\Facade\Pdf; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Order;
@@ -291,7 +291,92 @@ class OrderController extends Controller
             Notification::send($admins, new UpdateOrder($user));
         }
     }
+    //فاتور
+public function generateInvoice($id)
+{
+    $order = Order::with('orderdetels.product','userorder')->findOrFail($id);
 
+    // ضع رابط شعار الشركة هنا (يمكن رابط خارجي أو مسار من storage)
+    $logoUrl = asset('storage/logo.png'); 
+    $signatureUrl = asset('storage/signature.png'); // توقيع إلكتروني إذا موجود
+
+    $html = '
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body { font-family: DejaVu Sans, sans-serif; direction: rtl; color: #333; }
+            h2, h3 { text-align: center; color: #2c3e50; }
+            .logo { text-align: center; margin-bottom: 20px; }
+            .logo img { max-width: 150px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+            th { background-color: #3498db; color: #fff; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            tr:hover { background-color: #f1f1f1; }
+            .total { font-weight: bold; font-size: 1.2em; text-align: right; margin-top: 20px; }
+            .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+            .header div { width: 48%; }
+            .signature { margin-top: 50px; text-align: left; }
+            .signature img { max-width: 200px; }
+        </style>
+    </head>
+    <body>
+        <div class="logo">
+            <img src="'.$logoUrl.'" alt="شعار الشركة">
+        </div>
+
+        <div class="header">
+            <div>
+                <h3>فاتورة الطلب</h3>
+                <p><strong>رقم الطلب:</strong> '.$order->id.'</p>
+                <p><strong>تاريخ الطلب:</strong> '.$order->created_at->format('Y-m-d').'</p>
+            </div>
+            <div>
+                <h3>معلومات العميل</h3>
+                <p><strong>الاسم:</strong> '.$order->userorder->name.'</p>
+                <p><strong>الهاتف:</strong> '.$order->phone.'</p>
+                <p><strong>العنوان:</strong> '.$order->street.', '.$order->city.', '.$order->governorate.'</p>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>المنتج</th>
+                    <th>الكمية</th>
+                    <th>السعر</th>
+                    <th>الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>';
+
+    foreach($order->orderdetels as $item) {
+        $html .= '<tr>
+                    <td>'.$item->product->name.'</td>
+                    <td>'.$item->quantity.'</td>
+                    <td>'.number_format($item->price,2).' جنيه</td>
+                    <td>'.number_format($item->price * $item->quantity,2).' جنيه</td>
+                  </tr>';
+    }
+
+    $html .= '</tbody></table>
+              <p class="total">المجموع الكلي: '.number_format($order->total_price,2).' جنيه</p>
+
+              <div class="signature">
+                <p>توقيع الشركة:</p>
+                <img src="'.$signatureUrl.'" alt="توقيع">
+              </div>
+            </body>
+            </html>';
+
+    $pdf = Pdf::loadHTML($html)->setPaper('A4', 'portrait');
+
+    return response()->streamDownload(
+        fn() => print($pdf->output()),
+        "invoice-{$order->id}.pdf"
+    );
+}
     // حذف طلب (للمستخدم أو admin)
     public function deleteOrder($id)
     {

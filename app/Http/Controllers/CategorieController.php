@@ -123,7 +123,7 @@ class CategorieController extends Controller
         $sheet->setCellValue('D1', 'Description');
         $sheet->setCellValue('E1', 'Img');
         $sheet->setCellValue('F1', 'Banner');
-        $sheet->setCellValue('G', 'page_id');
+        $sheet->setCellValue('G1', 'page_id');
 
         // جلب البيانات
         $categories = Categorie::all();

@@ -197,6 +197,9 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    //فاتورا 
+    Route::get('/orders/{id}/invoice', [OrderController::class, 'generateInvoice']);
+
 });
 
 // 🧑‍💻 Admin Routes
