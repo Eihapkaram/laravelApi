@@ -297,23 +297,12 @@ class OrderController extends Controller
     {
         $order = Order::with('orderdetels.product', 'userorder')->findOrFail($id);
 
-        // 🖼️ تحويل الصور إلى Base64 لو موجودة
-        $logoPath = public_path('storage/logo.png');
-        $signaturePath = public_path('storage/signature.png');
-
-        $logoBase64 = file_exists($logoPath)
-            ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath))
-            : '';
-        $signatureBase64 = file_exists($signaturePath)
-            ? 'data:image/png;base64,' . base64_encode(file_get_contents($signaturePath))
-            : '';
-
-        // 🇴 تضمين الخط العربي المحلي
-        $fontPath = public_path('fonts/Cairo-Regular.ttf');
+        $logoUrl = 'file://' . public_path('storage/logo.png');
+        $signatureUrl = 'file://' . public_path('storage/signature.png');
+        $fontPath = storage_path('fonts/Cairo-Regular.ttf');
 
         $html = '
-    <!DOCTYPE html>
-    <html lang="ar" dir="rtl">
+    <html lang="ar">
     <head>
         <meta charset="utf-8">
         <style>
@@ -325,34 +314,34 @@ class OrderController extends Controller
                 font-family: "Cairo", DejaVu Sans, sans-serif;
                 direction: rtl;
                 text-align: right;
-                color: #333;
                 font-size: 14px;
+                line-height: 1.6;
             }
-            h2, h3 { text-align: center; color: #2c3e50; }
-            .logo { text-align: center; margin-bottom: 20px; }
-            .logo img { max-width: 120px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-            th { background-color: #3498db; color: #fff; }
-            tr:nth-child(even) { background-color: #f9f9f9; }
-            .total { font-weight: bold; font-size: 1.2em; text-align: left; margin-top: 20px; }
-            .signature { margin-top: 40px; text-align: left; }
-            .signature img { max-width: 150px; }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                margin-top: 10px;
+            }
+            th, td {
+                border: 1px solid #555;
+                padding: 6px;
+                text-align: center;
+            }
         </style>
     </head>
-    <body>';
+    <body>
+        <div align="center">
+            <img src="' . $logoUrl . '" alt="شعار الشركة" width="150">
+        </div>
 
-        if ($logoBase64) {
-            $html .= '<div class="logo"><img src="' . $logoBase64 . '" alt="الشعار"></div>';
-        }
-
-        $html .= '
-        <h3>فاتورة الطلب</h3>
+        <h3 align="center">فاتورة الطلب</h3>
         <p><strong>رقم الطلب:</strong> ' . $order->id . '</p>
         <p><strong>تاريخ الطلب:</strong> ' . $order->created_at->format('Y-m-d') . '</p>
-        <p><strong>العميل:</strong> ' . $order->userorder->name . '</p>
-        <p><strong>الهاتف:</strong> ' . $order->phone . '</p>
-        <p><strong>العنوان:</strong> ' . $order->street . ', ' . $order->city . ', ' . $order->governorate . '</p>
+
+        <h4>معلومات العميل</h4>
+        <p><strong>الاسم:</strong> ' . e($order->userorder->name) . '</p>
+        <p><strong>الهاتف:</strong> ' . e($order->phone) . '</p>
+        <p><strong>العنوان:</strong> ' . e($order->street . ", " . $order->city . ", " . $order->governorate) . '</p>
 
         <table>
             <thead>
@@ -368,7 +357,7 @@ class OrderController extends Controller
         foreach ($order->orderdetels as $item) {
             $html .= '
             <tr>
-                <td>' . $item->product->name . '</td>
+                <td>' . e($item->product->name) . '</td>
                 <td>' . $item->quantity . '</td>
                 <td>' . number_format($item->price, 2) . ' جنيه</td>
                 <td>' . number_format($item->price * $item->quantity, 2) . ' جنيه</td>
@@ -378,22 +367,29 @@ class OrderController extends Controller
         $html .= '
             </tbody>
         </table>
-        <p class="total">الإجمالي الكلي: ' . number_format($order->total_price, 2) . ' جنيه</p>';
 
-        if ($signatureBase64) {
-            $html .= '<div class="signature"><p>توقيع الشركة:</p><img src="' . $signatureBase64 . '" alt="التوقيع"></div>';
-        }
+        <p><strong>المجموع الكلي:</strong> ' . number_format($order->total_price, 2) . ' جنيه</p>
 
-        $html .= '</body></html>';
+        <div align="left" style="margin-top:40px;">
+            <p>توقيع الشركة:</p>
+            <img src="' . $signatureUrl . '" alt="توقيع" width="150">
+        </div>
+    </body>
+    </html>';
 
-        // 🔹 تحميل الـHTML وتحويله إلى PDF
-        $pdf = Pdf::loadHTML($html)->setPaper('A4', 'portrait');
+        $pdf = Pdf::setOption([
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled' => true,
+        ])
+            ->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'))
+            ->setPaper('A4', 'portrait');
 
         return response()->streamDownload(
             fn() => print($pdf->output()),
             "invoice-{$order->id}.pdf"
         );
     }
+
     // حذف طلب (للمستخدم أو admin)
     public function deleteOrder($id)
     {
