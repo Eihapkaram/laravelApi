@@ -14,6 +14,7 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\OfferController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SettingController;
 use Illuminate\Support\Facades\Storage;
 
 /*
@@ -39,6 +40,7 @@ Route::post('/register-phone', [UserController::class, 'registerWithPhone']);
 Route::post('login', [UserController::class, 'Login'])->name('login');
 Route::post('/login-phone', [UserController::class, 'loginWithPhone']);
 Route::get('pro', [ProductController::class, 'index']);
+Route::get('settings', [SettingController::class, 'index']);
 Route::get('/search/cate', [ProductController::class, 'search']);
 Route::get('/search', [PageController::class, 'search']);
 Route::get('pageProducts/show', [PageController::class, 'showPageProduct']);
@@ -50,7 +52,8 @@ Route::get('show/{id}', [ProductController::class, 'show']);
 Route::get('categorie/proshow', [CategorieController::class, 'showCateProduct']);
 Route::get('show/reviwe/{id}', [ReviewController::class, 'showProReviwes']);
 
-// ✅ Product Images
+
+// ✅ Product Image
 Route::get('/products/{filename}', function ($filename) {
     $filename = urldecode($filename);
     $path = 'products/' . $filename;
@@ -152,7 +155,20 @@ Route::get('/storebanners/{filename}', function ($filename) {
     return response($file, 200)->header('Content-Type', $mime);
 })->where('filename', '.*');
 
+//  imge  settings
+Route::get('/settings/{filename}', function ($filename) {
+    $filename = urldecode($filename);
+    $path = 'settings/' . $filename;
 
+    if (!Storage::disk('public')->exists($path)) {
+        return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
+    }
+
+    $mime = Storage::disk('public')->mimeType($path);
+    $file = Storage::disk('public')->get($path);
+
+    return response($file, 200)->header('Content-Type', $mime);
+})->where('filename', '.*');
 // 🔐 Authenticated Routes
 Route::middleware('auth:api')->group(function () {
     // User
@@ -244,4 +260,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::delete('/offers/{id}', [OfferController::class, 'destroy']);
     Route::get('/inquiries', [InquiryController::class, 'index']);
     Route::patch('/inquiries/{id}/status', [InquiryController::class, 'updateStatus']);
+    //settings
+    Route::post('settings/create', [SettingController::class, 'create']);
+    Route::post('settings/update', [SettingController::class, 'update']);
 });

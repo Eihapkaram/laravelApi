@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Notifications\CreatOrder;
 use App\Notifications\NewOrderNotification;
 use App\Notifications\UpdateOrder;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Notifications\Notifiable;
@@ -300,8 +301,18 @@ class OrderController extends Controller
 
         $order = Order::with('orderdetels.product', 'userorder')->findOrFail($id);
 
-        $logoPath = public_path('storage/logo.png');
-        $signaturePath = public_path('storage/signature.png');
+        $settings = Setting::first();
+
+        // Logo
+        $logoPath = $settings && $settings->logo
+            ? 'file://' . public_path('storage/' . basename($settings->logo))
+            : null;
+
+        // Signature
+        $signaturePath = $settings && $settings->signature
+            ? 'file://' . public_path('storage/' . basename($settings->signature))
+            : null;
+
 
         $html = '
     <html lang="ar" dir="rtl">
