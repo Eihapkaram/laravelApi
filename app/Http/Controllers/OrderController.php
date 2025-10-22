@@ -295,50 +295,28 @@ class OrderController extends Controller
     //فاتور
     public function generateInvoice($id)
     {
+        ini_set('max_execution_time', 300);
+        ini_set('memory_limit', '512M');
+
         $order = Order::with('orderdetels.product', 'userorder')->findOrFail($id);
 
-        $mpdf = new Mpdf([
-            'default_font' => 'Cairo',
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'directionality' => 'rtl'
-        ]);
-
-        $fontPath = public_path('fonts/Cairo-Regular.ttf');
-        $logoUrl = public_path('storage/logo.png');
-        $signatureUrl = public_path('storage/signature.png');
+        $logoPath = public_path('storage/logo.png');
+        $signaturePath = public_path('storage/signature.png');
 
         $html = '
-    <html lang="ar">
+    <html lang="ar" dir="rtl">
     <head>
-        <meta charset="utf-8">
+        <meta charset="UTF-8">
         <style>
-            @font-face {
-                font-family: "Cairo";
-                src: url("' . $fontPath . '");
-            }
-            body {
-                direction: rtl;
-                font-family: "Cairo";
-                text-align: right;
-                font-size: 14px;
-            }
-            table {
-                border-collapse: collapse;
-                width: 100%;
-            }
-            th, td {
-                border: 1px solid #000;
-                padding: 6px;
-            }
-            th {
-                background-color: #f2f2f2;
-            }
+            body { font-family: "dejavusans", sans-serif; text-align: right; direction: rtl; }
+            table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: center; }
+            th { background-color: #ddd; }
         </style>
     </head>
     <body>
         <div align="center">
-            <img src="' . $logoUrl . '" width="120">
+            ' . (file_exists($logoPath) ? '<img src="' . $logoPath . '" width="120">' : '') . '
             <h3>فاتورة الطلب</h3>
         </div>
 
@@ -362,13 +340,12 @@ class OrderController extends Controller
             <tbody>';
 
         foreach ($order->orderdetels as $item) {
-            $html .= '
-            <tr>
-                <td>' . $item->product->name . '</td>
-                <td>' . $item->quantity . '</td>
-                <td>' . number_format($item->price, 2) . ' جنيه</td>
-                <td>' . number_format($item->price * $item->quantity, 2) . ' جنيه</td>
-            </tr>';
+            $html .= '<tr>
+            <td>' . $item->product->name . '</td>
+            <td>' . $item->quantity . '</td>
+            <td>' . number_format($item->price, 2) . ' جنيه</td>
+            <td>' . number_format($item->price * $item->quantity, 2) . ' جنيه</td>
+        </tr>';
         }
 
         $html .= '
@@ -379,15 +356,23 @@ class OrderController extends Controller
 
         <div align="left" style="margin-top:40px;">
             <p>توقيع الشركة:</p>
-            <img src="' . $signatureUrl . '" width="120">
+            ' . (file_exists($signaturePath) ? '<img src="' . $signaturePath . '" width="100">' : '') . '
         </div>
     </body>
     </html>';
 
+        $mpdf = new Mpdf([
+            'tempDir' => storage_path('app/mpdf_temp'),
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'default_font' => 'dejavusans'
+        ]);
+
         $mpdf->WriteHTML($html);
 
-        return response($mpdf->Output("invoice-{$order->id}.pdf", 'I'))
-            ->header('Content-Type', 'application/pdf');
+        return response()->streamDownload(function () use ($mpdf) {
+            echo $mpdf->Output('', 'S');
+        }, 'invoice-' . $order->id . '.pdf');
     }
 
     // حذف طلب (للمستخدم أو admin)
