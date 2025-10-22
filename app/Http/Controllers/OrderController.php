@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Barryvdh\DomPDF\Facade\Pdf;
+use Mpdf\Mpdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Order;
@@ -297,9 +297,16 @@ class OrderController extends Controller
     {
         $order = Order::with('orderdetels.product', 'userorder')->findOrFail($id);
 
-        $logoUrl = 'file://' . public_path('storage/logo.png');
-        $signatureUrl = 'file://' . public_path('storage/signature.png');
-        $fontPath = storage_path('fonts/Cairo-Regular.ttf');
+        $mpdf = new Mpdf([
+            'default_font' => 'Cairo',
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'directionality' => 'rtl'
+        ]);
+
+        $fontPath = public_path('fonts/Cairo-Regular.ttf');
+        $logoUrl = public_path('storage/logo.png');
+        $signatureUrl = public_path('storage/signature.png');
 
         $html = '
     <html lang="ar">
@@ -308,40 +315,40 @@ class OrderController extends Controller
         <style>
             @font-face {
                 font-family: "Cairo";
-                src: url("file://' . $fontPath . '") format("truetype");
+                src: url("' . $fontPath . '");
             }
             body {
-                font-family: "Cairo", DejaVu Sans, sans-serif;
                 direction: rtl;
+                font-family: "Cairo";
                 text-align: right;
                 font-size: 14px;
-                line-height: 1.6;
             }
             table {
                 border-collapse: collapse;
                 width: 100%;
-                margin-top: 10px;
             }
             th, td {
-                border: 1px solid #555;
+                border: 1px solid #000;
                 padding: 6px;
-                text-align: center;
+            }
+            th {
+                background-color: #f2f2f2;
             }
         </style>
     </head>
     <body>
         <div align="center">
-            <img src="' . $logoUrl . '" alt="شعار الشركة" width="150">
+            <img src="' . $logoUrl . '" width="120">
+            <h3>فاتورة الطلب</h3>
         </div>
 
-        <h3 align="center">فاتورة الطلب</h3>
         <p><strong>رقم الطلب:</strong> ' . $order->id . '</p>
         <p><strong>تاريخ الطلب:</strong> ' . $order->created_at->format('Y-m-d') . '</p>
 
         <h4>معلومات العميل</h4>
-        <p><strong>الاسم:</strong> ' . e($order->userorder->name) . '</p>
-        <p><strong>الهاتف:</strong> ' . e($order->phone) . '</p>
-        <p><strong>العنوان:</strong> ' . e($order->street . ", " . $order->city . ", " . $order->governorate) . '</p>
+        <p><strong>الاسم:</strong> ' . $order->userorder->name . '</p>
+        <p><strong>الهاتف:</strong> ' . $order->phone . '</p>
+        <p><strong>العنوان:</strong> ' . $order->street . ', ' . $order->city . ', ' . $order->governorate . '</p>
 
         <table>
             <thead>
@@ -357,7 +364,7 @@ class OrderController extends Controller
         foreach ($order->orderdetels as $item) {
             $html .= '
             <tr>
-                <td>' . e($item->product->name) . '</td>
+                <td>' . $item->product->name . '</td>
                 <td>' . $item->quantity . '</td>
                 <td>' . number_format($item->price, 2) . ' جنيه</td>
                 <td>' . number_format($item->price * $item->quantity, 2) . ' جنيه</td>
@@ -372,22 +379,15 @@ class OrderController extends Controller
 
         <div align="left" style="margin-top:40px;">
             <p>توقيع الشركة:</p>
-            <img src="' . $signatureUrl . '" alt="توقيع" width="150">
+            <img src="' . $signatureUrl . '" width="120">
         </div>
     </body>
     </html>';
 
-        $pdf = Pdf::setOption([
-            'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true,
-        ])
-            ->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'))
-            ->setPaper('A4', 'portrait');
+        $mpdf->WriteHTML($html);
 
-        return response()->streamDownload(
-            fn() => print($pdf->output()),
-            "invoice-{$order->id}.pdf"
-        );
+        return response($mpdf->Output("invoice-{$order->id}.pdf", 'I'))
+            ->header('Content-Type', 'application/pdf');
     }
 
     // حذف طلب (للمستخدم أو admin)
