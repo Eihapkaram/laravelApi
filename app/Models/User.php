@@ -27,6 +27,8 @@ class User extends Authenticatable
         'role',
         'phone',
         'img',
+        'latitude',   // ✅ أضفت الإحداثيات
+        'longitude', 
     ];
  public function getOrder() {
        return $this->hasMany(Order::class, 'user_id');

@@ -144,7 +144,26 @@ class SellerCustomerController extends Controller
         ->where('seller_id', $seller->id)
         ->where('user_id', $customerId)
         ->orderBy('created_at', 'desc')
-        ->get(['id', 'total_price', 'status', 'created_at']);
+        ->get();
+
+    return response()->json($orders);
+}
+// Route: GET /seller/customers/{customer}/orders
+public function sellerCustomerOrders($customer_id)
+{
+    $seller = auth()->user();
+
+    if ($seller->role !== 'seller') {
+        return response()->json(['error' => 'غير مصرح لك'], 403);
+    }
+
+    $orders = Order::with(['orderdetels.product'])
+        ->where('seller_id', $seller->id)
+        ->where('user_id', $customer_id)
+        ->whereHas('userorder', function($q) {
+            $q->where('role', 'customer');
+        })
+        ->get();
 
     return response()->json($orders);
 }

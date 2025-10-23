@@ -196,7 +196,10 @@ Route::middleware('auth:api')->group(function () {
     // Order 
     Route::post('order/add', [OrderController::class, 'createOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
-    Route::get('order/count/seller', [OrderController::class, 'SellerOrderCount']);
+    //orders Seller
+    Route::get('sellerApprovedOrdershow', [OrderController::class, 'sellerApprovedOrders']);
+    Route::get('ALLorder/show/forSeller', [OrderController::class, 'sellerOrdersForCustomers']);
+    Route::get('order/count/seller', [OrderController::class, 'sellerOrdersCount']);
 
     Route::get('order/count', [OrderController::class, 'OrderCount']);
     Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);

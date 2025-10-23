@@ -169,21 +169,10 @@ class OrderController extends Controller
             'order'   => $order->load('orderdetels.product', 'userorder'),
         ], 201);
     }
-    // عرض  عدد طلبات المندوب الحالي
-    public function SellerOrderCount()
-    {
-        $seller = auth()->user();
 
-        if ($seller->role !== 'seller') {
-            return response()->json(['error' => 'غير مصرح لك بإنشاء طلبات'], 403);
-        }
-        $order = $seller->getOrder()->count();
 
-        return response()->json([
-            'message' => 'تم جلب  عدد الطلبات الخاصة بك بنجاح',
-            'orderCount'   => $order,
-        ], 200);
-    }
+
+
     // ✅ موافقة العميل على الطلب
     public function approveOrder($id)
     {
@@ -254,6 +243,71 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'تم جلب كل الطلبات التي قام بها البائعون بنجاح',
             'orders'  => $orders,
+        ], 200);
+    }
+    // 1️⃣ جميع الطلبات التي أنشأها البائع (لكل العملاء)
+    public function sellerOrdersForCustomers()
+    {
+        $seller = auth()->user();
+
+        if ($seller->role !== 'seller') {
+            return response()->json(['error' => 'غير مصرح لك'], 403);
+        }
+
+        // جلب كل الطلبات للبائع للعملاء الذين role = customer
+        $orders = Order::with(['orderdetels.product', 'userorder'])
+            ->where('seller_id', $seller->id)
+            ->whereHas('userorder', function ($query) {
+                $query->where('role', 'customer');
+            })
+            ->get();
+
+        return response()->json([
+            'message' => 'تم جلب الطلبات التي أنشأها البائع للعملاء بنجاح',
+            'orders'  => $orders
+        ], 200);
+    }
+
+    // ==========================
+    // 3️⃣ جميع الطلبات الموافق عليها التي أنشأها البائع لكل العملاء
+    // ==========================
+    public function sellerApprovedOrders()
+    {
+        $seller = auth()->user();
+
+        if ($seller->role !== 'seller') {
+            return response()->json(['error' => 'غير مصرح لك'], 403);
+        }
+
+        $orders = Order::with('orderdetels.product', 'userorder')
+            ->where('seller_id', $seller->id)
+            ->whereNotNull('approved_at')
+            ->get();
+
+        return response()->json([
+            'message' => 'تم جلب جميع الطلبات الموافق عليها للبائع',
+            'orders' => $orders
+        ], 200);
+    }
+    // 2️⃣ عدد الطلبات التي أنشأها البائع
+    public function sellerOrdersCount()
+    {
+        $seller = auth()->user();
+
+        if ($seller->role !== 'seller') {
+            return response()->json(['error' => 'غير مصرح لك'], 403);
+        }
+
+        // جلب عدد الطلبات للبائع لعملاء لديهم role = 'customer'
+        $count = Order::where('seller_id', $seller->id)
+            ->whereHas('userorder', function ($query) {
+                $query->where('role', 'customer');
+            })
+            ->count();
+
+        return response()->json([
+            'message' => 'تم جلب عدد الطلبات التي أنشأها البائع للعملاء',
+            'count' => $count
         ], 200);
     }
 
