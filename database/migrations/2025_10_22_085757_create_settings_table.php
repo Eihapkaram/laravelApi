@@ -13,6 +13,14 @@ class CreateSettingsTable extends Migration
             $table->string('site_name')->nullable();
             $table->string('logo')->nullable();
             $table->string('signature')->nullable();
+            $table->string('email')->nullable();
+            $table->string('facebook')->nullable();
+            $table->string('instgrame')->nullable();
+            $table->string('twiter')->nullable();
+            $table->string('whatsApp')->nullable();
+            $table->string('phone1')->nullable();
+            $table->string('phone2')->nullable();
+            $table->string('hotphone')->nullable();
             $table->timestamps();
         });
     }

@@ -31,6 +31,18 @@ class User extends Authenticatable
  public function getOrder() {
        return $this->hasMany(Order::class, 'user_id');
     }
+    // العملاء التابعين للبائع
+public function customers()
+{
+    return $this->belongsToMany(User::class, 'seller_customers', 'seller_id', 'customer_id');
+}
+
+// البائع اللي يتبعه العميل (عكس العلاقة)
+public function seller()
+{
+    return $this->belongsToMany(User::class, 'seller_customers', 'customer_id', 'seller_id');
+}
+
     public function sales()
 {
     // الطلبات اللي أنشأها المستخدم كـ "بائع"

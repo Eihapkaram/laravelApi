@@ -195,7 +195,7 @@ class OrderController extends Controller
             'orderCount'   => $order,
         ], 200);
     }
-    // عرض طلبات المستخدم الحالي
+    // عرض طلبات المستخدم الحالي sales
     public function showOrder()
     {
         $user = auth()->user();
@@ -206,6 +206,23 @@ class OrderController extends Controller
             'order'   => $order,
         ], 200);
     }
+
+     public function showAllOrdersBySellers()
+{
+    // جلب كل المستخدمين اللي دورهم seller
+    $sellers = User::where('role', 'seller')->pluck('id'); // بس ID البائعين
+
+    // جلب كل الطلبات اللي عاملها هؤلاء البائعين
+    $orders = Order::with('orderdetels.product', 'user', 'seller')
+        ->whereIn('seller_id', $sellers)
+        ->get();
+
+    return response()->json([
+        'message' => 'تم جلب كل الطلبات التي قام بها البائعون بنجاح',
+        'orders'  => $orders,
+    ], 200);
+}
+
 
     // عرض آخر طلب
     public function showlatestOrder()
@@ -300,29 +317,63 @@ class OrderController extends Controller
         ini_set('memory_limit', '512M');
 
         $order = Order::with('orderdetels.product', 'userorder')->findOrFail($id);
-
         $settings = Setting::first();
 
-        // Logo
         $logoPath = $settings && $settings->logo
-            ? 'file://' . public_path('storage/' . basename($settings->logo))
+            ? public_path('storage/' . $settings->logo)
             : null;
-
-        // Signature
-        $signaturePath = $settings && $settings->signature
-            ? 'file://' . public_path('storage/' . basename($settings->signature))
-            : null;
-
 
         $html = '
     <html lang="ar" dir="rtl">
     <head>
         <meta charset="UTF-8">
         <style>
-            body { font-family: "dejavusans", sans-serif; text-align: right; direction: rtl; }
-            table { border-collapse: collapse; width: 100%; margin-top: 15px; }
-            th, td { border: 1px solid #000; padding: 8px; text-align: center; }
-            th { background-color: #ddd; }
+            body { 
+                font-family: "dejavusans", sans-serif; 
+                text-align: right; 
+                direction: rtl; 
+                font-size: 14px;
+                color: #333;
+            }
+            h3 { 
+                margin-bottom: 5px; 
+                color: #1e3a8a; 
+            }
+            table { 
+                border-collapse: collapse; 
+                width: 100%; 
+                margin-top: 15px; 
+                font-size: 13px;
+            }
+            th, td { 
+                border: 1px solid #000; 
+                padding: 10px; 
+                text-align: center; 
+            }
+            th { 
+                background-color: #f3f4f6; 
+                color: #111827; 
+            }
+            tbody tr:nth-child(even) { 
+                background-color: #f9fafb; 
+            }
+            p, td { 
+                margin: 4px 0; 
+            }
+            .total { 
+                font-weight: bold; 
+                font-size: 15px; 
+                color: #1e40af; 
+            }
+            .signature { 
+                margin-top: 40px; 
+                font-size: 16px; 
+                font-weight: bold; 
+                color: #1e3a8a;
+            }
+            .customer-info p {
+                margin: 2px 0;
+            }
         </style>
     </head>
     <body>
@@ -334,10 +385,12 @@ class OrderController extends Controller
         <p><strong>رقم الطلب:</strong> ' . $order->id . '</p>
         <p><strong>تاريخ الطلب:</strong> ' . $order->created_at->format('Y-m-d') . '</p>
 
-        <h4>معلومات العميل</h4>
-        <p><strong>الاسم:</strong> ' . $order->userorder->name . '</p>
-        <p><strong>الهاتف:</strong> ' . $order->phone . '</p>
-        <p><strong>العنوان:</strong> ' . $order->street . ', ' . $order->city . ', ' . $order->governorate . '</p>
+        <div class="customer-info">
+            <h4>معلومات العميل</h4>
+            <p><strong>الاسم:</strong> ' . $order->userorder->name . '</p>
+            <p><strong>الهاتف:</strong> ' . $order->phone . '</p>
+            <p><strong>العنوان:</strong> ' . $order->street . ', ' . $order->city . ', ' . $order->governorate . '</p>
+        </div>
 
         <table>
             <thead>
@@ -354,8 +407,8 @@ class OrderController extends Controller
             $html .= '<tr>
             <td>' . $item->product->titel . '</td>
             <td>' . $item->quantity . '</td>
-            <td>' . number_format($item->price, 2) . ' جنيه</td>
-            <td>' . number_format($item->price * $item->quantity, 2) . ' جنيه</td>
+            <td>' . number_format(round($item->price), 0) . ' جنيه</td>
+            <td>' . number_format(round($item->price * $item->quantity), 0) . ' جنيه</td>
         </tr>';
         }
 
@@ -363,11 +416,11 @@ class OrderController extends Controller
             </tbody>
         </table>
 
-        <p><strong>المجموع الكلي:</strong> ' . number_format($order->total_price, 2) . ' جنيه</p>
+        <p class="total"><strong>المجموع الكلي:</strong> ' . number_format(round($order->total_price), 0) . ' جنيه</p>
 
-        <div align="left" style="margin-top:40px;">
+        <div class="signature" align="left">
             <p>توقيع الشركة:</p>
-            ' . (file_exists($signaturePath) ? '<img src="' . $signaturePath . '" width="100">' : '') . '
+            ' . ($settings && $settings->site_name ? '<strong>' . $settings->site_name . '</strong>' : '') . '
         </div>
     </body>
     </html>';
@@ -385,6 +438,7 @@ class OrderController extends Controller
             echo $mpdf->Output('', 'S');
         }, 'invoice-' . $order->id . '.pdf');
     }
+
 
     // حذف طلب (للمستخدم أو admin)
     public function deleteOrder($id)

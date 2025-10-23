@@ -15,6 +15,7 @@ use App\Http\Controllers\OfferController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SellerCustomerController;
 use Illuminate\Support\Facades\Storage;
 
 /*
@@ -177,6 +178,14 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout-phone', [UserController::class, 'logoutphone']);
     Route::get('user/info', [UserController::class, 'info']);
     Route::post('user/addPhoto', [UserController::class, 'addimg']);
+    //seller 
+    Route::get('/seller/customers', [SellerCustomerController::class, 'index']);
+    Route::get('/seller/customers/{id}', [SellerCustomerController::class, 'show']);
+    Route::get('/seller/customers/{id}/orders', [SellerCustomerController::class, 'customerOrders']);
+    Route::get('/seller/customersHeAdd', [SellerCustomerController::class, 'myCustomers']);
+    Route::post('seller/customers/new', [SellerCustomerController::class, 'createNewCustomer']);
+    Route::post('/seller/customers', [SellerCustomerController::class, 'store']);
+    Route::delete('/seller/customers/{id}', [SellerCustomerController::class, 'destroy']);
 
     // Cart
     Route::post('cart/add', [AddToController::class, 'addfun']);
@@ -187,6 +196,7 @@ Route::middleware('auth:api')->group(function () {
     // Order
     Route::post('order/add', [OrderController::class, 'createOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
+
     Route::get('order/count', [OrderController::class, 'OrderCount']);
     Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
     Route::get('order/show/latest', [OrderController::class, 'showlatestOrder']);
@@ -215,7 +225,6 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     //فاتورا 
     Route::get('/orders/{id}/invoice', [OrderController::class, 'generateInvoice']);
-
 });
 
 // 🧑‍💻 Admin Routes
@@ -243,7 +252,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::delete('page/Delete/{id}', [PageController::class, 'DeletePage']);
 
     // User
-    Route::get('orders/show/all', [OrderController::class, 'showAllOrders']);
+
     Route::get('usersinfo', [UserController::class, 'userinfo'])->name('userinfo');
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
     Route::post('/import/users', [UserController::class, 'importUsers']);
@@ -258,9 +267,13 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('/offers', [OfferController::class, 'store']);
     Route::post('/offers/{id}', [OfferController::class, 'update']);
     Route::delete('/offers/{id}', [OfferController::class, 'destroy']);
+    //inquiries
     Route::get('/inquiries', [InquiryController::class, 'index']);
     Route::patch('/inquiries/{id}/status', [InquiryController::class, 'updateStatus']);
     //settings
     Route::post('settings/create', [SettingController::class, 'create']);
     Route::post('settings/update', [SettingController::class, 'update']);
+    //all orders// and //by seller
+    Route::get('allorderbyseller', [OrderController::class, 'showAllOrdersBySellers']);
+    Route::get('orders/show/all', [OrderController::class, 'showAllOrders']);
 });
