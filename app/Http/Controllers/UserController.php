@@ -21,8 +21,8 @@ class UserController extends Controller
             'email' => 'required|email|unique:users',
             'password' => 'required|min:8',
             'last_name' => 'required',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
         ]);
 
         if ($request->hasFile('img')) {
@@ -57,8 +57,8 @@ class UserController extends Controller
             'password' => 'required|min:8',
             'last_name' => 'required',
             'img' => 'image|mimes:jpeg,png,jpg,gif,webp',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
         ]);
 
         if ($request->hasFile('img')) {
@@ -167,7 +167,29 @@ class UserController extends Controller
     {
         $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude')->get();
         return response()->json(['user' => $userdata], 200);
-    }
+    } 
+    // جلب المستخدمين الاقرب للموقع الي هتبعته لي url GET /api/users-nearby?latitude=30.0444&longitude=31.2357&distance=10
+
+public function usersNearby(Request $request)
+{
+    $request->validate([
+        'latitude' => 'required|numeric',
+        'longitude' => 'required|numeric',
+        'distance' => 'nullable|numeric'
+    ]);
+
+    $latitude = $request->latitude;
+    $longitude = $request->longitude;
+    $distance = $request->distance ?? 10; // افتراضي 10 كم هيجيب كل المستخدمين ضمن 15 كم من النقطة المحددة.
+
+    $users = User::nearby($latitude, $longitude, $distance)->get();
+
+    return response()->json([
+        'count' => $users->count(),
+        'users' => $users
+    ], 200);
+}
+
 
     public function OneUserinfo($id)
     {
@@ -221,6 +243,8 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
             'phone' => [
                 'required',
                 'regex:/^(011|012|015|010)[0-9]{8}$/'
@@ -235,6 +259,8 @@ class UserController extends Controller
             $user = User::create([
                 'phone' => $request->phone,
                 'name' => $request->name,
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
             ]);
             $user->notify(new WelcomeUser($user));
         }
