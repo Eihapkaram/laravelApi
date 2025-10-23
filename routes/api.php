@@ -193,9 +193,10 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('cart/delete/{id}', [AddToController::class, 'deleteCartItem']);
     Route::delete('cart/deleteAll', [AddToController::class, 'deleteAllCartItems']);
 
-    // Order
+    // Order 
     Route::post('order/add', [OrderController::class, 'createOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
+    Route::get('order/count/seller', [OrderController::class, 'SellerOrderCount']);
 
     Route::get('order/count', [OrderController::class, 'OrderCount']);
     Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);

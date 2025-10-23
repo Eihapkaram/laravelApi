@@ -96,8 +96,6 @@ class OrderController extends Controller
     }
 
 
-
-    // ✅ إنشاء طلب بواسطة بائع
     public function createBySeller(Request $request)
     {
         $seller = auth()->user();
@@ -107,49 +105,85 @@ class OrderController extends Controller
         }
 
         $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'total_price' => 'required|numeric',
-            'shipping_address' => 'required|string',
-            'city' => 'nullable|string',
-            'governorate' => 'nullable|string',
-            'street' => 'nullable|string',
-            'phone' => 'nullable|string',
-            'store_banner' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
+            'user_id'       => 'required|exists:users,id',
+            'city'          => 'required|string|max:100',
+            'governorate'   => 'required|string|max:100',
+            'street'        => 'required|string|max:255',
+            'phone'         => ['required', 'regex:/^(010|011|012|015)[0-9]{8}$/'],
+            'store_name'    => 'nullable|string|max:255',
+            'status'        => 'nullable|string|in:pending,paid,shipped,completed,cancelled',
+            'payment_method' => 'nullable|string|in:cod,credit_card,paypal',
         ]);
 
+        // جلب العميل
         $customer = User::find($request->user_id);
 
         if ($customer->role !== 'customer') {
             return response()->json(['error' => 'يمكنك فقط إنشاء طلبات لعملاء'], 400);
         }
-        // رفع الصورة الرئيسية
-        $path = null;
-        if ($request->hasFile('banner')) {
-            $image = $request->file('banner')->getClientOriginalName();
-            $path = $request->file('banner')->storeAs('storebanners', $image, 'public');
+
+        // ✅ اجلب سلة البائع نفسه
+        $cart = $seller->getcart()->with('proCItem.product')->first();
+
+        if (!$cart || $cart->proCItem->isEmpty()) {
+            return response()->json(['message' => 'سلة البائع فارغة'], 400);
         }
 
+        // حساب الإجمالي
+        $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
+
+        // إنشاء الطلب للعميل
         $order = Order::create([
-            'user_id' => $customer->id,
-            'seller_id' => $seller->id,
-            'total_price' => $request->total_price,
-            'shipping_address' => $request->shipping_address,
-            'city' => $request->city,
-            'governorate' => $request->governorate,
-            'street' => $request->street,
-            'phone' => $request->phone,
-            'status' => 'pending',
-            'approval_status' => 'pending',
-            'store_banner' => $path,
+            'user_id'        => $customer->id,
+            'seller_id'      => $seller->id,
+            'total_price'    => $total,
+            'status'         => $request->status ?? 'pending',
+            'city'           => $request->city,
+            'governorate'    => $request->governorate,
+            'street'         => $request->street,
+            'phone'          => $request->phone,
+            'store_name'     => $request->store_name,
+            'payment_method' => $request->payment_method,
         ]);
+
+        // إرسال إشعارات
+        if ($order) {
+            $admins = User::where('role', 'admin')->get();
+            Notification::send($admins, new CreatOrder($seller, $order)); // إشعار للأدمن
+        }
+
+        // نسخ تفاصيل السلة إلى تفاصيل الطلب
+        foreach ($cart->proCItem as $item) {
+            $order->orderdetels()->create([
+                'product_id' => $item->product_id,
+                'quantity'   => $item->quantity,
+                'price'      => $item->product->price,
+            ]);
+        }
         $customer->notify(new OrderCreatedBySellerNotification($order, $seller));
+        // مسح سلة البائع بعد إنشاء الطلب
+        $cart->proCItem()->truncate();
+
         return response()->json([
-            'message' => 'تم إنشاء الطلب بنجاح في انتظار موافقة العميل',
-            'order' => $order->load('orderdetels.product', 'userorder'),
+            'message' => 'تم إنشاء الطلب بنجاح للعميل',
+            'order'   => $order->load('orderdetels.product', 'userorder'),
         ], 201);
     }
+    // عرض  عدد طلبات المندوب الحالي
+    public function SellerOrderCount()
+    {
+        $seller = auth()->user();
 
+        if ($seller->role !== 'seller') {
+            return response()->json(['error' => 'غير مصرح لك بإنشاء طلبات'], 403);
+        }
+        $order = $seller->getOrder()->count();
 
+        return response()->json([
+            'message' => 'تم جلب  عدد الطلبات الخاصة بك بنجاح',
+            'orderCount'   => $order,
+        ], 200);
+    }
     // ✅ موافقة العميل على الطلب
     public function approveOrder($id)
     {
@@ -207,21 +241,21 @@ class OrderController extends Controller
         ], 200);
     }
 
-     public function showAllOrdersBySellers()
-{
-    // جلب كل المستخدمين اللي دورهم seller
-    $sellers = User::where('role', 'seller')->pluck('id'); // بس ID البائعين
+    public function showAllOrdersBySellers()
+    {
+        // جلب كل المستخدمين اللي دورهم seller
+        $sellers = User::where('role', 'seller')->pluck('id'); // بس ID البائعين
 
-    // جلب كل الطلبات اللي عاملها هؤلاء البائعين
-    $orders = Order::with('orderdetels.product', 'user', 'seller')
-        ->whereIn('seller_id', $sellers)
-        ->get();
+        // جلب كل الطلبات اللي عاملها هؤلاء البائعين
+        $orders = Order::with('orderdetels.product', 'user', 'seller')
+            ->whereIn('seller_id', $sellers)
+            ->get();
 
-    return response()->json([
-        'message' => 'تم جلب كل الطلبات التي قام بها البائعون بنجاح',
-        'orders'  => $orders,
-    ], 200);
-}
+        return response()->json([
+            'message' => 'تم جلب كل الطلبات التي قام بها البائعون بنجاح',
+            'orders'  => $orders,
+        ], 200);
+    }
 
 
     // عرض آخر طلب

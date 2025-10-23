@@ -40,10 +40,11 @@ class OrderCreatedBySellerNotification extends Notification
         return (new MailMessage)
             ->subject('طلب جديد من ' . $this->seller->name)
             ->greeting('مرحباً ' . $notifiable->name . ' 👋')
-            ->line('قام البائع ' . $this->seller->name . ' بإنشاء طلب جديد لك.')
+            ->line('قام المندوب ' . $this->seller->name . ' بإنشاء طلب جديد لك.')
             ->line('قيمة الطلب: ' . $this->order->total_price . ' جنيه.')
-            ->action('عرض الطلب', url('/orders/' . $this->order->id))
-            ->line('الرجاء تأكيد الطلب للموافقة أو الرفض.');
+             ->line(' الرجاء تأكيد الطلبية ب ا لموافقة أو الرفض لكي يتم تاكيد الطلبية و شحنها لك ')
+            ->action('عرض الطلب', url('/orders/' . $this->order->id));
+           
     }
 
     /**
@@ -53,7 +54,7 @@ class OrderCreatedBySellerNotification extends Notification
     {
         return [
             'type' => 'order_created_by_seller',
-            'message' => "قام {$this->seller->name} بإنشاء طلب جديد بقيمة {$this->order->total_price} جنيه.",
+            'message' => "قام {$this->seller->name} بإنشاء طلب جديد بقيمة {$this->order->total_price} الرجاء تأكيد الطلبية ب ا لموافقة أو الرفض لكي يتم تاكيد الطلبية و شحنها لك جنيه.",
             'order_id' => $this->order->id,
             'seller_name' => $this->seller->name,
             'orderDetels' => $this->order->with('orderdetels.product')->get(),
