@@ -359,65 +359,68 @@ class UserController extends Controller
         return response()->json(['message' => 'تم استيراد المستخدمين بنجاح']);
     }
 
-  public function exportUsers()
-{
-    try {
-        $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
-        $tempPath = storage_path('app/' . $fileName);
+    public function exportUsers()
+    {
+        try {
+            $users = User::all();
 
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Users');
 
-        // دعم الحروف العربية
-        $sheet->getDefaultStyle()->getFont()->setName('Arial');
-        $sheet->getDefaultStyle()->getFont()->setSize(12);
+            // رؤوس الأعمدة
+            $sheet->setCellValue('A1', 'ID')
+                ->setCellValue('B1', 'Name')
+                ->setCellValue('C1', 'Last Name')
+                ->setCellValue('D1', 'Email')
+                ->setCellValue('E1', 'Phone')
+                ->setCellValue('F1', 'Role')
+                ->setCellValue('G1', 'Last Seen')
+                ->setCellValue('H1', 'Image');
 
-        // العناوين
-        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img', 'Latitude', 'Longitude'];
-        $sheet->fromArray([$headers], null, 'A1');
+            $row = 2;
+            foreach ($users as $user) {
+                $sheet->setCellValue('A' . $row, $user->id)
+                    ->setCellValue('B' . $row, $user->name ?? '')
+                    ->setCellValue('C' . $row, $user->last_name ?? '')
+                    ->setCellValue('D' . $row, $user->email ?? '')
+                    ->setCellValue('E' . $row, $user->phone ?? '')
+                    ->setCellValue('F' . $row, $user->role ?? '')
+                    ->setCellValue('G' . $row, $user->last_seen ?? '');
 
-        $row = 2;
-
-        // استيراد المستخدمين على دفعات لتقليل استهلاك الذاكرة
-        User::chunk(500, function ($usersChunk) use ($sheet, &$row) {
-            foreach ($usersChunk as $user) {
-                $sheet->setCellValueExplicit('A' . $row, $user->id ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-                $sheet->setCellValue('B' . $row, $user->name ?? '');
-                $sheet->setCellValue('C' . $row, $user->last_name ?? '');
-                $sheet->setCellValue('D' . $row, $user->email ?? '');
-                $sheet->setCellValue('E' . $row, $user->phone ?? '');
-                $sheet->setCellValue('F' . $row, $user->role ?? '');
-                $sheet->setCellValue('G' . $row, '********'); // لا نصدر الباسورد الحقيقي
-
-                // إضافة الصورة إذا موجودة
-                if ($user->img && file_exists(public_path($user->img))) {
-                    $drawing = new Drawing();
-                    $drawing->setPath(public_path($user->img));
-                    $drawing->setCoordinates('H' . $row);
-                    $drawing->setHeight(50);
-                    $drawing->setWorksheet($sheet);
+                // إضافة الصورة إذا موجودة وصالحة
+                if ($user->img && file_exists(public_path('storage/' . $user->img))) {
+                    $ext = pathinfo($user->img, PATHINFO_EXTENSION);
+                    if (in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif'])) {
+                        $drawing = new Drawing();
+                        $drawing->setPath(public_path('storage/' . $user->img));
+                        $drawing->setCoordinates('H' . $row);
+                        $drawing->setHeight(50);
+                        $drawing->setWorksheet($sheet);
+                    } else {
+                        $sheet->setCellValue('H' . $row, 'Unsupported image');
+                    }
                 } else {
-                    $sheet->setCellValue('H' . $row, '');
+                    $sheet->setCellValue('H' . $row, 'No image');
                 }
 
-                $sheet->setCellValue('I' . $row, $user->latitude ?? '');
-                $sheet->setCellValue('J' . $row, $user->longitude ?? '');
                 $row++;
             }
-        });
 
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($tempPath);
+            $writer = new Xlsx($spreadsheet);
 
-        return response()->download($tempPath)->deleteFileAfterSend(true);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'error' => true,
-            'message' => $e->getMessage(),
-            'file' => method_exists($e, 'getFile') ? $e->getFile() : null,
-            'line' => method_exists($e, 'getLine') ? $e->getLine() : null,
-        ], 500);
+            // رجوع Response صالح دائماً
+            return response()->streamDownload(function () use ($writer) {
+                $writer->save('php://output');
+            }, 'users.xlsx', [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
+        } catch (\Throwable $e) {
+            // لو حصل أي خطأ
+            return response()->json([
+                'error' => 'Export failed',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
-}
 }
