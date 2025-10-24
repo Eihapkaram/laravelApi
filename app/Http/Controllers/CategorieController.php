@@ -74,7 +74,6 @@ class CategorieController extends Controller
             'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
             'banner' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
             'description' => 'required',
-            'page_id' => 'required',
         ]);
 
         if (!$request || !$id) {
