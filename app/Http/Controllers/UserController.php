@@ -365,7 +365,7 @@ class UserController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
 
         // العناوين
-        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img','Latitude','Longitude'];
+        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role','Img','Latitude','Longitude'];
         $sheet->fromArray([$headers], null, 'A1');
 
         // البيانات
@@ -378,7 +378,6 @@ class UserController extends Controller
                 $user->email,
                 $user->phone,
                 $user->role,
-                '********', // 🔒 ما نصدرش الباسورد الأصلي
                 $user->img,
                 $user->latitude,
                 $user->longitude,
