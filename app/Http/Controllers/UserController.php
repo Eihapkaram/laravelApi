@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\Notifiable;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Facades\Hash;
 
@@ -356,41 +357,63 @@ class UserController extends Controller
         return response()->json(['message' => 'تم استيراد المستخدمين بنجاح']);
     }
 
-   public function exportUsers()
-{
-    // ⚡ نستخدم chunk لتجنب استهلاك الذاكرة
-    $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
-    $tempPath = storage_path('app/' . $fileName);
+    public function exportUsers()
+    {
+        try {
+            $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
+            $tempPath = storage_path('app/' . $fileName);
 
-    $spreadsheet = new Spreadsheet();
-    $sheet = $spreadsheet->getActiveSheet();
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
 
-    // العناوين
-    $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img', 'Latitude', 'Longitude'];
-    $sheet->fromArray([$headers], null, 'A1');
+            // دعم الحروف العربية
+            $sheet->getDefaultStyle()->getFont()->setName('Arial');
+            $sheet->getDefaultStyle()->getFont()->setSize(12);
 
-    $row = 2; // بداية البيانات بعد العنوان
+            // العناوين
+            $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img', 'Latitude', 'Longitude'];
+            $sheet->fromArray([$headers], null, 'A1');
 
-    User::chunk(500, function($usersChunk) use ($sheet, &$row) {
-        foreach ($usersChunk as $user) {
-            $sheet->setCellValue('A'.$row, $user->id);
-            $sheet->setCellValue('B'.$row, $user->name);
-            $sheet->setCellValue('C'.$row, $user->last_name);
-            $sheet->setCellValue('D'.$row, $user->email);
-            $sheet->setCellValue('E'.$row, $user->phone);
-            $sheet->setCellValue('F'.$row, $user->role);
-            $sheet->setCellValue('G'.$row, '********'); // لا نصدر الباسورد
-            $sheet->setCellValue('H'.$row, $user->img ?? '');
-            $sheet->setCellValue('I'.$row, $user->latitude ?? '');
-            $sheet->setCellValue('J'.$row, $user->longitude ?? '');
-            $row++;
+            $row = 2;
+
+            User::chunk(500, function ($usersChunk) use ($sheet, &$row) {
+                foreach ($usersChunk as $user) {
+                    $sheet->setCellValueExplicit('A' . $row, $user->id, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                    $sheet->setCellValue('B' . $row, $user->name ?? '');
+                    $sheet->setCellValue('C' . $row, $user->last_name ?? '');
+                    $sheet->setCellValue('D' . $row, $user->email ?? '');
+                    $sheet->setCellValue('E' . $row, $user->phone ?? '');
+                    $sheet->setCellValue('F' . $row, $user->role ?? '');
+                    $sheet->setCellValue('G' . $row, '********');
+
+                    // إضافة الصورة في الخلية H
+                    if ($user->img && file_exists(public_path($user->img))) {
+                        $drawing = new Drawing();
+                        $drawing->setPath(public_path($user->img));
+                        $drawing->setCoordinates('H' . $row);
+                        $drawing->setHeight(50); // ارتفاع الصورة
+                        $drawing->setWorksheet($sheet);
+                    } else {
+                        $sheet->setCellValue('H' . $row, '');
+                    }
+
+                    $sheet->setCellValue('I' . $row, $user->latitude ?? '');
+                    $sheet->setCellValue('J' . $row, $user->longitude ?? '');
+                    $row++;
+                }
+            });
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save($tempPath);
+
+            return response()->download($tempPath)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+                'file' => method_exists($e, 'getFile') ? $e->getFile() : null,
+                'line' => method_exists($e, 'getLine') ? $e->getLine() : null,
+            ], 500);
         }
-    });
-
-    $writer = new Xlsx($spreadsheet);
-    $writer->save($tempPath);
-
-    return response()->download($tempPath)->deleteFileAfterSend(true);
-}
-
+    }
 }
