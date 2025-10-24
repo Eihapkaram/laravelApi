@@ -83,7 +83,7 @@ class UserController extends Controller
             'phone' => auth()->user()->find($id)->phone,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
-            'img' => $path ?? 'null',
+            'img' => $path ?? $user->img,
             'latitude' => $request->latitude ?? $user->latitude,
             'longitude' => $request->longitude ?? $user->longitude,
         ]);
