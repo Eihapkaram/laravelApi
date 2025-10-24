@@ -282,14 +282,15 @@ class ProductController extends Controller
 
         // حفظ Excel مؤقت
         $excelFileName = 'products.xlsx';
-        $excelPath = storage_path('app/' . $excelFileName);
+        $excelPath = storage_path('products.xlsx'); // استخدم مسار عام متاح على Railway
         $writer = new Xlsx($spreadsheet);
         $writer->save($excelPath);
 
-        // إنشاء ملف ZIP
+        // إنشاء ZIP مؤقت
         $zipFileName = 'products_with_images.zip';
-        $zipPath = storage_path('app/' . $zipFileName);
+        $zipPath = storage_path($zipFileName);
         $zip = new ZipArchive();
+
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
 
             // إضافة Excel
@@ -308,9 +309,15 @@ class ProductController extends Controller
             $zip->close();
         }
 
-        // تنزيل ZIP و حذف الملفات المؤقتة
+        // حذف Excel مؤقت بعد إضافته للـ ZIP
+        if (file_exists($excelPath)) {
+            unlink($excelPath);
+        }
+
+        // تنزيل ZIP و حذفه بعد الإرسال
         return response()->download($zipPath)->deleteFileAfterSend(true);
     }
+
     // ✅ استيراد المنتجات من Excel
 
     public function import(Request $request)
