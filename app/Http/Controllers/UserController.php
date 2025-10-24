@@ -356,43 +356,41 @@ class UserController extends Controller
         return response()->json(['message' => 'تم استيراد المستخدمين بنجاح']);
     }
 
-    // ✅ تصدير المستخدمين إلى ملف Excel
-    public function exportUsers()
-    {
-        $users = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'password', 'img')->get();
+   public function exportUsers()
+{
+    // ⚡ نستخدم chunk لتجنب استهلاك الذاكرة
+    $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
+    $tempPath = storage_path('app/' . $fileName);
 
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
 
-        // العناوين
-        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img'];
-        $sheet->fromArray([$headers], null, 'A1');
+    // العناوين
+    $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img', 'Latitude', 'Longitude'];
+    $sheet->fromArray([$headers], null, 'A1');
 
-        // البيانات
-        $data = [];
-        foreach ($users as $user) {
-            $data[] = [
-                $user->id,
-                $user->name,
-                $user->last_name,
-                $user->email,
-                $user->phone,
-                $user->role,
-                '********', // 🔒 ما نصدرش الباسورد الأصلي
-                $user->img,
-                
+    $row = 2; // بداية البيانات بعد العنوان
 
-            ];
+    User::chunk(500, function($usersChunk) use ($sheet, &$row) {
+        foreach ($usersChunk as $user) {
+            $sheet->setCellValue('A'.$row, $user->id);
+            $sheet->setCellValue('B'.$row, $user->name);
+            $sheet->setCellValue('C'.$row, $user->last_name);
+            $sheet->setCellValue('D'.$row, $user->email);
+            $sheet->setCellValue('E'.$row, $user->phone);
+            $sheet->setCellValue('F'.$row, $user->role);
+            $sheet->setCellValue('G'.$row, '********'); // لا نصدر الباسورد
+            $sheet->setCellValue('H'.$row, $user->img ?? '');
+            $sheet->setCellValue('I'.$row, $user->latitude ?? '');
+            $sheet->setCellValue('J'.$row, $user->longitude ?? '');
+            $row++;
         }
+    });
 
-        $sheet->fromArray($data, null, 'A2');
+    $writer = new Xlsx($spreadsheet);
+    $writer->save($tempPath);
 
-        // حفظ الملف مؤقتًا
-        $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
-        $tempPath = storage_path('app/' . $fileName);
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($tempPath);
+    return response()->download($tempPath)->deleteFileAfterSend(true);
+}
 
-        return response()->download($tempPath)->deleteFileAfterSend(true);
-    }
 }
