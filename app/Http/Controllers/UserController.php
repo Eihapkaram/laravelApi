@@ -357,43 +357,42 @@ class UserController extends Controller
     }
 
     // ✅ تصدير المستخدمين إلى ملف Excel
-    public function exportUsers()
-    {
-        $users = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'password', 'img','latitude','longitude')->get();
+   public function exportUsers()
+{
+    $users = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'password', 'img','latitude','longitude')->get();
 
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
 
-        // العناوين
-        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img','Latitude','Longitude'];
-        $sheet->fromArray([$headers], null, 'A1');
+    // العناوين
+    $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img','Latitude','Longitude'];
+    $sheet->fromArray([$headers], null, 'A1');
 
-        // البيانات
-        $data = [];
-        foreach ($users as $user) {
-            $data[] = [
-                $user->id,
-                $user->name,
-                $user->last_name,
-                $user->email,
-                $user->phone,
-                $user->role,
-                '********', // 🔒 ما نصدرش الباسورد الأصلي
-                $user->img,
-                $user->latitude,
-                $user->longitude,
-
-            ];
-        }
-
-        $sheet->fromArray($data, null, 'A2');
-
-        // حفظ الملف مؤقتًا
-        $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
-        $tempPath = storage_path('app/' . $fileName);
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($tempPath);
-
-        return response()->download($tempPath)->deleteFileAfterSend(true);
+    // البيانات
+    $data = [];
+    foreach ($users as $user) {
+        $data[] = [
+            $user->id,
+            $user->name,
+            $user->last_name,
+            $user->email,
+            $user->phone,
+            $user->role,
+            '********', // 🔒 ما نصدرش الباسورد الأصلي
+            $user->img,
+            $user->latitude,
+            $user->longitude,
+        ];
     }
+    $sheet->fromArray($data, null, 'A2');
+
+    // حفظ الملف في مجلد مؤقت
+    $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
+    $tempPath = sys_get_temp_dir() . '/' . $fileName; // ✔️ استخدام مجلد مؤقت
+    $writer = new Xlsx($spreadsheet);
+    $writer->save($tempPath);
+
+    return response()->download($tempPath, $fileName)->deleteFileAfterSend(true);
+}
+
 }
