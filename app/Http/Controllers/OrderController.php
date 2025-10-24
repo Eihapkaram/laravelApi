@@ -232,7 +232,7 @@ class OrderController extends Controller
 public function showAllOrdersWithoutSeller()
 {
     // ✅ جلب كل الطلبات التي لا تحتوي على seller_id
-    $orders = Order::with(['orderdetels.product', 'user'])
+    $orders = Order::with(['orderdetels.product', 'userorder'])
         ->whereNull('seller_id')
         ->orderBy('created_at', 'desc')
         ->get();
