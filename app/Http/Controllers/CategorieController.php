@@ -101,8 +101,8 @@ class CategorieController extends Controller
             'name' => $request->name,
             'slug' => $request->slug,
             'description' => $request->description,
-            'img' => $path ?? null,
-            'banner' => $path2 ?? null,
+            'img' => $path ?? $pro->img,
+            'banner' => $path2 ?? $pro->banner,
             'page_id' =>$request->page_id,
         ]);
         return response()->json([
