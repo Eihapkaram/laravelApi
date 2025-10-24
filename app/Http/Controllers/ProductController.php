@@ -129,60 +129,55 @@ class ProductController extends Controller
     {
     }
 
-    public function update(Request $request, product $product, $id)
-    {
+   public function update(Request $request, $id)
+{
+    $pro = Product::findOrFail($id);
 
-        if (!$request) {
-            return response()->json(['error' => 'faild edit']);
-        }
-
-        $pro = product::findOrFail($id);
-
-        // رفع الصورة الرئيسية الجديدة
-        if ($request->hasFile('img')) {
-            $image = $request->file('img')->getClientOriginalName();
-            $path = $request->file('img')->storeAs('products', $image, 'public');
-            $pro->img = $path ??  $pro->img;
-            $pro->save();
-        }
-
-        $pro->update([
-            'titel' => $request->titel ?? $product->titel,
-            'description' => $request->description ?? $product->description,
-            'votes' => $request->votes ?? $product->votes,
-            'url' => $request->url ?? $product->url,
-            'price' => $request->price ?? $product->price,
-            'stock' => $request->stock ?? $product->stock,
-            'category_id' => $request->category_id ?? $product->category_id,
-            'page_id' => $request->page_id ?? $product->page_id,
-            'brand' => $request->brand ?? $product->brand,
-             'Counttype' => $request->Counttype ?? $product->Counttype,
-            'inCounttype' => $request->inCounttype ?? $product->inCounttype,
-            'discount' =>  $request->discount ?? $product->discount,
-        ]);
-
-        // تحديث الصور الإضافية
-        $product = product::findOrFail($id);
-
-        if ($request->hasFile('images_url')) {
-            foreach ($product->images as $oldImage) {
-                Storage::disk('public')->delete($oldImage->path);
-                $oldImage->delete();
-            }
-
-            foreach ($request->file('images_url') as $imageUP) {
-                $imageName = time().'_'.uniqid().'.'.$imageUP->getClientOriginalExtension();
-                $path = $imageUP->storeAs('products', $imageName, 'public');
-                $product->images()->create(['path' => $path]);
-            }
-        }
-
-        return response()->json([
-            'sucsse' => 'true',
-            'message' => 'edit item done',
-            'imgupdate' => $product->load('images'),
-        ]);
+    // رفع الصورة الرئيسية الجديدة (لو فيه)
+    if ($request->hasFile('img')) {
+        $image = $request->file('img')->getClientOriginalName();
+        $path = $request->file('img')->storeAs('products', $image, 'public');
+        $pro->img = $path;
     }
+
+    // تحديث باقي الحقول (مع تعويض القيم الناقصة)
+    $pro->update([
+        'titel' => $request->titel ?? $pro->titel,
+        'description' => $request->description ?? $pro->description,
+        'votes' => $request->votes ?? $pro->votes ?? 0,
+        'url' => $request->url ?? $pro->url ?? 'no-url',
+        'price' => $request->price ?? $pro->price ?? 0,
+        'stock' => $request->stock ?? $pro->stock ?? 0,
+        'category_id' => $request->category_id ?? $pro->category_id,
+        'page_id' => $request->page_id ?? $pro->page_id,
+        'brand' => $request->brand ?? $pro->brand ?? '',
+        'Counttype' => $request->Counttype ?? $pro->Counttype ?? '',
+        'inCounttype' => $request->inCounttype ?? $pro->inCounttype ?? '',
+        'discount' => $request->discount ?? $pro->discount ?? 0,
+        'img' => $pro->img, // عشان ما يضيع المسار بعد upload
+    ]);
+
+    // ✅ تحديث الصور الإضافية (images_url)
+    if ($request->hasFile('images_url')) {
+        foreach ($pro->images as $oldImage) {
+            Storage::disk('public')->delete($oldImage->path);
+            $oldImage->delete();
+        }
+
+        foreach ($request->file('images_url') as $imageUP) {
+            $imageName = time() . '_' . uniqid() . '.' . $imageUP->getClientOriginalExtension();
+            $path = $imageUP->storeAs('products', $imageName, 'public');
+            $pro->images()->create(['path' => $path]);
+        }
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Product updated successfully',
+        'product' => $pro->load('images'),
+    ]);
+}
+
 
     public function destroy($id)
     {
