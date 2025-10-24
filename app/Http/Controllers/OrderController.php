@@ -669,4 +669,156 @@ public function showApprovedOrdersBySellers()
 
         return response()->download($filePath)->deleteFileAfterSend(true);
     }
+    ///999999
+    class OrderController extends Controller
+{
+    // ✅ استيراد الطلبات الخاصة بالعملاء (بدون seller_id)
+    public function importCustomerOrders(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        $file = $request->file('file');
+        $spreadsheet = IOFactory::load($file->getPathname());
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
+
+        foreach (array_slice($rows, 1) as $row) {
+            if (!empty($row[1])) { // user_id موجود
+                Order::updateOrCreate(
+                    ['id' => $row[0] ?? null],
+                    [
+                        'user_id'        => $row[1],
+                        'seller_id'      => null, // ✅ بدون seller_id
+                        'total_price'    => $row[3] ?? 0,
+                        'status'         => $row[4] ?? 'pending',
+                        'city'           => $row[5] ?? null,
+                        'governorate'    => $row[6] ?? null,
+                        'street'         => $row[7] ?? null,
+                        'phone'          => $row[8] ?? null,
+                        'payment_method' => $row[9] ?? null,
+                        'approval_status' => $row[10] ?? 'pending',
+                    ]
+                );
+            }
+        }
+
+        return response()->json(['message' => '✅ تم استيراد طلبات العملاء بنجاح']);
+    }
+
+    // ✅ تصدير الطلبات الخاصة بالعملاء (بدون seller_id)
+    public function exportCustomerOrders()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // رؤوس الأعمدة
+        $headers = ['ID', 'User ID', 'Seller ID', 'Total Price', 'Status', 'City', 'Governorate', 'Street', 'Phone', 'Payment Method', 'Approval Status'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        // الطلبات التي لا تحتوي على seller_id
+        $orders = Order::whereNull('seller_id')->orderBy('created_at', 'desc')->get();
+        $row = 2;
+
+        foreach ($orders as $order) {
+            $sheet->fromArray([
+                $order->id,
+                $order->user_id,
+                $order->seller_id,
+                $order->total_price,
+                $order->status,
+                $order->city,
+                $order->governorate,
+                $order->street,
+                $order->phone,
+                $order->payment_method,
+                $order->approval_status,
+            ], null, 'A' . $row);
+            $row++;
+        }
+
+        $fileName = 'customer-orders-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        $filePath = storage_path('app/public/' . $fileName);
+        (new Xlsx($spreadsheet))->save($filePath);
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
+    }
+
+    // ✅ استيراد الطلبات الخاصة بالبائعين (approval_status = approved)
+    public function importApprovedSellerOrders(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        $file = $request->file('file');
+        $spreadsheet = IOFactory::load($file->getPathname());
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
+
+        foreach (array_slice($rows, 1) as $row) {
+            if (!empty($row[2])) { // seller_id موجود
+                Order::updateOrCreate(
+                    ['id' => $row[0] ?? null],
+                    [
+                        'user_id'        => $row[1] ?? null,
+                        'seller_id'      => $row[2],
+                        'total_price'    => $row[3] ?? 0,
+                        'status'         => $row[4] ?? 'pending',
+                        'city'           => $row[5] ?? null,
+                        'governorate'    => $row[6] ?? null,
+                        'street'         => $row[7] ?? null,
+                        'phone'          => $row[8] ?? null,
+                        'payment_method' => $row[9] ?? null,
+                        'approval_status' => 'approved', // ✅ نثبّت الحالة
+                    ]
+                );
+            }
+        }
+
+        return response()->json(['message' => '✅ تم استيراد طلبات البائعين الموافق عليها بنجاح']);
+    }
+
+    // ✅ تصدير الطلبات الخاصة بالبائعين الموافق عليها فقط
+    public function exportApprovedSellerOrders()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $headers = ['ID', 'User ID', 'Seller ID', 'Total Price', 'Status', 'City', 'Governorate', 'Street', 'Phone', 'Payment Method', 'Approval Status'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        // الطلبات التي تحتوي على seller_id وتمت الموافقة عليها
+        $orders = Order::whereNotNull('seller_id')
+            ->where('approval_status', 'approved')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $row = 2;
+
+        foreach ($orders as $order) {
+            $sheet->fromArray([
+                $order->id,
+                $order->user_id,
+                $order->seller_id,
+                $order->total_price,
+                $order->status,
+                $order->city,
+                $order->governorate,
+                $order->street,
+                $order->phone,
+                $order->payment_method,
+                $order->approval_status,
+            ], null, 'A' . $row);
+            $row++;
+        }
+
+        $fileName = 'approved-seller-orders-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        $filePath = storage_path('app/public/' . $fileName);
+        (new Xlsx($spreadsheet))->save($filePath);
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
+    }
+}
 }
