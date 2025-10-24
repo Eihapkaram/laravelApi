@@ -237,7 +237,7 @@ class OrderController extends Controller
 
         // جلب كل الطلبات اللي عاملها هؤلاء البائعين
         $orders = Order::with('orderdetels.product', 'user', 'seller')
-            ->find('seller_id')
+            ->where('seller_id', $sellers)
             ->get();
 
         return response()->json([
