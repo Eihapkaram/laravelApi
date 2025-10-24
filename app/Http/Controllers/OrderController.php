@@ -230,21 +230,20 @@ class OrderController extends Controller
         ], 200);
     }
 
-    public function showAllOrdersBySellers()
-    {
-        // جلب كل المستخدمين اللي دورهم seller
-        $sellers = User::where('role', 'seller')->pluck('id'); // بس ID البائعين
+  public function showAllOrdersBySellers()
+{
+    // ✅ جلب كل الطلبات التي لها seller_id (أي أنشأها بائع)
+    $orders = Order::with(['orderdetels.product', 'user', 'seller'])
+        ->whereNotNull('seller_id')
+        ->orderBy('created_at', 'desc')
+        ->get();
 
-        // جلب كل الطلبات اللي عاملها هؤلاء البائعين
-        $orders = Order::with('orderdetels.product', 'user', 'seller')
-            ->where('seller_id', $sellers)
-            ->get();
+    return response()->json([
+        'message' => 'تم جلب كل الطلبات التي قام بها البائعون بنجاح',
+        'orders'  => $orders,
+    ], 200);
+}
 
-        return response()->json([
-            'message' => 'تم جلب كل الطلبات التي قام بها البائعون بنجاح',
-            'orders'  => $orders,
-        ], 200);
-    }
     // 1️⃣ جميع الطلبات التي أنشأها البائع (لكل العملاء)
     public function sellerOrdersForCustomers()
     {
