@@ -237,14 +237,14 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('create', [ProductController::class, 'create']);
     Route::get('/products/export', [ProductController::class, 'export']);
     Route::post('/products/import', [ProductController::class, 'import']);
-    Route::put('update/{id}', [ProductController::class, 'update']);
+    Route::post('update/{id}', [ProductController::class, 'update']);
     Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
 
     // Category
     Route::post('categorie/add', [CategorieController::class, 'AddCate']);
     Route::post('categories/import', [CategorieController::class, 'import']);
     Route::get('categories/export', [CategorieController::class, 'export']);
-    Route::put('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
+    Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
     Route::delete('categorie/{id}', [CategorieController::class, 'DeleteCate']);
     Route::delete('categorie/delete/{id}', [CategorieController::class, 'DeleteCate']);
 
