@@ -7,15 +7,12 @@ use Illuminate\Http\Request;
 use App\Notifications\WelcomeUser;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\Notifiable;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
-
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -361,54 +358,76 @@ class UserController extends Controller
 
         return response()->json(['message' => 'تم استيراد المستخدمين بنجاح']);
     }
-// ✅ تصدير بيانات المستخدمين إلى Excel
-public function exportUsers()
-{
-    $spreadsheet = new Spreadsheet();
-    $sheet = $spreadsheet->getActiveSheet();
 
-    // رؤوس الأعمدة
-    $sheet->setCellValue('A1', 'ID');
-    $sheet->setCellValue('B1', 'Name');
-    $sheet->setCellValue('C1', 'Email');
-    $sheet->setCellValue('D1', 'Phone');
-    $sheet->setCellValue('E1', 'Role');
-    $sheet->setCellValue('F1', 'Last Seen');
-    $sheet->setCellValue('G1', 'Image');
-    $sheet->setCellValue('H1', 'Created At');
+    public function exportUsers()
+    {
+        try {
+            $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
+            $tempPath = storage_path('app/' . $fileName);
 
-    // البيانات
-    $users = User::all();
-    $row = 2;
-    foreach ($users as $user) {
-        $sheet->setCellValue('A' . $row, $user->id);
-        $sheet->setCellValue('B' . $row, $user->name ?? '');
-        $sheet->setCellValue('C' . $row, $user->email ?? '');
-        $sheet->setCellValue('D' . $row, $user->phone ?? '');
-        $sheet->setCellValue('E' . $row, $user->role ?? '');
-        $sheet->setCellValue('F' . $row, $user->last_seen ?? '');
-        $sheet->setCellValue('G' . $row, $user->img ?? '');
-        $sheet->setCellValue('H' . $row, $user->created_at);
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
 
-        $row++;
+            // دعم الحروف العربية
+            $sheet->getDefaultStyle()->getFont()->setName('Arial');
+            $sheet->getDefaultStyle()->getFont()->setSize(12);
+
+            // العناوين
+            $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img', 'Latitude', 'Longitude'];
+            $sheet->fromArray([$headers], null, 'A1');
+
+            $row = 2;
+
+            User::chunk(500, function ($usersChunk) use ($sheet, &$row) {
+                foreach ($usersChunk as $user) {
+                    $sheet->setCellValueExplicit('A' . $row, $user->id, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                    $sheet->setCellValue('B' . $row, $user->name ?? '');
+                    $sheet->setCellValue('C' . $row, $user->last_name ?? '');
+                    $sheet->setCellValue('D' . $row, $user->email ?? '');
+                    $sheet->setCellValue('E' . $row, $user->phone ?? '');
+                    $sheet->setCellValue('F' . $row, $user->role ?? '');
+                    $sheet->setCellValue('G' . $row, '********');
+
+                    // إضافة الصورة في الخلية H إذا موجودة وصالحة
+                    try {
+                        if ($user->img && file_exists(public_path($user->img))) {
+                            $drawing = new Drawing();
+                            $drawing->setPath(public_path($user->img));
+                            $drawing->setCoordinates('H' . $row);
+                            $drawing->setHeight(50); // تقليل ارتفاع الصورة لتقليل استهلاك الذاكرة
+                            $drawing->setWorksheet($sheet);
+                        } else {
+                            $sheet->setCellValue('H' . $row, '');
+                        }
+                    } catch (\Exception $imgEx) {
+                        $sheet->setCellValue('H' . $row, 'Image error');
+                    }
+
+                    $sheet->setCellValue('I' . $row, $user->latitude ?? '');
+                    $sheet->setCellValue('J' . $row, $user->longitude ?? '');
+                    $row++;
+                }
+            });
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save($tempPath);
+
+            // تحقق من وجود الملف قبل محاولة تحميله
+            if (!file_exists($tempPath)) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'ملف Excel لم يتم إنشاؤه'
+                ], 500);
+            }
+
+            return response()->download($tempPath)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+                'file' => method_exists($e, 'getFile') ? $e->getFile() : null,
+                'line' => method_exists($e, 'getLine') ? $e->getLine() : null,
+            ], 500);
+        }
     }
-
-    $writer = new Xlsx($spreadsheet);
-
-    // تحميل مباشر للملف في المتصفح ✅ بدون Null Response
-    $response = new \Symfony\Component\HttpFoundation\StreamedResponse(function () use ($writer) {
-        $writer->save('php://output');
-    });
-
-    $response->headers->set(
-        'Content-Type',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    );
-    $response->headers->set('Content-Disposition', 'attachment;filename="users.xlsx"');
-    $response->headers->set('Cache-Control', 'max-age=0, no-cache, no-store, must-revalidate');
-
-    return $response;
-}
-
-
 }
