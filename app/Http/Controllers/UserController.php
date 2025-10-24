@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notifiable;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Facades\Hash;
 
@@ -386,15 +387,19 @@ class UserController extends Controller
                     $sheet->setCellValue('F' . $row, $user->role ?? '');
                     $sheet->setCellValue('G' . $row, '********');
 
-                    // إضافة الصورة في الخلية H
-                    if ($user->img && file_exists(public_path($user->img))) {
-                        $drawing = new Drawing();
-                        $drawing->setPath(public_path($user->img));
-                        $drawing->setCoordinates('H' . $row);
-                        $drawing->setHeight(50); // ارتفاع الصورة
-                        $drawing->setWorksheet($sheet);
-                    } else {
-                        $sheet->setCellValue('H' . $row, '');
+                    // إضافة الصورة في الخلية H إذا موجودة وصالحة
+                    try {
+                        if ($user->img && file_exists(public_path($user->img))) {
+                            $drawing = new Drawing();
+                            $drawing->setPath(public_path($user->img));
+                            $drawing->setCoordinates('H' . $row);
+                            $drawing->setHeight(50); // تقليل ارتفاع الصورة لتقليل استهلاك الذاكرة
+                            $drawing->setWorksheet($sheet);
+                        } else {
+                            $sheet->setCellValue('H' . $row, '');
+                        }
+                    } catch (\Exception $imgEx) {
+                        $sheet->setCellValue('H' . $row, 'Image error');
                     }
 
                     $sheet->setCellValue('I' . $row, $user->latitude ?? '');
@@ -405,6 +410,14 @@ class UserController extends Controller
 
             $writer = new Xlsx($spreadsheet);
             $writer->save($tempPath);
+
+            // تحقق من وجود الملف قبل محاولة تحميله
+            if (!file_exists($tempPath)) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'ملف Excel لم يتم إنشاؤه'
+                ], 500);
+            }
 
             return response()->download($tempPath)->deleteFileAfterSend(true);
         } catch (\Exception $e) {
