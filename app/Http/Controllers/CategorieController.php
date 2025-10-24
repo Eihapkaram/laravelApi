@@ -103,7 +103,7 @@ class CategorieController extends Controller
             'description' => $request->description,
             'img' => $path ?? $pro->img,
             'banner' => $path2 ?? $pro->banner,
-            'page_id' =>$request->page_id,
+            'page_id' =>$id,
         ]);
         return response()->json([
             'massege' => 'update categorie is done',
