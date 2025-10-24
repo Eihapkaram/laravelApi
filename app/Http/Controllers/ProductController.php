@@ -249,14 +249,15 @@ class ProductController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // العناوين
+        // العناوين: كل الأعمدة الحالية + عمود للصور
         $sheet->fromArray([
-            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'Discount', 'Image Files']
+            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'Discount', 'Main Image', 'Additional Images']
         ]);
 
         $rows = [];
         foreach ($products as $product) {
-            $imageNames = $product->images->pluck('path')->map(function ($p) {
+            $mainImage = $product->img ? basename($product->img) : '';
+            $additionalImages = $product->images->pluck('path')->map(function ($p) {
                 return basename($p);
             })->implode(', ');
 
@@ -275,14 +276,15 @@ class ProductController extends Controller
                 $product->Counttype,
                 $product->inCounttype,
                 $product->discount,
-                $imageNames
+                $mainImage,
+                $additionalImages
             ];
         }
         $sheet->fromArray($rows, null, 'A2');
 
         // حفظ Excel مؤقت
         $excelFileName = 'products.xlsx';
-        $excelPath = storage_path('products.xlsx'); // استخدم مسار عام متاح على Railway
+        $excelPath = storage_path($excelFileName);
         $writer = new Xlsx($spreadsheet);
         $writer->save($excelPath);
 
@@ -296,8 +298,16 @@ class ProductController extends Controller
             // إضافة Excel
             $zip->addFile($excelPath, $excelFileName);
 
-            // إضافة الصور لكل منتج
+            // إضافة الصورة الرئيسية لكل منتج
             foreach ($products as $product) {
+                if ($product->img) {
+                    $imgFullPath = storage_path('app/public/' . $product->img);
+                    if (file_exists($imgFullPath)) {
+                        $zip->addFile($imgFullPath, 'images/' . basename($product->img));
+                    }
+                }
+
+                // إضافة الصور الإضافية
                 foreach ($product->images as $image) {
                     $imageFullPath = storage_path('app/public/' . $image->path);
                     if (file_exists($imageFullPath)) {
@@ -314,9 +324,10 @@ class ProductController extends Controller
             unlink($excelPath);
         }
 
-        // تنزيل ZIP و حذفه بعد الإرسال
+        // تنزيل ZIP وحذفه بعد الإرسال
         return response()->download($zipPath)->deleteFileAfterSend(true);
     }
+
 
     // ✅ استيراد المنتجات من Excel
 
