@@ -245,20 +245,20 @@ class ProductController extends Controller
     {
         $products = Product::with('images')->get();
 
+        // إنشاء ملف Excel مؤقت
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
         // العناوين
         $sheet->fromArray([
-            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'Discount', 'Images']
+            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'Discount', 'Image Files']
         ]);
 
         $rows = [];
         foreach ($products as $product) {
-            $imageNames = [];
-            foreach ($product->images as $img) {
-                $imageNames[] = basename($img->path);
-            }
+            $imageNames = $product->images->pluck('path')->map(function ($p) {
+                return basename($p);
+            })->implode(', ');
 
             $rows[] = [
                 $product->id,
@@ -275,12 +275,12 @@ class ProductController extends Controller
                 $product->Counttype,
                 $product->inCounttype,
                 $product->discount,
-                implode(',', $imageNames)
+                $imageNames
             ];
         }
         $sheet->fromArray($rows, null, 'A2');
 
-        // حفظ ملف Excel مؤقت
+        // حفظ Excel مؤقت
         $excelFileName = 'products.xlsx';
         $excelPath = storage_path('app/' . $excelFileName);
         $writer = new Xlsx($spreadsheet);
@@ -291,15 +291,16 @@ class ProductController extends Controller
         $zipPath = storage_path('app/' . $zipFileName);
         $zip = new ZipArchive();
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
-            // أضف ملف Excel للـ ZIP
+
+            // إضافة Excel
             $zip->addFile($excelPath, $excelFileName);
 
-            // أضف كل الصور للـ ZIP
+            // إضافة الصور لكل منتج
             foreach ($products as $product) {
-                foreach ($product->images as $img) {
-                    $fullPath = storage_path('app/public/' . $img->path);
-                    if (file_exists($fullPath)) {
-                        $zip->addFile($fullPath, 'images/' . basename($img->path));
+                foreach ($product->images as $image) {
+                    $imageFullPath = storage_path('app/public/' . $image->path);
+                    if (file_exists($imageFullPath)) {
+                        $zip->addFile($imageFullPath, 'images/' . basename($image->path));
                     }
                 }
             }
@@ -307,15 +308,9 @@ class ProductController extends Controller
             $zip->close();
         }
 
-        // مسح ملف Excel المؤقت بعد إضافته للـ ZIP
-        if (file_exists($excelPath)) {
-            unlink($excelPath);
-        }
-
-        // تنزيل ملف ZIP
+        // تنزيل ZIP و حذف الملفات المؤقتة
         return response()->download($zipPath)->deleteFileAfterSend(true);
     }
-
     // ✅ استيراد المنتجات من Excel
 
     public function import(Request $request)
