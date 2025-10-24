@@ -7,6 +7,7 @@ use Spatie\QueryBuilder\AllowedFilter;
 use App\Models\product;
 use App\Models\categorie;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Response;
 use App\Notifications\NewProduct;
 use ZipArchive;
 use App\Models\User;
@@ -249,7 +250,6 @@ class ProductController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // رؤوس الأعمدة
         $sheet->fromArray([
             ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'Discount', 'Main Image', 'Additional Images']
         ]);
@@ -280,34 +280,34 @@ class ProductController extends Controller
 
         $sheet->fromArray($rows, null, 'A2');
 
-        // حفظ Excel مؤقتًا
-        $tempDir   = storage_path('app/temp_export');
+        // مجلد مؤقت
+        $tempDir = storage_path('app/temp_export');
         if (!file_exists($tempDir)) {
             mkdir($tempDir, 0777, true);
         }
 
         $excelPath = $tempDir . '/products.xlsx';
-        $zipPath   = $tempDir . '/products_with_images.zip';
+        $zipPath = $tempDir . '/products_with_images.zip';
 
         $writer = new Xlsx($spreadsheet);
         $writer->save($excelPath);
 
-        // إنشاء ZIP فعلي
+        // إنشاء ملف ZIP
         $zip = new ZipArchive();
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
             $zip->addFile($excelPath, 'products.xlsx');
 
             foreach ($products as $product) {
                 if ($product->img) {
-                    $imgFullPath = storage_path('app/public/' . $product->img);
-                    if (file_exists($imgFullPath)) {
-                        $zip->addFile($imgFullPath, 'images/' . basename($product->img));
+                    $mainImg = storage_path('app/public/' . $product->img);
+                    if (file_exists($mainImg)) {
+                        $zip->addFile($mainImg, 'images/' . basename($mainImg));
                     }
                 }
                 foreach ($product->images as $image) {
-                    $imgFullPath = storage_path('app/public/' . $image->path);
-                    if (file_exists($imgFullPath)) {
-                        $zip->addFile($imgFullPath, 'images/' . basename($image->path));
+                    $img = storage_path('app/public/' . $image->path);
+                    if (file_exists($img)) {
+                        $zip->addFile($img, 'images/' . basename($img));
                     }
                 }
             }
@@ -315,13 +315,16 @@ class ProductController extends Controller
             $zip->close();
         }
 
-        // حذف Excel بعد ضغطه
+        // حذف excel بعد إضافته للـ zip
         if (file_exists($excelPath)) unlink($excelPath);
 
-        // ✅ رجّع ملف ZIP فعليًا بالـ headers الصحيحة
-        return response()->download($zipPath, 'products_with_images.zip', [
+        // ✅ إرسال كـ stream بصيغة ZIP حقيقية
+        return Response::stream(function () use ($zipPath) {
+            readfile($zipPath);
+        }, 200, [
             'Content-Type' => 'application/zip',
             'Content-Disposition' => 'attachment; filename="products_with_images.zip"',
+            'Content-Length' => filesize($zipPath),
         ])->deleteFileAfterSend(true);
     }
 
