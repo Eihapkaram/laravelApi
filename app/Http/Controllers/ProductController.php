@@ -241,6 +241,7 @@ class ProductController extends Controller
     }
 
     // ✅ تصدير المنتجات إلى Excel
+
     public function export()
     {
         $products = Product::with('images')->get();
@@ -280,18 +281,18 @@ class ProductController extends Controller
 
         $sheet->fromArray($rows, null, 'A2');
 
-        // استخدام مجلد مؤقت متوافق مع Railway
-        $tempExcel = sys_get_temp_dir() . '/products.xlsx';
-        $tempZip   = sys_get_temp_dir() . '/products_with_images.zip';
+        // حفظ Excel مؤقتًا
+        $tempDir   = sys_get_temp_dir();
+        $tempExcel = $tempDir . '/products.xlsx';
+        $tempZip   = $tempDir . '/products_with_images.zip';
 
-        // حفظ ملف Excel مؤقتًا
         $writer = new Xlsx($spreadsheet);
         $writer->save($tempExcel);
 
-        // إنشاء ملف ZIP يحتوي على Excel + الصور
+        // إنشاء ملف ZIP فعلي
         $zip = new ZipArchive();
         if ($zip->open($tempZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
-            // أضف ملف Excel
+            // أضف Excel
             $zip->addFile($tempExcel, 'products.xlsx');
 
             // أضف الصور
@@ -309,15 +310,17 @@ class ProductController extends Controller
                     }
                 }
             }
-
             $zip->close();
         }
 
-        // حذف ملف Excel المؤقت
+        // حذف ملف Excel بعد إضافته للـ ZIP
         if (file_exists($tempExcel)) unlink($tempExcel);
 
-        // تحميل ملف ZIP
-        return response()->download($tempZip, 'products_with_images.zip')->deleteFileAfterSend(true);
+        // إرجاع ملف ZIP فعليًا بالهيدر الصحيح
+        return response()->file($tempZip, [
+            'Content-Type' => 'application/zip',
+            'Content-Disposition' => 'attachment; filename="products_with_images.zip"',
+        ])->deleteFileAfterSend(true);
     }
 
     // ✅ استيراد المنتجات من Excel
