@@ -293,28 +293,7 @@ class OrderController extends Controller
             'orders'  => $orders
         ], 200);
     }
-
-    // ==========================
-    // 3️⃣ جميع الطلبات الموافق عليها التي أنشأها البائع لكل العملاء
-    // ==========================
-    public function sellerApprovedOrders()
-    {
-        $seller = auth()->user();
-
-        if ($seller->role !== 'seller') {
-            return response()->json(['error' => 'غير مصرح لك'], 403);
-        }
-
-        $orders = Order::with('orderdetels.product', 'userorder')
-            ->where('seller_id', $seller->id)
-            ->whereNotNull('approved_at')
-            ->get();
-
-        return response()->json([
-            'message' => 'تم جلب جميع الطلبات الموافق عليها للبائع',
-            'orders' => $orders
-        ], 200);
-    }
+ 
     // 2️⃣ عدد الطلبات التي أنشأها البائع
     public function sellerOrdersCount()
     {
@@ -363,6 +342,23 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'تم جلب جميع الطلبات بنجاح',
+            'orders'  => $orders,
+        ], 200);
+    }
+    //لعرض الطلبات الي عملها seller لي costomer ووافق عليها costomer
+    public function showCurrentSellerApprovedOrders()
+    {
+        $sellerId = auth()->id(); // 🧩 البائع الحالي
+
+        // ✅ الطلبات التي أنشأها هذا البائع وتمت الموافقة عليها من العميل
+        $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])
+            ->where('seller_id', $sellerId)
+            ->where('approval_status', 'approved')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'message' => 'تم جلب الطلبات التي أنشأها هذا البائع ووافق عليها العملاء بنجاح',
             'orders'  => $orders,
         ], 200);
     }
