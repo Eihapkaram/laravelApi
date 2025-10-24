@@ -279,6 +279,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('settings/update', [SettingController::class, 'update']);
     //all orders// and //by seller
     Route::get('allorderbyseller', [OrderController::class, 'showAllOrdersBySellers']);
+         Route::get('allorderbyseller/ApprovedOrders', [OrderController::class, 'showApprovedOrdersBySellers']);
     Route::get('orders/customers', [OrderController::class, 'showAllOrdersWithoutSeller']);
     Route::get('orders/show/all', [OrderController::class, 'showAllOrders']);
 });
