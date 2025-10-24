@@ -245,11 +245,8 @@ class ProductController extends Controller
     {
         $products = Product::with('images')->get();
 
-        // إنشاء ملف Excel مؤقت
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-
-        // العناوين: كل الأعمدة الحالية + عمود للصور
         $sheet->fromArray([
             ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'Discount', 'Main Image', 'Additional Images']
         ]);
@@ -257,10 +254,7 @@ class ProductController extends Controller
         $rows = [];
         foreach ($products as $product) {
             $mainImage = $product->img ? basename($product->img) : '';
-            $additionalImages = $product->images->pluck('path')->map(function ($p) {
-                return basename($p);
-            })->implode(', ');
-
+            $additionalImages = $product->images->pluck('path')->map(fn($p) => basename($p))->implode(', ');
             $rows[] = [
                 $product->id,
                 $product->titel,
@@ -282,50 +276,31 @@ class ProductController extends Controller
         }
         $sheet->fromArray($rows, null, 'A2');
 
-        // حفظ Excel مؤقت
-        $excelFileName = 'products.xlsx';
-        $excelPath = storage_path($excelFileName);
+        $tempExcel = sys_get_temp_dir() . '/products.xlsx';
         $writer = new Xlsx($spreadsheet);
-        $writer->save($excelPath);
+        $writer->save($tempExcel);
 
-        // إنشاء ZIP مؤقت
-        $zipFileName = 'products_with_images.zip';
-        $zipPath = storage_path($zipFileName);
+        $tempZip = sys_get_temp_dir() . '/products_with_images.zip';
         $zip = new ZipArchive();
+        if ($zip->open($tempZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+            $zip->addFile($tempExcel, 'products.xlsx');
 
-        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
-
-            // إضافة Excel
-            $zip->addFile($excelPath, $excelFileName);
-
-            // إضافة الصورة الرئيسية لكل منتج
             foreach ($products as $product) {
                 if ($product->img) {
                     $imgFullPath = storage_path('app/public/' . $product->img);
-                    if (file_exists($imgFullPath)) {
-                        $zip->addFile($imgFullPath, 'images/' . basename($product->img));
-                    }
+                    if (file_exists($imgFullPath)) $zip->addFile($imgFullPath, 'images/' . basename($product->img));
                 }
-
-                // إضافة الصور الإضافية
                 foreach ($product->images as $image) {
-                    $imageFullPath = storage_path('app/public/' . $image->path);
-                    if (file_exists($imageFullPath)) {
-                        $zip->addFile($imageFullPath, 'images/' . basename($image->path));
-                    }
+                    $imgFullPath = storage_path('app/public/' . $image->path);
+                    if (file_exists($imgFullPath)) $zip->addFile($imgFullPath, 'images/' . basename($image->path));
                 }
             }
-
             $zip->close();
         }
 
-        // حذف Excel مؤقت بعد إضافته للـ ZIP
-        if (file_exists($excelPath)) {
-            unlink($excelPath);
-        }
+        if (file_exists($tempExcel)) unlink($tempExcel);
 
-        // تنزيل ZIP وحذفه بعد الإرسال
-        return response()->download($zipPath)->deleteFileAfterSend(true);
+        return response()->download($tempZip)->deleteFileAfterSend(true);
     }
 
 
