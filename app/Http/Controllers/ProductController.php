@@ -131,21 +131,6 @@ class ProductController extends Controller
 
     public function update(Request $request, product $product, $id)
     {
-        $request->validate([
-            'titel' => 'required',
-            'description' => 'required',
-            'votes' => 'required',
-            'url' => 'required',
-            'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
-            'price' => 'required',
-            'stock' => 'required',
-            'category_id' => 'required|min:1',
-            'page_id' => 'required|min:1',
-            'brand' => 'required',
-             'Counttype' => 'required',
-            'inCounttype' => 'required',
-            'discount' => 'required',
-        ]);
 
         if (!$request) {
             return response()->json(['error' => 'faild edit']);
@@ -162,18 +147,18 @@ class ProductController extends Controller
         }
 
         $pro->update([
-            'titel' => $request->titel,
-            'description' => $request->description,
-            'votes' => $request->votes,
-            'url' => $request->url,
-            'price' => $request->price,
-            'stock' => $request->stock,
-            'category_id' => $request->category_id,
-            'page_id' => $request->page_id,
-            'brand' => $request->brand,
-             'Counttype' => $request->Counttype,
-            'inCounttype' => $request->inCounttype,
-            'discount' =>  $request->discount,
+            'titel' => $request->titel ?? $product->titel,
+            'description' => $request->description ?? $product->description,
+            'votes' => $request->votes ?? $product->votes,
+            'url' => $request->url ?? $product->url,
+            'price' => $request->price ?? $product->price,
+            'stock' => $request->stock ?? $product->stock,
+            'category_id' => $request->category_id ?? $product->category_id,
+            'page_id' => $request->page_id ?? $product->page_id,
+            'brand' => $request->brand ?? $product->brand,
+             'Counttype' => $request->Counttype ?? $product->Counttype,
+            'inCounttype' => $request->inCounttype ?? $product->inCounttype,
+            'discount' =>  $request->discount ?? $product->discount,
         ]);
 
         // تحديث الصور الإضافية
