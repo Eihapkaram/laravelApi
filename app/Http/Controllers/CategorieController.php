@@ -71,8 +71,8 @@ class CategorieController extends Controller
         $request->validate([
             'name' => 'required',
             'slug' => 'required',
-            'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
-            'banner' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
+            'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
+            'banner' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
             'description' => 'required',
             'page_id' => 'required',
         ]);
@@ -101,8 +101,8 @@ class CategorieController extends Controller
             'name' => $request->name,
             'slug' => $request->slug,
             'description' => $request->description,
-            'img' => $path,
-            'banner' => $path2,
+            'img' => $path ?? null,
+            'banner' => $path2 ?? null,
             'page_id' =>$request->page_id,
         ]);
         return response()->json([
