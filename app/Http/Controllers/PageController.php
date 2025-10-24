@@ -76,7 +76,7 @@ class PageController extends Controller
             $path = $request->file('img')->storeAs('pages', $image, 'public');
             // => هيتخزن في storage/app/public/products
         }
-        $pro->update(['slug' => $request->slug, 'img' => $path ?? null]);
+        $pro->update(['slug' => $request->slug, 'img' => $path ?? $pro->img]);
 
         return response()->json([
             'massege' => 'update Page is done',
