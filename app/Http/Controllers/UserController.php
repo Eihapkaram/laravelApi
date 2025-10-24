@@ -9,9 +9,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\Notifiable;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Response;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Facades\Hash;
 
@@ -24,8 +21,6 @@ class UserController extends Controller
             'email' => 'required|email|unique:users',
             'password' => 'required|min:8',
             'last_name' => 'required',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
         ]);
 
         if ($request->hasFile('img')) {
@@ -40,12 +35,14 @@ class UserController extends Controller
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
             'img' => $path ?? 'null',
-            'latitude' => $request->latitude ?? null,
-            'longitude' => $request->longitude ?? null,
         ]);
 
+ 
+
+        // إنشاء التوكن
         $token = $user->createToken('eihapkaramvuejs')->accessToken;
-        $user->notify(new WelcomeUser($user));
+        // 🔔 إرسال إشعار ترحيبي للمستخدم
+    $user->notify(new WelcomeUser($user));
 
         return response()->json([
             'message' => 'تم التسجيل بنجاح، برجاء التحقق من بريدك الإلكتروني',
@@ -53,28 +50,27 @@ class UserController extends Controller
         ], 200);
     }
 
+
     public function userUpdate(Request $request, $id)
     {
         $this->validate($request, [
             'name' => 'required',
             'password' => 'required|min:8',
             'last_name' => 'required',
-            'img' => 'image|mimes:jpeg,png,jpg,gif,webp',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
+            'img' => 'image|mimes:jpeg,png,jpg,gif,webp'
         ]);
 
         if ($request->hasFile('img')) {
             $imge = $request->file('img')->getClientOriginalName();
             $path = $request->file('img')->storeAs('users', $imge, 'public');
         }
-
         $user = User::find($id);
         if (!$user) {
             return response()->json([
                 'message' => 'المستخدم غير موجود',
             ], 404);
         }
+
 
         $user->update([
             'name' => $request->name,
@@ -84,42 +80,16 @@ class UserController extends Controller
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
             'img' => $path ?? 'null',
-            'latitude' => $request->latitude ?? $user->latitude,
-            'longitude' => $request->longitude ?? $user->longitude,
         ]);
+
 
         return response()->json([
             'message' => 'تم تعديل بنجاح',
             'user' => $user,
         ], 200);
     }
-    public function updateLocation(Request $request)
-    {
-        $this->validate($request, [
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
-        ]);
 
-        $user = auth()->user();
-
-        if (!$user) {
-            return response()->json([
-                'message' => 'المستخدم غير موجود',
-            ], 404);
-        }
-
-        $user->update([
-            'latitude' => $request->latitude,
-            'longitude' => $request->longitude,
-        ]);
-
-        return response()->json([
-            'message' => 'تم تحديث الموقع بنجاح',
-            'user' => $user,
-        ], 200);
-    }
-
-    public function addimg(Request $request)
+     public function addimg(Request $request)
     {
         $this->validate($request, [
             'img' => 'image|mimes:jpeg,png,jpg,gif,webp'
@@ -136,6 +106,7 @@ class UserController extends Controller
             ], 404);
         }
 
+
         $user->update([
             'name' => auth()->user()->name,
             'last_name' => auth()->user()->last_name,
@@ -146,11 +117,14 @@ class UserController extends Controller
             'img' => $path ?? 'null',
         ]);
 
+
         return response()->json([
             'message' => 'تم اضافه صورة  بنجاح',
             'user' => $user,
         ], 200);
     }
+
+
 
     public function Login(Request $Request)
     {
@@ -160,6 +134,7 @@ class UserController extends Controller
         ];
         if (auth()->attempt($data)) {
             $token = auth()->user()->createToken('eihapkaramvuejs')->accessToken;
+
             return response()->json(['token' => $token], 200);
         } else {
             return response()->json(['error' => 'field login'], 401);
@@ -168,86 +143,61 @@ class UserController extends Controller
 
     public function userinfo()
     {
-        $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude')->get();
+        $userdata = User::get();
+
         return response()->json(['user' => $userdata], 200);
     }
-    // جلب المستخدمين الاقرب للموقع الي هتبعته لي url GET /api/users-nearby?latitude=30.0444&longitude=31.2357&distance=10
-
-    public function usersNearby(Request $request)
-    {
-        $request->validate([
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-            'distance' => 'nullable|numeric'
-        ]);
-
-        $latitude = $request->latitude;
-        $longitude = $request->longitude;
-        $distance = $request->distance ?? 10; // افتراضي 10 كم هيجيب كل المستخدمين ضمن 15 كم من النقطة المحددة.
-
-        $users = User::nearby($latitude, $longitude, $distance)->get();
-
-        return response()->json([
-            'count' => $users->count(),
-            'users' => $users
-        ], 200);
-    }
-
-
     public function OneUserinfo($id)
     {
-        $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude')->find($id);
-        if (!$userdata) {
-            return response()->json(['message' => 'المستخدم غير موجود'], 404);
-        }
+        $userdata = User::find($id);
+
         return response()->json(['user' => $userdata], 200);
     }
-
-    public function info()
+public function info()
     {
         $userdata = auth()->user();
-        return response()->json([
-            'user' => [
-                'id' => $userdata->id,
-                'name' => $userdata->name,
-                'last_name' => $userdata->last_name,
-                'email' => $userdata->email,
-                'phone' => $userdata->phone,
-                'role' => $userdata->role,
-                'img' => $userdata->img,
-                'latitude' => $userdata->latitude,
-                'longitude' => $userdata->longitude,
-            ]
-        ], 200);
+
+        return response()->json(['user' => $userdata], 200);
     }
 
     public function logout(Request $request)
     {
         $request->user()->token()->revoke();
-        return response()->json(['message' => 'تم تسجيل الخروج بنجاح']);
+
+        return response()->json([
+            'message' => 'تم تسجيل الخروج بنجاح',
+        ]);
     }
 
     public function logoutAll(Request $request)
     {
         $request->user()->token()->revoke();
-        return response()->json(['message' => 'تم تسجيل الخروج']);
+
+        return response()->json([
+            'message' => 'تم تسجيل الخروج',
+        ]);
     }
 
     public function UserDelete($id)
     {
         if (! User::find($id)) {
-            return response()->json(['message' => 'لم يتم ايجاد حساب المستخدم']);
+            return response()->json([
+                'message' => 'لم يتم ايجاد حساب المستخدم',
+            ]);
         }
         User::find($id)->delete();
-        return response()->json(['message' => 'تم ازاله حساب  المستخدم']);
+
+        return response()->json([
+            'message' => 'تم ازاله حساب  المستخدم',
+        ]);
     }
 
+
+    // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
     public function registerWithPhone(Request $request)
     {
         $request->validate([
             'name' => 'required',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
             'phone' => [
                 'required',
                 'regex:/^(011|012|015|010)[0-9]{8}$/'
@@ -257,18 +207,22 @@ class UserController extends Controller
             'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010او  011 أو 012 أو 015',
         ]);
 
+        // البحث عن المستخدم
         $user = User::where('phone', $request->phone)->first();
+
+        // لو مش موجود، نعمل حساب جديد
         if (!$user) {
             $user = User::create([
                 'phone' => $request->phone,
                 'name' => $request->name,
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
             ]);
-            $user->notify(new WelcomeUser($user));
+            // 🔔 إرسال إشعار ترحيبي للمستخدم
+    $user->notify(new WelcomeUser($user));
         }
 
+        // إنشاء token للمستخدم
         $token = $user->createToken('API Token')->accessToken;
+
         return response()->json([
             'success' => true,
             'user' => $user,
@@ -276,6 +230,8 @@ class UserController extends Controller
         ]);
     }
 
+
+    // ✅ تسجيل الدخول أو إنشاء حساب جديد برقم الهاتف
     public function loginWithPhone(Request $request)
     {
         $request->validate([
@@ -289,39 +245,35 @@ class UserController extends Controller
         ]);
 
         $user = User::where('phone', $request->phone)->first();
+
         if (!$user) {
             return response()->json([
-                'success' => false,
-                'user' => 'الرقم غير مسجل او تاكد من',
+                'success' => true,
+                'user' => 'الرقم غير مسجل او تاكد من ',
             ], 401);
         }
 
         $token = $user->createToken('API Token')->accessToken;
+
         return response()->json([
             'success' => true,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'last_name' => $user->last_name,
-                'phone' => $user->phone,
-                'role' => $user->role,
-                'latitude' => $user->latitude,
-                'longitude' => $user->longitude,
-            ],
+            'user' => $user,
             'token' => $token,
         ], 200);
     }
 
+    // ✅ تسجيل الخروج (يتطلب auth:api)
     public function logoutphone(Request $request)
     {
+        // إلغاء صلاحية التوكن الحالي
         $request->user()->token()->revoke();
+
         return response()->json([
             'success' => true,
             'message' => 'تم تسجيل الخروج بنجاح',
         ]);
     }
-
-    // ✅ استيراد المستخدمين من ملف Excel
+      // ✅ استيراد المستخدمين من ملف Excel
     public function importUsers(Request $request)
     {
         $request->validate([
@@ -341,6 +293,7 @@ class UserController extends Controller
             if (empty($row[1]) && empty($row[3])) {
                 continue; // تجاهل الصفوف الفارغة
             }
+
             User::updateOrCreate(
                 ['email' => $row[3] ?? null],
                 [
@@ -350,8 +303,6 @@ class UserController extends Controller
                     'role' => $row[5] ?? 'customer',
                     'password' => isset($row[6]) ? Hash::make($row[6]) : Hash::make('12345678'),
                     'img' => $row[7] ?? null,
-                    'latitude' => $row[8] ?? null,
-                    'longitude' => $row[9] ?? null,
                 ]
             );
         }
@@ -359,68 +310,41 @@ class UserController extends Controller
         return response()->json(['message' => 'تم استيراد المستخدمين بنجاح']);
     }
 
+    // ✅ تصدير المستخدمين إلى ملف Excel
     public function exportUsers()
     {
-        try {
-            $users = User::all();
+        $users = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'password', 'img')->get();
 
-            $spreadsheet = new Spreadsheet();
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('Users');
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-            // رؤوس الأعمدة
-            $sheet->setCellValue('A1', 'ID')
-                ->setCellValue('B1', 'Name')
-                ->setCellValue('C1', 'Last Name')
-                ->setCellValue('D1', 'Email')
-                ->setCellValue('E1', 'Phone')
-                ->setCellValue('F1', 'Role')
-                ->setCellValue('G1', 'Last Seen')
-                ->setCellValue('H1', 'Image');
+        // العناوين
+        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img'];
+        $sheet->fromArray([$headers], null, 'A1');
 
-            $row = 2;
-            foreach ($users as $user) {
-                $sheet->setCellValue('A' . $row, $user->id)
-                    ->setCellValue('B' . $row, $user->name ?? '')
-                    ->setCellValue('C' . $row, $user->last_name ?? '')
-                    ->setCellValue('D' . $row, $user->email ?? '')
-                    ->setCellValue('E' . $row, $user->phone ?? '')
-                    ->setCellValue('F' . $row, $user->role ?? '')
-                    ->setCellValue('G' . $row, $user->last_seen ?? '');
-
-                // إضافة الصورة إذا موجودة وصالحة
-                if ($user->img && file_exists(public_path('storage/' . $user->img))) {
-                    $ext = pathinfo($user->img, PATHINFO_EXTENSION);
-                    if (in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif'])) {
-                        $drawing = new Drawing();
-                        $drawing->setPath(public_path('storage/' . $user->img));
-                        $drawing->setCoordinates('H' . $row);
-                        $drawing->setHeight(50);
-                        $drawing->setWorksheet($sheet);
-                    } else {
-                        $sheet->setCellValue('H' . $row, 'Unsupported image');
-                    }
-                } else {
-                    $sheet->setCellValue('H' . $row, 'No image');
-                }
-
-                $row++;
-            }
-
-            $writer = new Xlsx($spreadsheet);
-
-            // رجوع Response صالح دائماً
-            return response()->streamDownload(function () use ($writer) {
-                $writer->save('php://output');
-            }, 'users.xlsx', [
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            ]);
-        } catch (\Throwable $e) {
-            // لو حصل أي خطأ
-            return response()->json([
-                'error' => 'Export failed',
-                'message' => $e->getMessage(),
-            ], 500);
+        // البيانات
+        $data = [];
+        foreach ($users as $user) {
+            $data[] = [
+                $user->id,
+                $user->name,
+                $user->last_name,
+                $user->email,
+                $user->phone,
+                $user->role,
+                '********', // 🔒 ما نصدرش الباسورد الأصلي
+                $user->img,
+            ];
         }
+
+        $sheet->fromArray($data, null, 'A2');
+
+        // حفظ الملف مؤقتًا
+        $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
+        $tempPath = storage_path('app/' . $fileName);
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath)->deleteFileAfterSend(true);
     }
 }
