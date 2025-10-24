@@ -206,6 +206,12 @@ Route::middleware('auth:api')->group(function () {
     Route::get('order/show/latest', [OrderController::class, 'showlatestOrder']);
     Route::post('/orders/seller-create', [OrderController::class, 'createBySeller']);
     Route::get('/orders/export', [OrderController::class, 'export']);
+    // عملاء (بدون seller_id)
+
+    Route::get('/orders/export/customers', [OrderController::class, 'exportCustomerOrders']);
+    // بائعون (approved فقط)
+
+    Route::get('/orders/export/sellers/approved', [OrderController::class, 'exportApprovedSellerOrders']);
     Route::post('/orders/{id}/approve', [OrderController::class, 'approveOrder']);
     Route::post('/orders/{id}/reject', [OrderController::class, 'rejectOrder']);
     Route::put('order/update/{id}', [OrderController::class, 'updateOrderStatus']);
@@ -284,9 +290,6 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::get('orders/show/all', [OrderController::class, 'showAllOrders']);
     // عملاء (بدون seller_id)
     Route::post('/orders/import/customers', [OrderController::class, 'importCustomerOrders']);
-    Route::get('/orders/export/customers', [OrderController::class, 'exportCustomerOrders']);
-
     // بائعون (approved فقط)
     Route::post('/orders/import/sellers/approved', [OrderController::class, 'importApprovedSellerOrders']);
-    Route::get('/orders/export/sellers/approved', [OrderController::class, 'exportApprovedSellerOrders']);
 });
