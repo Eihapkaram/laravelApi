@@ -229,47 +229,47 @@ class OrderController extends Controller
             'order'   => $order,
         ], 200);
     }
-public function showAllOrdersWithoutSeller()
-{
-    // ✅ جلب كل الطلبات التي لا تحتوي على seller_id
-    $orders = Order::with(['orderdetels.product', 'userorder'])
-        ->whereNull('seller_id')
-        ->orderBy('created_at', 'desc')
-        ->get();
+    public function showAllOrdersWithoutSeller()
+    {
+        // ✅ جلب كل الطلبات التي لا تحتوي على seller_id
+        $orders = Order::with(['orderdetels.product', 'userorder'])
+            ->whereNull('seller_id')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-    return response()->json([
-        'message' => 'تم جلب كل الطلبات التي لم يتم إنشاؤها بواسطة بائع',
-        'orders'  => $orders,
-    ], 200);
-}
-public function showApprovedOrdersBySellers()
-{
-    // ✅ جلب الطلبات التي أنشأها بائع وتمت الموافقة عليها فقط
-    $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])
-        ->whereNotNull('seller_id')
-        ->where('approval_status', 'approved')
-        ->orderBy('created_at', 'desc')
-        ->get();
+        return response()->json([
+            'message' => 'تم جلب كل الطلبات التي لم يتم إنشاؤها بواسطة بائع',
+            'orders'  => $orders,
+        ], 200);
+    }
+    public function showApprovedOrdersBySellers()
+    {
+        // ✅ جلب الطلبات التي أنشأها بائع وتمت الموافقة عليها فقط
+        $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])
+            ->whereNotNull('seller_id')
+            ->where('approval_status', 'approved')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-    return response()->json([
-        'message' => 'تم جلب الطلبات الموافق عليها التي قام بها البائعون بنجاح',
-        'orders'  => $orders,
-    ], 200);
-}
+        return response()->json([
+            'message' => 'تم جلب الطلبات الموافق عليها التي قام بها البائعون بنجاح',
+            'orders'  => $orders,
+        ], 200);
+    }
 
-  public function showAllOrdersBySellers()
-{
-    // ✅ جلب كل الطلبات التي لها seller_id (أي أنشأها بائع)
-    $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])
-        ->whereNotNull('seller_id')
-        ->orderBy('created_at', 'desc')
-        ->get();
+    public function showAllOrdersBySellers()
+    {
+        // ✅ جلب كل الطلبات التي لها seller_id (أي أنشأها بائع)
+        $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])
+            ->whereNotNull('seller_id')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-    return response()->json([
-        'message' => 'تم جلب كل الطلبات التي قام بها البائعون بنجاح',
-        'orders'  => $orders,
-    ], 200);
-}
+        return response()->json([
+            'message' => 'تم جلب كل الطلبات التي قام بها البائعون بنجاح',
+            'orders'  => $orders,
+        ], 200);
+    }
 
     // 1️⃣ جميع الطلبات التي أنشأها البائع (لكل العملاء)
     public function sellerOrdersForCustomers()
@@ -669,10 +669,6 @@ public function showApprovedOrdersBySellers()
 
         return response()->download($filePath)->deleteFileAfterSend(true);
     }
-    ///999999
-    class OrderController extends Controller
-{
-    // ✅ استيراد الطلبات الخاصة بالعملاء (بدون seller_id)
     public function importCustomerOrders(Request $request)
     {
         $request->validate([
@@ -820,5 +816,4 @@ public function showApprovedOrdersBySellers()
 
         return response()->download($filePath)->deleteFileAfterSend(true);
     }
-}
 }
