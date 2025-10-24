@@ -245,8 +245,11 @@ class ProductController extends Controller
     {
         $products = Product::with('images')->get();
 
+        // إنشاء ملف Excel مؤقت
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
+
+        // رؤوس الأعمدة
         $sheet->fromArray([
             ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'Discount', 'Main Image', 'Additional Images']
         ]);
@@ -274,35 +277,48 @@ class ProductController extends Controller
                 $additionalImages
             ];
         }
+
         $sheet->fromArray($rows, null, 'A2');
 
+        // استخدام مجلد مؤقت متوافق مع Railway
         $tempExcel = sys_get_temp_dir() . '/products.xlsx';
+        $tempZip   = sys_get_temp_dir() . '/products_with_images.zip';
+
+        // حفظ ملف Excel مؤقتًا
         $writer = new Xlsx($spreadsheet);
         $writer->save($tempExcel);
 
-        $tempZip = sys_get_temp_dir() . '/products_with_images.zip';
+        // إنشاء ملف ZIP يحتوي على Excel + الصور
         $zip = new ZipArchive();
         if ($zip->open($tempZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+            // أضف ملف Excel
             $zip->addFile($tempExcel, 'products.xlsx');
 
+            // أضف الصور
             foreach ($products as $product) {
                 if ($product->img) {
                     $imgFullPath = storage_path('app/public/' . $product->img);
-                    if (file_exists($imgFullPath)) $zip->addFile($imgFullPath, 'images/' . basename($product->img));
+                    if (file_exists($imgFullPath)) {
+                        $zip->addFile($imgFullPath, 'images/' . basename($product->img));
+                    }
                 }
                 foreach ($product->images as $image) {
                     $imgFullPath = storage_path('app/public/' . $image->path);
-                    if (file_exists($imgFullPath)) $zip->addFile($imgFullPath, 'images/' . basename($image->path));
+                    if (file_exists($imgFullPath)) {
+                        $zip->addFile($imgFullPath, 'images/' . basename($image->path));
+                    }
                 }
             }
+
             $zip->close();
         }
 
+        // حذف ملف Excel المؤقت
         if (file_exists($tempExcel)) unlink($tempExcel);
 
-        return response()->download($tempZip)->deleteFileAfterSend(true);
+        // تحميل ملف ZIP
+        return response()->download($tempZip, 'products_with_images.zip')->deleteFileAfterSend(true);
     }
-
 
     // ✅ استيراد المنتجات من Excel
 
