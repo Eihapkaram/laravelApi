@@ -142,7 +142,7 @@ class ProductController extends Controller
         if ($request->hasFile('img')) {
             $image = $request->file('img')->getClientOriginalName();
             $path = $request->file('img')->storeAs('products', $image, 'public');
-            $pro->img = $path;
+            $pro->img = $path ??  $pro->img;
             $pro->save();
         }
 
