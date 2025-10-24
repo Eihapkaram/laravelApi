@@ -242,6 +242,20 @@ public function showAllOrdersWithoutSeller()
         'orders'  => $orders,
     ], 200);
 }
+public function showApprovedOrdersBySellers()
+{
+    // ✅ جلب الطلبات التي أنشأها بائع وتمت الموافقة عليها فقط
+    $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])
+        ->whereNotNull('seller_id')
+        ->where('approval_status', 'approved')
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json([
+        'message' => 'تم جلب الطلبات الموافق عليها التي قام بها البائعون بنجاح',
+        'orders'  => $orders,
+    ], 200);
+}
 
   public function showAllOrdersBySellers()
 {
