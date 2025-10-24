@@ -280,4 +280,5 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     //all orders// and //by seller
     Route::get('allorderbyseller', [OrderController::class, 'showAllOrdersBySellers']);
     Route::get('orders/show/all', [OrderController::class, 'showAllOrdersWithoutSeller']);
+    Route::get('orders/show/all/all', [OrderController::class, 'showAllOrders']);
 });
