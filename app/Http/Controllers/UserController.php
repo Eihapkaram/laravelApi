@@ -359,13 +359,13 @@ class UserController extends Controller
     // ✅ تصدير المستخدمين إلى ملف Excel
     public function exportUsers()
     {
-        $users = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'password', 'img')->get();
+        $users = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'password', 'img','Latitude','Longitude')->get();
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
         // العناوين
-        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img'];
+        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img','Latitude','Longitude'];
         $sheet->fromArray([$headers], null, 'A1');
 
         // البيانات
