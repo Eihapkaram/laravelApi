@@ -241,7 +241,6 @@ class ProductController extends Controller
     }
 
     // ✅ تصدير المنتجات إلى Excel
-
     public function export()
     {
         $products = Product::with('images')->get();
@@ -282,20 +281,22 @@ class ProductController extends Controller
         $sheet->fromArray($rows, null, 'A2');
 
         // حفظ Excel مؤقتًا
-        $tempDir   = sys_get_temp_dir();
-        $tempExcel = $tempDir . '/products.xlsx';
-        $tempZip   = $tempDir . '/products_with_images.zip';
+        $tempDir   = storage_path('app/temp_export');
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0777, true);
+        }
+
+        $excelPath = $tempDir . '/products.xlsx';
+        $zipPath   = $tempDir . '/products_with_images.zip';
 
         $writer = new Xlsx($spreadsheet);
-        $writer->save($tempExcel);
+        $writer->save($excelPath);
 
-        // إنشاء ملف ZIP فعلي
+        // إنشاء ZIP فعلي
         $zip = new ZipArchive();
-        if ($zip->open($tempZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
-            // أضف Excel
-            $zip->addFile($tempExcel, 'products.xlsx');
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+            $zip->addFile($excelPath, 'products.xlsx');
 
-            // أضف الصور
             foreach ($products as $product) {
                 if ($product->img) {
                     $imgFullPath = storage_path('app/public/' . $product->img);
@@ -310,14 +311,15 @@ class ProductController extends Controller
                     }
                 }
             }
+
             $zip->close();
         }
 
-        // حذف ملف Excel بعد إضافته للـ ZIP
-        if (file_exists($tempExcel)) unlink($tempExcel);
+        // حذف Excel بعد ضغطه
+        if (file_exists($excelPath)) unlink($excelPath);
 
-        // إرجاع ملف ZIP فعليًا بالهيدر الصحيح
-        return response()->file($tempZip, [
+        // ✅ رجّع ملف ZIP فعليًا بالـ headers الصحيحة
+        return response()->download($zipPath, 'products_with_images.zip', [
             'Content-Type' => 'application/zip',
             'Content-Disposition' => 'attachment; filename="products_with_images.zip"',
         ])->deleteFileAfterSend(true);
