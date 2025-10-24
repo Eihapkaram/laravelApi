@@ -59,7 +59,7 @@ class UserController extends Controller
             'name' => 'required',
             'password' => 'required|min:8',
             'last_name' => 'required',
-            'img' => 'image|mimes:jpeg,png,jpg,gif,webp',
+            'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
         ]);
@@ -137,12 +137,6 @@ class UserController extends Controller
         }
 
         $user->update([
-            'name' => auth()->user()->name,
-            'last_name' => auth()->user()->last_name,
-            'email' => auth()->user()->email,
-            'phone' => auth()->user()->phone,
-            'password' => bcrypt(auth()->user()->password),
-            'role' => auth()->user()->role ?? 'customer',
             'img' => $path ?? 'null',
         ]);
 
