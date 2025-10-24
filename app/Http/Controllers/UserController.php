@@ -167,28 +167,28 @@ class UserController extends Controller
     {
         $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude')->get();
         return response()->json(['user' => $userdata], 200);
-    } 
+    }
     // جلب المستخدمين الاقرب للموقع الي هتبعته لي url GET /api/users-nearby?latitude=30.0444&longitude=31.2357&distance=10
 
-public function usersNearby(Request $request)
-{
-    $request->validate([
-        'latitude' => 'required|numeric',
-        'longitude' => 'required|numeric',
-        'distance' => 'nullable|numeric'
-    ]);
+    public function usersNearby(Request $request)
+    {
+        $request->validate([
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+            'distance' => 'nullable|numeric'
+        ]);
 
-    $latitude = $request->latitude;
-    $longitude = $request->longitude;
-    $distance = $request->distance ?? 10; // افتراضي 10 كم هيجيب كل المستخدمين ضمن 15 كم من النقطة المحددة.
+        $latitude = $request->latitude;
+        $longitude = $request->longitude;
+        $distance = $request->distance ?? 10; // افتراضي 10 كم هيجيب كل المستخدمين ضمن 15 كم من النقطة المحددة.
 
-    $users = User::nearby($latitude, $longitude, $distance)->get();
+        $users = User::nearby($latitude, $longitude, $distance)->get();
 
-    return response()->json([
-        'count' => $users->count(),
-        'users' => $users
-    ], 200);
-}
+        return response()->json([
+            'count' => $users->count(),
+            'users' => $users
+        ], 200);
+    }
 
 
     public function OneUserinfo($id)
@@ -318,16 +318,26 @@ public function usersNearby(Request $request)
         ]);
     }
 
+    // ✅ استيراد المستخدمين من ملف Excel
     public function importUsers(Request $request)
     {
-        $request->validate(['file' => 'required|mimes:xlsx,xls']);
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls'
+        ]);
+
         $filePath = $request->file('file')->getRealPath();
         $spreadsheet = IOFactory::load($filePath);
         $sheet = $spreadsheet->getActiveSheet();
         $rows = $sheet->toArray();
 
+        // نفترض أول صف عناوين الأعمدة
         foreach (array_slice($rows, 1) as $row) {
-            if (empty($row[1]) && empty($row[3])) continue;
+            // مثال على ترتيب الأعمدة داخل الملف:
+            // [0 => id, 1 => name, 2 => last_name, 3 => email, 4 => phone, 5 => role, 6 => password, 7 => img]
+
+            if (empty($row[1]) && empty($row[3])) {
+                continue; // تجاهل الصفوف الفارغة
+            }
             User::updateOrCreate(
                 ['email' => $row[3] ?? null],
                 [
@@ -342,18 +352,23 @@ public function usersNearby(Request $request)
                 ]
             );
         }
+
         return response()->json(['message' => 'تم استيراد المستخدمين بنجاح']);
     }
 
+    // ✅ تصدير المستخدمين إلى ملف Excel
     public function exportUsers()
     {
-        $users = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'password', 'img', 'latitude', 'longitude')->get();
+        $users = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'password', 'img')->get();
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img', 'Latitude', 'Longitude'];
+        // العناوين
+        $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img'];
         $sheet->fromArray([$headers], null, 'A1');
 
+        // البيانات
         $data = [];
         foreach ($users as $user) {
             $data[] = [
@@ -363,14 +378,17 @@ public function usersNearby(Request $request)
                 $user->email,
                 $user->phone,
                 $user->role,
-                '********',
+                '********', // 🔒 ما نصدرش الباسورد الأصلي
                 $user->img,
                 $user->latitude,
                 $user->longitude,
+
             ];
         }
+
         $sheet->fromArray($data, null, 'A2');
 
+        // حفظ الملف مؤقتًا
         $fileName = 'users_export_' . date('Y_m_d_His') . '.xlsx';
         $tempPath = storage_path('app/' . $fileName);
         $writer = new Xlsx($spreadsheet);
