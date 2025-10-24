@@ -233,7 +233,7 @@ class OrderController extends Controller
   public function showAllOrdersBySellers()
 {
     // ✅ جلب كل الطلبات التي لها seller_id (أي أنشأها بائع)
-    $orders = Order::with(['orderdetels.product', 'user', 'seller'])
+    $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])
         ->whereNotNull('seller_id')
         ->orderBy('created_at', 'desc')
         ->get();
