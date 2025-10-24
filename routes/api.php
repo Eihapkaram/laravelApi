@@ -252,7 +252,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('page/add', [PageController::class, 'AddPage']);
     Route::get('/pages/export', [PageController::class, 'export']);
     Route::post('/pages/import', [PageController::class, 'import']);
-    Route::put('page/Update/{id}', [PageController::class, 'UpdatePage']);
+    Route::post('page/Update/{id}', [PageController::class, 'UpdatePage']);
     Route::delete('page/Delete/{id}', [PageController::class, 'DeletePage']);
 
     // User
