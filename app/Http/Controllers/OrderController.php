@@ -229,6 +229,19 @@ class OrderController extends Controller
             'order'   => $order,
         ], 200);
     }
+public function showAllOrdersWithoutSeller()
+{
+    // ✅ جلب كل الطلبات التي لا تحتوي على seller_id
+    $orders = Order::with(['orderdetels.product', 'user'])
+        ->whereNull('seller_id')
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json([
+        'message' => 'تم جلب كل الطلبات التي لم يتم إنشاؤها بواسطة بائع',
+        'orders'  => $orders,
+    ], 200);
+}
 
   public function showAllOrdersBySellers()
 {
