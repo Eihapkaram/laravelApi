@@ -197,7 +197,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('order/add', [OrderController::class, 'createOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
     //orders Seller
-    Route::get('sellerApprovedOrdershow', [OrderController::class, 'sellerApprovedOrders']);
+    Route::get('sellerApprovedOrdershow', [OrderController::class, 'showCurrentSellerApprovedOrders']);
     Route::get('ALLorder/show/forSeller', [OrderController::class, 'sellerOrdersForCustomers']);
     Route::get('order/count/seller', [OrderController::class, 'sellerOrdersCount']);
 
@@ -209,7 +209,7 @@ Route::middleware('auth:api')->group(function () {
     // عملاء (بدون seller_id)
 
     Route::get('/orders/export/customers', [OrderController::class, 'exportCustomerOrders']);
-    // بائعون (approved فقط)
+    // للكل مش لواحد  بائعون (approved فقط)
 
     Route::get('/orders/export/sellers/approved', [OrderController::class, 'exportApprovedSellerOrders']);
     Route::post('/orders/{id}/approve', [OrderController::class, 'approveOrder']);
