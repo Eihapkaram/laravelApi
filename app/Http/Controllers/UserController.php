@@ -7,12 +7,15 @@ use Illuminate\Http\Request;
 use App\Notifications\WelcomeUser;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\Notifiable;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -358,69 +361,54 @@ class UserController extends Controller
 
         return response()->json(['message' => 'تم استيراد المستخدمين بنجاح']);
     }
-
-   public function exportUsers()
+// ✅ تصدير بيانات المستخدمين إلى Excel
+public function exportUsers()
 {
-    try {
-        $users = User::all();
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
 
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Users');
+    // رؤوس الأعمدة
+    $sheet->setCellValue('A1', 'ID');
+    $sheet->setCellValue('B1', 'Name');
+    $sheet->setCellValue('C1', 'Email');
+    $sheet->setCellValue('D1', 'Phone');
+    $sheet->setCellValue('E1', 'Role');
+    $sheet->setCellValue('F1', 'Last Seen');
+    $sheet->setCellValue('G1', 'Image');
+    $sheet->setCellValue('H1', 'Created At');
 
-        // رؤوس الأعمدة
-        $sheet->fromArray(['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Last Seen', 'Image'], null, 'A1');
+    // البيانات
+    $users = User::all();
+    $row = 2;
+    foreach ($users as $user) {
+        $sheet->setCellValue('A' . $row, $user->id);
+        $sheet->setCellValue('B' . $row, $user->name ?? '');
+        $sheet->setCellValue('C' . $row, $user->email ?? '');
+        $sheet->setCellValue('D' . $row, $user->phone ?? '');
+        $sheet->setCellValue('E' . $row, $user->role ?? '');
+        $sheet->setCellValue('F' . $row, $user->last_seen ?? '');
+        $sheet->setCellValue('G' . $row, $user->img ?? '');
+        $sheet->setCellValue('H' . $row, $user->created_at);
 
-        $row = 2;
-        foreach ($users as $user) {
-            $sheet->setCellValue("A{$row}", $user->id)
-                ->setCellValue("B{$row}", $user->name ?? '')
-                ->setCellValue("C{$row}", $user->last_name ?? '')
-                ->setCellValue("D{$row}", $user->email ?? '')
-                ->setCellValue("E{$row}", $user->phone ?? '')
-                ->setCellValue("F{$row}", $user->role ?? '')
-                ->setCellValue("G{$row}", $user->last_seen ?? '');
-
-            // ✅ تحقق من الصورة
-            $imagePath = public_path('storage/' . $user->img);
-            if ($user->img && file_exists($imagePath)) {
-                $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
-                if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
-                    $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
-                    $drawing->setPath($imagePath);
-                    $drawing->setCoordinates("H{$row}");
-                    $drawing->setHeight(50);
-                    $drawing->setWorksheet($sheet);
-                } else {
-                    $sheet->setCellValue("H{$row}", 'Unsupported image');
-                }
-            } else {
-                $sheet->setCellValue("H{$row}", 'No image');
-            }
-
-            $row++;
-        }
-
-        // ✅ الكتابة المؤقتة في الذاكرة
-        $writer = new Xlsx($spreadsheet);
-
-        return response()->streamDownload(function () use ($writer) {
-            $writer->save('php://output');
-        }, 'users.xlsx', [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
-        ]);
-
-    } catch (\Throwable $e) {
-        // ✅ تأكد أن عند الخطأ يتم إرجاع Response JSON حقيقي
-        return response()->json([
-            'success' => false,
-            'error' => 'Export failed',
-            'message' => $e->getMessage(),
-            'line' => $e->getLine(),
-            'file' => $e->getFile(),
-        ], 500);
+        $row++;
     }
+
+    $writer = new Xlsx($spreadsheet);
+
+    // تحميل مباشر للملف في المتصفح ✅ بدون Null Response
+    $response = new \Symfony\Component\HttpFoundation\StreamedResponse(function () use ($writer) {
+        $writer->save('php://output');
+    });
+
+    $response->headers->set(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    $response->headers->set('Content-Disposition', 'attachment;filename="users.xlsx"');
+    $response->headers->set('Cache-Control', 'max-age=0, no-cache, no-store, must-revalidate');
+
+    return $response;
 }
+
 
 }
