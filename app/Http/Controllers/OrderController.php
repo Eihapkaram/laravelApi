@@ -293,7 +293,7 @@ class OrderController extends Controller
             'orders'  => $orders
         ], 200);
     }
- 
+
     // 2️⃣ عدد الطلبات التي أنشأها البائع
     public function sellerOrdersCount()
     {
@@ -360,6 +360,23 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'تم جلب الطلبات التي أنشأها هذا البائع ووافق عليها العملاء بنجاح',
             'orders'  => $orders,
+        ], 200);
+    }
+
+    //جلب المنديب ب الترتيب حسب الي عمل اوردارات اكتر وتم اكملها 
+    public function getpositionSellersByApprovedOrders()
+    {
+        // ✅ جلب البائعين مع عدد الطلبات الموافق عليها فقط
+        $sellers = User::where('role', 'seller')
+            ->withCount(['sales as approved_orders_count' => function ($query) {
+                $query->where('approval_status', 'approved');
+            }])
+            ->orderByDesc('approved_orders_count') // ترتيب تنازلي حسب العدد
+            ->get(['id', 'name', 'email']);
+
+        return response()->json([
+            'message' => 'تم جلب البائعين حسب عدد الطلبات الموافق عليها بنجاح',
+            'sellers' => $sellers,
         ], 200);
     }
 
