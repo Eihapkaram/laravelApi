@@ -71,10 +71,9 @@ class CategorieController extends Controller
         $request->validate([
             'name' => 'required',
             'slug' => 'required',
-            'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
-            'banner' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
+            'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
+            'banner' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
             'description' => 'required',
-            'page_id' => 'required',
         ]);
 
         if (!$request || !$id) {
@@ -101,9 +100,8 @@ class CategorieController extends Controller
             'name' => $request->name,
             'slug' => $request->slug,
             'description' => $request->description,
-            'img' => $path,
-            'banner' => $path2,
-            'page_id' =>$request->page_id,
+            'img' => $path ?? $pro->img,
+            'banner' => $path2 ?? $pro->banner,
         ]);
         return response()->json([
             'massege' => 'update categorie is done',

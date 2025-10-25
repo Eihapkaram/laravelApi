@@ -229,15 +229,40 @@ class OrderController extends Controller
             'order'   => $order,
         ], 200);
     }
+    public function showAllOrdersWithoutSeller()
+    {
+        // ✅ جلب كل الطلبات التي لا تحتوي على seller_id
+        $orders = Order::with(['orderdetels.product', 'userorder'])
+            ->whereNull('seller_id')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'message' => 'تم جلب كل الطلبات التي لم يتم إنشاؤها بواسطة بائع',
+            'orders'  => $orders,
+        ], 200);
+    }
+    public function showApprovedOrdersBySellers()
+    {
+        // ✅ جلب الطلبات التي أنشأها بائع وتمت الموافقة عليها فقط
+        $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])
+            ->whereNotNull('seller_id')
+            ->where('approval_status', 'approved')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'message' => 'تم جلب الطلبات الموافق عليها التي قام بها البائعون بنجاح',
+            'orders'  => $orders,
+        ], 200);
+    }
 
     public function showAllOrdersBySellers()
     {
-        // جلب كل المستخدمين اللي دورهم seller
-        $sellers = User::where('role', 'seller')->pluck('id'); // بس ID البائعين
-
-        // جلب كل الطلبات اللي عاملها هؤلاء البائعين
-        $orders = Order::with('orderdetels.product', 'user', 'seller')
-            ->whereIn('seller_id', $sellers)
+        // ✅ جلب كل الطلبات التي لها seller_id (أي أنشأها بائع)
+        $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])
+            ->whereNotNull('seller_id')
+            ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json([
@@ -245,6 +270,7 @@ class OrderController extends Controller
             'orders'  => $orders,
         ], 200);
     }
+
     // 1️⃣ جميع الطلبات التي أنشأها البائع (لكل العملاء)
     public function sellerOrdersForCustomers()
     {
@@ -268,27 +294,6 @@ class OrderController extends Controller
         ], 200);
     }
 
-    // ==========================
-    // 3️⃣ جميع الطلبات الموافق عليها التي أنشأها البائع لكل العملاء
-    // ==========================
-    public function sellerApprovedOrders()
-    {
-        $seller = auth()->user();
-
-        if ($seller->role !== 'seller') {
-            return response()->json(['error' => 'غير مصرح لك'], 403);
-        }
-
-        $orders = Order::with('orderdetels.product', 'userorder')
-            ->where('seller_id', $seller->id)
-            ->whereNotNull('approved_at')
-            ->get();
-
-        return response()->json([
-            'message' => 'تم جلب جميع الطلبات الموافق عليها للبائع',
-            'orders' => $orders
-        ], 200);
-    }
     // 2️⃣ عدد الطلبات التي أنشأها البائع
     public function sellerOrdersCount()
     {
@@ -338,6 +343,75 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'تم جلب جميع الطلبات بنجاح',
             'orders'  => $orders,
+        ], 200);
+    }
+    //لعرض الطلبات الي عملها seller لي costomer ووافق عليها costomer
+    public function showCurrentSellerApprovedOrders()
+    {
+        $sellerId = auth()->id(); // 🧩 البائع الحالي
+
+        // ✅ الطلبات التي أنشأها هذا البائع وتمت الموافقة عليها من العميل
+        $orders = Order::with(['orderdetels.product', 'userorder', 'seller'])
+            ->where('seller_id', $sellerId)
+            ->where('approval_status', 'approved')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'message' => 'تم جلب الطلبات التي أنشأها هذا البائع ووافق عليها العملاء بنجاح',
+            'orders'  => $orders,
+        ], 200);
+    }
+
+    //جلب المنديب ب الترتيب حسب الي عمل اوردارات اكتر وتم اكملها 
+    public function getpositionSellersByApprovedOrders()
+    {
+        // ✅ جلب البائعين مع عدد الطلبات الموافق عليها فقط
+        $sellers = User::where('role', 'seller')
+            ->withCount(['sales as approved_orders_count' => function ($query) {
+                $query->where('approval_status', 'approved');
+            }])
+            ->orderByDesc('approved_orders_count') // ترتيب تنازلي حسب العدد
+            ->get(['id', 'name', 'email']);
+
+        return response()->json([
+            'message' => 'تم جلب البائعين حسب عدد الطلبات الموافق عليها بنجاح',
+            'sellers' => $sellers,
+        ], 200);
+    }
+    // اضافه الارباح علي طلبيات المنديب 
+    public function addSellerProfit(Request $request, $orderId)
+    {
+        $admin = auth()->user();
+
+        if ($admin->role !== 'admin') {
+            return response()->json(['message' => 'غير مصرح - فقط للمديرين'], 403);
+        }
+
+        $request->validate([
+            'profit' => 'required|numeric|min:0',
+        ]);
+
+        $order = Order::with('seller')->find($orderId);
+
+        if (!$order) {
+            return response()->json(['message' => 'الطلب غير موجود'], 404);
+        }
+
+        if (is_null($order->seller_id)) {
+            return response()->json(['message' => 'هذا الطلب لم يتم بواسطة بائع'], 400);
+        }
+
+        if ($order->approval_status !== 'approved') {
+            return response()->json(['message' => 'لا يمكن إضافة أرباح إلا للطلبات الموافق عليها'], 400);
+        }
+
+        $order->seller_profit = $request->profit;
+        $order->save();
+
+        return response()->json([
+            'message' => 'تمت إضافة أرباح المندوب بنجاح',
+            'order' => $order->only(['id', 'seller_id', 'seller_profit', 'total_price'])
         ], 200);
     }
 
@@ -640,6 +714,153 @@ class OrderController extends Controller
         $filePath = storage_path('app/public/' . $fileName);
 
         $writer->save($filePath);
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
+    }
+    public function importCustomerOrders(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        $file = $request->file('file');
+        $spreadsheet = IOFactory::load($file->getPathname());
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
+
+        foreach (array_slice($rows, 1) as $row) {
+            if (!empty($row[1])) { // user_id موجود
+                Order::updateOrCreate(
+                    ['id' => $row[0] ?? null],
+                    [
+                        'user_id'        => $row[1],
+                        'seller_id'      => null, // ✅ بدون seller_id
+                        'total_price'    => $row[3] ?? 0,
+                        'status'         => $row[4] ?? 'pending',
+                        'city'           => $row[5] ?? null,
+                        'governorate'    => $row[6] ?? null,
+                        'street'         => $row[7] ?? null,
+                        'phone'          => $row[8] ?? null,
+                        'payment_method' => $row[9] ?? null,
+                        'approval_status' => $row[10] ?? 'pending',
+                    ]
+                );
+            }
+        }
+
+        return response()->json(['message' => '✅ تم استيراد طلبات العملاء بنجاح']);
+    }
+
+    // ✅ تصدير الطلبات الخاصة بالعملاء (بدون seller_id)
+    public function exportCustomerOrders()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // رؤوس الأعمدة
+        $headers = ['ID', 'User ID', 'Seller ID', 'Total Price', 'Status', 'City', 'Governorate', 'Street', 'Phone', 'Payment Method', 'Approval Status'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        // الطلبات التي لا تحتوي على seller_id
+        $orders = Order::whereNull('seller_id')->orderBy('created_at', 'desc')->get();
+        $row = 2;
+
+        foreach ($orders as $order) {
+            $sheet->fromArray([
+                $order->id,
+                $order->user_id,
+                $order->seller_id,
+                $order->total_price,
+                $order->status,
+                $order->city,
+                $order->governorate,
+                $order->street,
+                $order->phone,
+                $order->payment_method,
+                $order->approval_status,
+            ], null, 'A' . $row);
+            $row++;
+        }
+
+        $fileName = 'customer-orders-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        $filePath = storage_path('app/public/' . $fileName);
+        (new Xlsx($spreadsheet))->save($filePath);
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
+    }
+
+    // ✅ استيراد الطلبات الخاصة بالبائعين (approval_status = approved)
+    public function importApprovedSellerOrders(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        $file = $request->file('file');
+        $spreadsheet = IOFactory::load($file->getPathname());
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
+
+        foreach (array_slice($rows, 1) as $row) {
+            if (!empty($row[2])) { // seller_id موجود
+                Order::updateOrCreate(
+                    ['id' => $row[0] ?? null],
+                    [
+                        'user_id'        => $row[1] ?? null,
+                        'seller_id'      => $row[2],
+                        'total_price'    => $row[3] ?? 0,
+                        'status'         => $row[4] ?? 'pending',
+                        'city'           => $row[5] ?? null,
+                        'governorate'    => $row[6] ?? null,
+                        'street'         => $row[7] ?? null,
+                        'phone'          => $row[8] ?? null,
+                        'payment_method' => $row[9] ?? null,
+                        'approval_status' => 'approved', // ✅ نثبّت الحالة
+                    ]
+                );
+            }
+        }
+
+        return response()->json(['message' => '✅ تم استيراد طلبات البائعين الموافق عليها بنجاح']);
+    }
+
+    // ✅ تصدير الطلبات الخاصة بالبائعين الموافق عليها فقط
+    public function exportApprovedSellerOrders()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $headers = ['ID', 'User ID', 'Seller ID', 'Total Price', 'Status', 'City', 'Governorate', 'Street', 'Phone', 'Payment Method', 'Approval Status'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        // الطلبات التي تحتوي على seller_id وتمت الموافقة عليها
+        $orders = Order::whereNotNull('seller_id')
+            ->where('approval_status', 'approved')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $row = 2;
+
+        foreach ($orders as $order) {
+            $sheet->fromArray([
+                $order->id,
+                $order->user_id,
+                $order->seller_id,
+                $order->total_price,
+                $order->status,
+                $order->city,
+                $order->governorate,
+                $order->street,
+                $order->phone,
+                $order->payment_method,
+                $order->approval_status,
+            ], null, 'A' . $row);
+            $row++;
+        }
+
+        $fileName = 'approved-seller-orders-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        $filePath = storage_path('app/public/' . $fileName);
+        (new Xlsx($spreadsheet))->save($filePath);
 
         return response()->download($filePath)->deleteFileAfterSend(true);
     }

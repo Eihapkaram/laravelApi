@@ -14,6 +14,7 @@ class CreateSettingsTable extends Migration
             $table->string('logo')->nullable();
             $table->string('signature')->nullable();
             $table->string('email')->nullable();
+            $table->string('location')->nullable();
             $table->string('facebook')->nullable();
             $table->string('instgrame')->nullable();
             $table->string('twiter')->nullable();

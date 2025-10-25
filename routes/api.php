@@ -196,16 +196,24 @@ Route::middleware('auth:api')->group(function () {
     // Order 
     Route::post('order/add', [OrderController::class, 'createOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
-    //orders Seller
-    Route::get('sellerApprovedOrdershow', [OrderController::class, 'sellerApprovedOrders']);
+
+    //orders Seller 
+    Route::get('sellerPosition', [OrderController::class, 'getpositionSellersByApprovedOrders']);
+    Route::get('sellerApprovedOrdershow', [OrderController::class, 'showCurrentSellerApprovedOrders']);
     Route::get('ALLorder/show/forSeller', [OrderController::class, 'sellerOrdersForCustomers']);
     Route::get('order/count/seller', [OrderController::class, 'sellerOrdersCount']);
-
+    Route::get('/seller/my-profits', [SellerCustomerController::class, 'myProfits']);
     Route::get('order/count', [OrderController::class, 'OrderCount']);
     Route::delete('order/delete/all', [OrderController::class, 'deleteAllOrder']);
     Route::get('order/show/latest', [OrderController::class, 'showlatestOrder']);
     Route::post('/orders/seller-create', [OrderController::class, 'createBySeller']);
     Route::get('/orders/export', [OrderController::class, 'export']);
+    // عملاء (بدون seller_id)
+
+    Route::get('/orders/export/customers', [OrderController::class, 'exportCustomerOrders']);
+    // للكل مش لواحد  بائعون (approved فقط)
+
+    Route::get('/orders/export/sellers/approved', [OrderController::class, 'exportApprovedSellerOrders']);
     Route::post('/orders/{id}/approve', [OrderController::class, 'approveOrder']);
     Route::post('/orders/{id}/reject', [OrderController::class, 'rejectOrder']);
     Route::put('order/update/{id}', [OrderController::class, 'updateOrderStatus']);
@@ -227,6 +235,16 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    //طلب سحب ارباح 
+
+    //  عرض ارباجحهة الحاليه المندوب
+    Route::post('/seller/myProfits', [SellerCustomerController::class, 'myProfits']);
+//سحب كل 
+    Route::post('/seller/withdraw', [SellerCustomerController::class, 'requestWithdraw']);
+    //سحب جزء 
+    Route::post('/seller/withdraw', [SellerCustomerController::class, 'requestWithdrawpart']);
+    // عرض طلبا السحب
+    Route::get('/seller/withdraws', [SellerCustomerController::class, 'myWithdraws']);
     //فاتورا 
     Route::get('/orders/{id}/invoice', [OrderController::class, 'generateInvoice']);
 });
@@ -237,14 +255,14 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('create', [ProductController::class, 'create']);
     Route::get('/products/export', [ProductController::class, 'export']);
     Route::post('/products/import', [ProductController::class, 'import']);
-    Route::put('update/{id}', [ProductController::class, 'update']);
+    Route::post('update/{id}', [ProductController::class, 'update']);
     Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
 
     // Category
     Route::post('categorie/add', [CategorieController::class, 'AddCate']);
     Route::post('categories/import', [CategorieController::class, 'import']);
     Route::get('categories/export', [CategorieController::class, 'export']);
-    Route::put('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
+    Route::post('categorie/update/{id}', [CategorieController::class, 'UpdateCate']);
     Route::delete('categorie/{id}', [CategorieController::class, 'DeleteCate']);
     Route::delete('categorie/delete/{id}', [CategorieController::class, 'DeleteCate']);
 
@@ -252,7 +270,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('page/add', [PageController::class, 'AddPage']);
     Route::get('/pages/export', [PageController::class, 'export']);
     Route::post('/pages/import', [PageController::class, 'import']);
-    Route::put('page/Update/{id}', [PageController::class, 'UpdatePage']);
+    Route::post('page/Update/{id}', [PageController::class, 'UpdatePage']);
     Route::delete('page/Delete/{id}', [PageController::class, 'DeletePage']);
 
     // User
@@ -261,7 +279,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::get('user/info/{id}', [UserController::class, 'OneUserinfo']);
     Route::post('/import/users', [UserController::class, 'importUsers']);
     Route::get('/export/users', [UserController::class, 'export']);
-    Route::put('user/update/{id}', [UserController::class, 'userUpdate']);
+    Route::post('user/update/{id}', [UserController::class, 'userUpdate']);
     Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateOrderStatus']);
 
@@ -279,5 +297,22 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('settings/update', [SettingController::class, 'update']);
     //all orders// and //by seller
     Route::get('allorderbyseller', [OrderController::class, 'showAllOrdersBySellers']);
+    Route::get('allorderbyseller/ApprovedOrders', [OrderController::class, 'showApprovedOrdersBySellers']);
+    Route::get('orders/customers', [OrderController::class, 'showAllOrdersWithoutSeller']);
     Route::get('orders/show/all', [OrderController::class, 'showAllOrders']);
+    
+    // عملاء (بدون seller_id)
+    Route::post('/orders/import/customers', [OrderController::class, 'importCustomerOrders']);
+    //اضافه ارباح لي orders لي seller
+    Route::post('/orders/{id}/add-profit', [OrderController::class, 'addSellerProfit']);
+    // بائعون (approved فقط)
+    Route::post('/orders/import/sellers/approved', [OrderController::class, 'importApprovedSellerOrders']);
+    //عرض ارباح المنديب
+         Route::get('/sellersProfits', [SellerCustomerController::class, 'sellersProfits']);
+         //موافقه او رفض طلب سحب الارباح 
+    // الإدمن
+     Route::get('/withdraw-requests', [SellerCustomerController::class, 'allWithdrawRequests']);
+     Route::patch('/withdraw-requests/{id}', [SellerCustomerController::class, 'updateWithdrawStatus']);
+    Route::post('/withdraws/{id}/approve', [SellerCustomerController::class, 'approveWithdraw']);
+
 });

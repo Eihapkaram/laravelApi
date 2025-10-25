@@ -12,7 +12,7 @@ use App\Models\Cart;
 use App\Models\Review;
 
 class User extends Authenticatable
-{  
+{
     use HasApiTokens, HasFactory, Notifiable;
     /**
      * The attributes that are mass assignable.
@@ -28,37 +28,50 @@ class User extends Authenticatable
         'phone',
         'img',
         'latitude',   // ✅ أضفت الإحداثيات
-        'longitude', 
+        'longitude',
     ];
- public function getOrder() {
-       return $this->hasMany(Order::class, 'user_id');
+    public function getOrder()
+    {
+        return $this->hasMany(Order::class, 'user_id');
     }
     // العملاء التابعين للبائع
-public function customers()
-{
-    return $this->belongsToMany(User::class, 'seller_customers', 'seller_id', 'customer_id');
-}
+    public function customers()
+    {
+        return $this->belongsToMany(User::class, 'seller_customers', 'seller_id', 'customer_id');
+    }
 
-// البائع اللي يتبعه العميل (عكس العلاقة)
-public function seller()
-{
-    return $this->belongsToMany(User::class, 'seller_customers', 'customer_id', 'seller_id');
-}
+    // البائع اللي يتبعه العميل (عكس العلاقة)
+    public function seller()
+    {
+        return $this->belongsToMany(User::class, 'seller_customers', 'customer_id', 'seller_id');
+    }
 
     public function sales()
-{
-    // الطلبات اللي أنشأها المستخدم كـ "بائع"
-    return $this->hasMany(Order::class, 'seller_id');
-}
-   public function getcart()
-{
-    return $this->hasOne(Cart::class);
-}
- public function userReviwes()
-{
-    return $this->hasMany(Review::class);
-}
-
+    {
+        // الطلبات اللي أنشأها المستخدم كـ "بائع"
+        return $this->hasMany(Order::class, 'seller_id');
+    }
+    public function getcart()
+    {
+        return $this->hasOne(Cart::class);
+    }
+    public function userReviwes()
+    {
+        return $this->hasMany(Review::class);
+    }
+    public function scopeNearby($query, $latitude, $longitude, $distance = 10)
+    {
+        return $query->selectRaw("*,
+            ( 6371 * acos(
+                cos(radians(?)) *
+                cos(radians(latitude)) *
+                cos(radians(longitude) - radians(?)) +
+                sin(radians(?)) *
+                sin(radians(latitude))
+            )) AS distance", [$latitude, $longitude, $latitude])
+            ->having("distance", "<", $distance)
+            ->orderBy("distance", "asc");
+    }
     /**
      * The attributes that should be hidden for serialization.
      *

@@ -63,7 +63,7 @@ class PageController extends Controller
 
     public function UpdatePage(Request $request, $id)
     {
-        $request->validate(['slug' => 'required', 'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',]);
+        $request->validate(['slug' => 'required', 'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',]);
         if (! $request || ! $id) {
             return response()->json([
                 'massege' => 'update Page not done',
@@ -76,7 +76,7 @@ class PageController extends Controller
             $path = $request->file('img')->storeAs('pages', $image, 'public');
             // => هيتخزن في storage/app/public/products
         }
-        $pro->update(['slug' => $request->slug, 'img' => $path]);
+        $pro->update(['slug' => $request->slug, 'img' => $path ?? $pro->img]);
 
         return response()->json([
             'massege' => 'update Page is done',

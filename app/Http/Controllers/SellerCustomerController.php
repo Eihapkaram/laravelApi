@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Order;
+ use App\Models\WithdrawRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -167,5 +168,337 @@ public function sellerCustomerOrders($customer_id)
 
     return response()->json($orders);
 }
+//عرض الارباح لكل مندوب
+// ✅ عرض أرباح المندوب الحالية بعد عمليات السحب
+public function myProfits()
+{
+    $seller = Auth::user();
+
+    // تأكد أن المستخدم فعلاً مندوب
+    if ($seller->role !== 'seller') {
+        return response()->json(['message' => 'غير مصرح لك'], 403);
+    }
+
+    // إجمالي الطلبات الموافق عليها
+    $orders = Order::where('seller_id', $seller->id)
+        ->where('approval_status', 'approved')
+        ->select('id', 'user_id', 'seller_profit', 'total_price', 'created_at')
+        ->with('userorder:id,name')
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    // حساب إجمالي الأرباح من الطلبات
+    $totalProfit = $orders->sum('seller_profit');
+
+    // حساب المبالغ المسحوبة (الموافق عليها فقط)
+    $withdrawn = WithdrawRequest::where('seller_id', $seller->id)
+        ->where('status', 'approved')
+        ->sum('amount');
+
+    // الرصيد المتاح بعد عمليات السحب
+    $availableProfit = $totalProfit - $withdrawn;
+
+    // تحديث الرصيد في جدول المستخدم
+    $seller->available_profit = $availableProfit;
+    $seller->save();
+
+    return response()->json([
+        'seller_id' => $seller->id,
+        'seller_name' => $seller->name,
+        'total_orders' => $orders->count(),
+        'total_profit' => round($totalProfit, 2),
+        'withdrawn' => round($withdrawn, 2),
+        'available_profit' => round($availableProfit, 2),
+        'orders' => $orders->map(function ($order) {
+            return [
+                'order_id' => $order->id,
+                'customer_name' => $order->userorder->name ?? '-',
+                'total_price' => $order->total_price,
+                'seller_profit' => $order->seller_profit,
+                'date' => $order->created_at->format('Y-m-d H:i'),
+            ];
+        }),
+    ]);
+}
+
+// ✅ طلب سحب جزء من الأرباح
+public function requestWithdrawpart(Request $request)
+{
+    $seller = auth()->user();
+
+    if ($seller->role !== 'seller') {
+        return response()->json(['message' => 'غير مصرح لك'], 403);
+    }
+
+    $request->validate([
+        'amount' => 'required|numeric|min:1',
+        'note' => 'nullable|string|max:255',
+    ]);
+
+    // إجمالي الأرباح من الطلبات الموافق عليها
+    $totalProfit = Order::where('seller_id', $seller->id)
+        ->where('approval_status', 'approved')
+        ->sum('seller_profit');
+
+    // إجمالي المبالغ التي تم سحبها فعلاً (تمت الموافقة عليها)
+    $withdrawn = WithdrawRequest::where('seller_id', $seller->id)
+        ->where('status', 'approved')
+        ->sum('amount');
+
+    // الأرباح المتاحة حالياً
+    $available = $totalProfit - $withdrawn;
+
+    if ($available <= 0) {
+        return response()->json(['message' => 'لا توجد أرباح متاحة للسحب حالياً'], 400);
+    }
+
+    if ($request->amount > $available) {
+        return response()->json([
+            'message' => 'المبلغ المطلوب يتجاوز الأرباح المتاحة',
+            'available' => round($available, 2)
+        ], 400);
+    }
+
+    // إنشاء طلب سحب جديد
+    $withdraw = WithdrawRequest::create([
+        'seller_id' => $seller->id,
+        'amount' => $request->amount,
+        'note' => $request->note,
+        'status' => 'pending',
+    ]);
+
+    return response()->json([
+        'message' => 'تم إرسال طلب السحب بنجاح وبانتظار المراجعة',
+        'withdraw_request' => $withdraw,
+        'available_after_request' => round($available - $request->amount, 2)
+    ]);
+}
+
+// طلب سحب ارباح المندوب 
+public function requestWithdraw(Request $request)
+{
+    $seller = auth()->user();
+
+    if ($seller->role !== 'seller') {
+        return response()->json(['message' => 'غير مصرح لك'], 403);
+    }
+
+    $request->validate([
+        'amount' => 'required|numeric|min:1',
+        'note' => 'nullable|string|max:255',
+    ]);
+
+    // احسب إجمالي الأرباح الحالية
+    $totalProfit = Order::where('seller_id', $seller->id)
+        ->where('approval_status', 'approved')
+        ->sum('seller_profit');
+
+    // احسب المبالغ اللي تم سحبها سابقًا
+    $withdrawn = WithdrawRequest::where('seller_id', $seller->id)
+        ->where('status', 'approved')
+        ->sum('amount');
+
+    $available = $totalProfit - $withdrawn;
+
+    if ($request->amount > $available) {
+        return response()->json([
+            'message' => 'المبلغ المطلوب يتجاوز الأرباح المتاحة',
+            'available' => $available
+        ], 400);
+    }
+
+    $withdraw = WithdrawRequest::create([
+        'seller_id' => $seller->id,
+        'amount' => $request->amount,
+        'note' => $request->note,
+    ]);
+
+    return response()->json([
+        'message' => 'تم إرسال طلب السحب بنجاح، بانتظار المراجعة',
+        'withdraw_request' => $withdraw,
+    ], 201);
+}
+//عرض طلب سحب للمندوب 
+public function myWithdraws()
+{
+    $seller = auth()->user();
+
+    if ($seller->role !== 'seller') {
+        return response()->json(['message' => 'غير مصرح لك'], 403);
+    }
+
+    $withdraws = WithdrawRequest::where('seller_id', $seller->id)
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json($withdraws);
+}
+
+//عرض ارباح كل مندوب 
+public function sellersProfits()
+{
+    // تأكد أن المستخدم أدمن فقط
+    $user = Auth::user();
+    if ($user->role !== 'admin') {
+        return response()->json(['message' => 'غير مصرح لك'], 403);
+    }
+
+    // اجمع أرباح كل بائع بناءً على الطلبات الموافق عليها
+    $profits = Order::selectRaw('seller_id, COUNT(*) as total_orders, SUM(seller_profit) as total_profit')
+        ->whereNotNull('seller_id')
+        ->where('approval_status', 'approved')
+        ->groupBy('seller_id')
+        ->with('seller:id,name')
+        ->get()
+        ->map(function ($item) {
+            return [
+                'seller_id' => $item->seller_id,
+                'seller_name' => $item->seller?->name ?? 'غير معروف',
+                'total_orders' => $item->total_orders,
+                'total_profit' => round($item->total_profit, 2),
+            ];
+        });
+
+    return response()->json($profits);
+}
+// الموافقه او رفض لطلب سحب الارباح ادمن 
+// ✅ الموافقه او رفض لطلب سحب الارباح ادمن 
+public function approveWithdraw($id, Request $request)
+{
+    $admin = auth()->user();
+
+    if ($admin->role !== 'admin') {
+        return response()->json(['message' => 'غير مصرح لك'], 403);
+    }
+
+    $request->validate([
+        'status' => 'required|in:approved,rejected',
+        'note' => 'nullable|string|max:255',
+    ]);
+
+    $withdraw = WithdrawRequest::with('seller')->findOrFail($id);
+
+    if ($withdraw->status !== 'pending') {
+        return response()->json(['message' => 'تمت معالجة هذا الطلب مسبقًا'], 400);
+    }
+
+    // ✅ لو تمت الموافقة يتم خصم المبلغ من أرباح المندوب
+    if ($request->status === 'approved') {
+        $seller = $withdraw->seller;
+
+        // احسب الأرباح الكلية للمندوب من الطلبات الموافق عليها
+        $totalProfit = Order::where('seller_id', $seller->id)
+            ->where('approval_status', 'approved')
+            ->sum('seller_profit');
+
+        // احسب المبالغ المسحوبة سابقًا
+        $withdrawn = WithdrawRequest::where('seller_id', $seller->id)
+            ->where('status', 'approved')
+            ->sum('amount');
+
+        // احسب الرصيد الحالي بعد العملية الجديدة
+        $available = $totalProfit - $withdrawn;
+
+        // حدث الرصيد في جدول المستخدمين
+        $seller->available_profit = $available;
+        $seller->save();
+    }
+
+    // تحديث حالة طلب السحب
+    $withdraw->update([
+        'status' => $request->status,
+        'note' => $request->note,
+    ]);
+
+    return response()->json([
+        'message' => 'تم تحديث حالة طلب السحب بنجاح',
+        'withdraw' => $withdraw,
+        'new_balance' => $withdraw->seller->available_profit ?? null,
+    ]);
+}
+
+   
+// ✅ عرض كل طلبات السحب (للأدمن)
+public function allWithdrawRequests()
+{
+    $admin = auth()->user();
+
+    // تأكد أن المستخدم أدمن
+    if ($admin->role !== 'admin') {
+        return response()->json(['message' => 'غير مصرح لك'], 403);
+    }
+
+    // جلب جميع طلبات السحب مع بيانات المندوب
+    $withdraws = WithdrawRequest::with('seller:id,name,phone')
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'seller_id' => $item->seller_id,
+                'seller_name' => $item->seller->name ?? '-',
+                'seller_phone' => $item->seller->phone ?? '-',
+                'amount' => $item->amount,
+                'status' => $item->status,
+                'note' => $item->note,
+                'created_at' => $item->created_at->format('Y-m-d H:i'),
+            ];
+        });
+
+    return response()->json([
+        'message' => 'تم جلب طلبات السحب بنجاح',
+        'withdraw_requests' => $withdraws,
+    ]);
+}
+// ✅ تحديث حالة طلب السحب (للأدمن)
+public function updateWithdrawStatus($id, Request $request)
+{
+    $admin = auth()->user();
+
+    // تأكد أن المستخدم أدمن
+    if ($admin->role !== 'admin') {
+        return response()->json(['message' => 'غير مصرح لك'], 403);
+    }
+
+    // التحقق من البيانات المدخلة
+    $request->validate([
+        'status' => 'required|in:pending,approved,rejected',
+        'note' => 'nullable|string|max:255',
+    ]);
+
+    // جلب الطلب
+    $withdraw = WithdrawRequest::with('seller:id,name')->findOrFail($id);
+
+    // منع التحديث لو الطلب بالفعل تمت معالجته
+    if ($withdraw->status !== 'pending') {
+        return response()->json([
+            'message' => 'لا يمكن تعديل حالة طلب تمت معالجته مسبقاً',
+        ], 400);
+    }
+
+    // تحديث الحالة
+    $withdraw->status = $request->status;
+    $withdraw->note = $request->note;
+
+    // لو تم الموافقة، احفظ تاريخ الموافقة
+    if ($request->status === 'approved') {
+        $withdraw->approved_at = now();
+    }
+
+    $withdraw->save();
+
+    return response()->json([
+        'message' => 'تم تحديث حالة طلب السحب بنجاح',
+        'withdraw' => [
+            'id' => $withdraw->id,
+            'seller_name' => $withdraw->seller->name ?? '-',
+            'amount' => $withdraw->amount,
+            'status' => $withdraw->status,
+            'note' => $withdraw->note,
+            'approved_at' => $withdraw->approved_at,
+        ],
+    ]);
+}
+
 
 }

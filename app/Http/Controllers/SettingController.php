@@ -38,6 +38,7 @@ class SettingController extends Controller
             'phone1' => 'nullable|string|max:20',
             'phone2' => 'nullable|string|max:20',
             'hotphone' => 'nullable|string|max:20',
+            'location' => 'nullable|string',
         ]);
 
         try {
@@ -65,6 +66,7 @@ class SettingController extends Controller
             $settings->phone1 = $request->phone1;
             $settings->phone2 = $request->phone2;
             $settings->hotphone = $request->hotphone;
+            $settings->location = $request->location;
 
             $settings->save();
 
@@ -97,6 +99,7 @@ class SettingController extends Controller
             'phone1' => 'nullable|string|max:20',
             'phone2' => 'nullable|string|max:20',
             'hotphone' => 'nullable|string|max:20',
+            'location' => 'nullable|string',
         ]);
 
         $settings = Setting::first();
@@ -133,6 +136,7 @@ class SettingController extends Controller
         $settings->phone1 = $request->phone1;
         $settings->phone2 = $request->phone2;
         $settings->hotphone = $request->hotphone;
+        $settings->location = $request->location;
 
         $settings->save();
 
