@@ -163,7 +163,7 @@ class UserController extends Controller
 
     public function userinfo()
     {
-        $userdata = User::get();
+        $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude','created_at')->get();
         return response()->json(['user' => $userdata], 200);
     }
     // جلب المستخدمين الاقرب للموقع الي هتبعته لي url GET /api/users-nearby?latitude=30.0444&longitude=31.2357&distance=10
@@ -191,7 +191,7 @@ class UserController extends Controller
 
     public function OneUserinfo($id)
     {
-        $userdata = User::find($id);
+        $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude','created_at')->find($id);
         if (!$userdata) {
             return response()->json(['message' => 'المستخدم غير موجود'], 404);
         }
@@ -202,7 +202,18 @@ class UserController extends Controller
     {
         $userdata = auth()->user();
         return response()->json([
-            'user' => $userdata->get()
+            'user' => [
+                'id' => $userdata->id,
+                'name' => $userdata->name,
+                'last_name' => $userdata->last_name,
+                'email' => $userdata->email,
+                'phone' => $userdata->phone,
+                'role' => $userdata->role,
+                'img' => $userdata->img,
+                'latitude' => $userdata->latitude,
+                'longitude' => $userdata->longitude,
+                "created_at" => $userdata->created_at
+            ]
         ], 200);
     }
 
