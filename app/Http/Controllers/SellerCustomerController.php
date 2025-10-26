@@ -241,6 +241,18 @@ class SellerCustomerController extends Controller
             'note' => 'nullable|string|max:255',
         ]);
 
+        // ✅ تحقق إن مفيش طلب سحب معلق بالفعل
+        $pendingRequest = WithdrawRequest::where('seller_id', $seller->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($pendingRequest) {
+            return response()->json([
+                'message' => 'لديك طلب سحب قيد المراجعة بالفعل، يرجى انتظار الموافقة عليه قبل إنشاء طلب جديد',
+                'pending_request_id' => $pendingRequest->id,
+            ], 400);
+        }
+
         // إجمالي الأرباح من الطلبات الموافق عليها
         $totalProfit = Order::where('seller_id', $seller->id)
             ->where('approval_status', 'approved')
@@ -265,24 +277,28 @@ class SellerCustomerController extends Controller
             ], 400);
         }
 
-        // إنشاء طلب سحب جديد
+        // ✅ إنشاء طلب سحب جديد
         $withdraw = WithdrawRequest::create([
             'seller_id' => $seller->id,
             'amount' => $request->amount,
             'note' => $request->note,
             'status' => 'pending',
         ]);
-        // ✅ إرسال إشعار للمندوب أو الأدمن
+
+        // ✅ إرسال إشعار للأدمن والمندوب
         $admins = User::whereIn('role', ['admin', 'delegate'])->get();
         Notification::send($admins, new NewWithdrawRequest($seller, $request->amount));
-        // ✅ إرسال إشعار للبائع نفسه
+
+        // ✅ إشعار للبائع نفسه
         $seller->notify(new WithdrawRequestSubmitted($request->amount));
+
         return response()->json([
             'message' => 'تم إرسال طلب السحب بنجاح وبانتظار المراجعة',
             'withdraw_request' => $withdraw,
             'available_after_request' => round($available - $request->amount, 2)
-        ]);
+        ], 200);
     }
+
 
     // طلب سحب ارباح المندوب 
     public function requestWithdraw(Request $request)

@@ -27,7 +27,7 @@ class WithdrawRequestRejected extends Notification
     {
         return [
             'title' => '❌ تم رفض طلب السحب',
-            'body' => $this->note
+            'message' => $this->note
                 ? "تم رفض طلب سحب الأرباح بمبلغ {$this->amount} جنيه. السبب: {$this->note}"
                 : "تم رفض طلب سحب الأرباح بمبلغ {$this->amount} جنيه.",
         ];

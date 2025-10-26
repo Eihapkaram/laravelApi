@@ -29,7 +29,7 @@ class NewWithdrawRequest extends Notification
     {
         return [
             'title' => '📤 طلب سحب أرباح جديد',
-            'body' => "البائع {$this->seller->name} طلب سحب مبلغ {$this->amount} ج.م",
+            'message' => "البائع {$this->seller->name} طلب سحب مبلغ {$this->amount} ج.م",
             'seller_id' => $this->seller->id,
         ];
     }
