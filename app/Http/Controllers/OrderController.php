@@ -219,16 +219,23 @@ class OrderController extends Controller
         ], 200);
     }
     // عرض طلبات المستخدم الحالي sales
+
     public function showOrder()
     {
         $user = auth()->user();
-        $order = $user->getOrder()->with('orderdetels.product', 'seller')->get();
+
+        // ✅ ترتيب الطلبات من الأحدث إلى الأقدم
+        $order = $user->getOrder()
+            ->with('orderdetels.product', 'seller')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return response()->json([
             'message' => 'تم جلب الطلبات الخاصة بك بنجاح',
             'order'   => $order,
         ], 200);
     }
+
     public function showAllOrdersWithoutSeller()
     {
         // ✅ جلب كل الطلبات التي لا تحتوي على seller_id

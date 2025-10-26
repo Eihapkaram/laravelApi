@@ -11,18 +11,17 @@ return new class extends Migration
      *
      * @return void
      */
-   public function up()
-{
-    Schema::table('withdraw_requests', function (Blueprint $table) {
-        $table->timestamp('approved_at')->nullable()->after('status');
-    });
-}
+    public function up()
+    {
+        Schema::table('withdraw_requests', function (Blueprint $table) {
+            $table->timestamp('approved_at')->nullable();
+        });
+    }
 
-public function down()
-{
-    Schema::table('withdraw_requests', function (Blueprint $table) {
-        $table->dropColumn('approved_at');
-    });
-}
-
+    public function down()
+    {
+        Schema::table('withdraw_requests', function (Blueprint $table) {
+            $table->dropColumn('approved_at');
+        });
+    }
 };

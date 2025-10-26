@@ -54,7 +54,7 @@ class OrderCreatedBySellerNotification extends Notification
     {
         return [
             'type' => 'order_created_by_seller',
-            'message' => "قام {$this->seller->name} بإنشاء طلبية لك جديد بقيمة {$this->order->total_price}جنيه.من فضلك اكد الطلبيه من صفحة مشترياتك ليتم شحنها لك",
+            'message' => "قام {$this->seller->name} بإنشاء طلبية رقم{$this->order->id}# لك جديد بقيمة {$this->order->total_price}جنيه.من فضلك اكد الطلبيه من صفحة مشترياتك ليتم شحنها لك",
             'order_id' => $this->order->id,
             'seller_name' => $this->seller->name,
             'orderDetels' => $this->order->with('orderdetels.product')->get(),
