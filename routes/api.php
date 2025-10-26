@@ -238,7 +238,7 @@ Route::middleware('auth:api')->group(function () {
     //طلب سحب ارباح 
 
     //  عرض ارباجحهة الحاليه المندوب
-    Route::post('/seller/myProfits', [SellerCustomerController::class, 'myProfits']);
+    Route::get('/seller/myProfits', [SellerCustomerController::class, 'myProfits']);
 //سحب كل 
     Route::post('/seller/withdraw', [SellerCustomerController::class, 'requestWithdraw']);
     //سحب جزء 
@@ -312,6 +312,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
          //موافقه او رفض طلب سحب الارباح 
     // الإدمن
      Route::get('/withdraw-requests', [SellerCustomerController::class, 'allWithdrawRequests']);
+     //موافقه او رفض طلب سحب الارباح 
      Route::patch('/withdraw-requests/{id}', [SellerCustomerController::class, 'updateWithdrawStatus']);
     Route::post('/withdraws/{id}/approve', [SellerCustomerController::class, 'approveWithdraw']);
 
