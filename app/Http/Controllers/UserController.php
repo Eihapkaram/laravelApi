@@ -397,14 +397,14 @@ class UserController extends Controller
         if (!$user) {
             return response()->json([
                 'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
-            ], 404);
+            ], 404, [], JSON_UNESCAPED_UNICODE);
         }
 
-       return response()->json([
-    'question' => $user->security_question
-], 200, [], JSON_UNESCAPED_UNICODE);
-
+        return response()->json([
+            'question' => $user->security_question
+        ], 200, [], JSON_UNESCAPED_UNICODE);
     }
+
 
     // اعاده تعين كلمه السر 
     public function resetPasswordWithSecurity(Request $request)
