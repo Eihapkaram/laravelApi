@@ -26,11 +26,24 @@ class UserController extends Controller
             'last_name' => 'required',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
+            'security_question'  => 'required',
+            'security_answer'  => 'required',
+            'wallet_number'  => 'nullable|numeric',
+            'front_id_image'  => 'nullable',
+            'back_id_image'  => 'nullable',
         ]);
 
         if ($request->hasFile('img')) {
             $imge = $request->file('img')->getClientOriginalName();
             $path = $request->file('img')->storeAs('users', $imge, 'public');
+        }
+        if ($request->hasFile('front_id_image')) {
+            $imge1 = $request->file('front_id_image')->getClientOriginalName();
+            $path1 = $request->file('front_id_image')->storeAs('imageid', $imge1, 'public');
+        }
+        if ($request->hasFile('back_id_image')) {
+            $imge2 = $request->file('back_id_image')->getClientOriginalName();
+            $path2 = $request->file('back_id_image')->storeAs('imageid', $imge2, 'public');
         }
 
         $user = User::create([
@@ -40,8 +53,13 @@ class UserController extends Controller
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
             'img' => $path ?? 'null',
-            'latitude' => $request->latitude ?? null,
-            'longitude' => $request->longitude ?? null,
+            'latitude' => $request->latitude ?? 'null',
+            'longitude' => $request->longitude ?? 'null',
+            'security_question' => $request->security_question ?? 'null',
+            'security_answer'  => $request->security_answer ?? 'null',
+            'wallet_number' => $request->wallet_number ?? 'null',
+            'front_id_image'  => $path1 ?? 'null',
+            'back_id_image'  => $path2 ?? 'null',
         ]);
 
         $token = $user->createToken('eihapkaramvuejs')->accessToken;
@@ -69,6 +87,7 @@ class UserController extends Controller
             $path = $request->file('img')->storeAs('users', $imge, 'public');
         }
 
+
         $user = User::find($id);
         if (!$user) {
             return response()->json([
@@ -86,6 +105,9 @@ class UserController extends Controller
             'img' => $path ?? $user->img,
             'latitude' => $request->latitude ?? $user->latitude,
             'longitude' => $request->longitude ?? $user->longitude,
+            'security_question' => $request->security_question ?? $user->security_question,
+            'security_answer'  => $request->security_answer ?? $user->security_answer,
+            'wallet_number' => $request->wallet_number ?? $user->wallet_number,
         ]);
 
         return response()->json([
@@ -165,27 +187,36 @@ class UserController extends Controller
         $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude', 'created_at')->get();
         return response()->json(['user' => $userdata], 200);
     }
-    // جلب المستخدمين الاقرب للموقع الي هتبعته لي url GET /api/users-nearby?latitude=30.0444&longitude=31.2357&distance=10
+    // جلب العملاء القريبين من موقع المندوب
 
     public function usersNearby(Request $request)
     {
-        $request->validate([
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-            'distance' => 'nullable|numeric'
-        ]);
+        $user = auth()->user(); // 🧍‍♂️ المستخدم الحالي
 
-        $latitude = $request->latitude;
-        $longitude = $request->longitude;
-        $distance = $request->distance ?? 10; // افتراضي 10 كم هيجيب كل المستخدمين ضمن 15 كم من النقطة المحددة.
+        // تأكد أن عنده إحداثيات
+        if (!$user->latitude || !$user->longitude) {
+            return response()->json([
+                'message' => '⚠️ لا يوجد إحداثيات محفوظة للمستخدم الحالي.',
+            ], 400);
+        }
 
-        $users = User::nearby($latitude, $longitude, $distance)->get();
+        $latitude = $user->latitude;
+        $longitude = $user->longitude;
+        $distance = $request->distance ?? 10; // المسافة الافتراضية 10 كم
+
+        // 🔍 جلب العملاء القريبين من المستخدم الحالي فقط
+        $users = User::where('role', 'customer')
+            ->where('id', '!=', $user->id) // استبعاد المستخدم نفسه
+            ->nearby($latitude, $longitude, $distance)
+            ->get();
 
         return response()->json([
             'count' => $users->count(),
-            'users' => $users
+            'users' => $users,
         ], 200);
     }
+
+
 
 
     public function OneUserinfo($id)
@@ -241,8 +272,14 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required',
+            'password' => 'required|min:8',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
+            'security_question'  => 'required',
+            'security_answer'  => 'required',
+            'wallet_number'  => 'nullable|numeric',
+            'front_id_image'  => 'nullable',
+            'back_id_image'  => 'nullable',
             'phone' => [
                 'required',
                 'regex:/^(011|012|015|010)[0-9]{8}$/'
@@ -253,17 +290,32 @@ class UserController extends Controller
         ]);
 
         $user = User::where('phone', $request->phone)->first();
+        if ($request->hasFile('front_id_image')) {
+            $imge3 = $request->file('front_id_image')->getClientOriginalName();
+            $path3 = $request->file('front_id_image')->storeAs('imageid', $imge3, 'public');
+        }
+        if ($request->hasFile('back_id_image')) {
+            $imge4 = $request->file('back_id_image')->getClientOriginalName();
+            $path4 = $request->file('back_id_image')->storeAs('imageid', $imge4, 'public');
+        }
         if (!$user) {
             $user = User::create([
                 'phone' => $request->phone,
                 'name' => $request->name,
+                'password' => $request->password,
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
+                'security_question' => $request->security_question ?? 'null',
+                'security_answer'  => $request->security_answer ?? 'null',
+                'wallet_number' => $request->wallet_number ?? 'null',
+                'front_id_image'  => $path3 ?? 'null',
+                'back_id_image'  => $path4 ?? 'null',
+
             ]);
             $user->notify(new WelcomeUser($user));
         }
 
-        $token = $user->createToken('API Token')->accessToken;
+        $token = $user->createToken('eihapkaramvuejs')->accessToken;
         return response()->json([
             'success' => true,
             'user' => $user,
@@ -278,20 +330,34 @@ class UserController extends Controller
                 'required',
                 'regex:/^(011|012|015|010)[0-9]{8}$/'
             ],
+            'password' => 'required|string|min:8'
         ], [
             'phone.required' => 'رقم الهاتف مطلوب',
-            'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010او  011 أو 012 أو 015',
+            'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015',
+            'password.required' => 'كلمة المرور مطلوبة',
+            'password.min' => 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
         ]);
 
         $user = User::where('phone', $request->phone)->first();
+
         if (!$user) {
             return response()->json([
                 'success' => false,
-                'user' => 'الرقم غير مسجل او تاكد من',
+                'message' => 'الرقم غير مسجل'
             ], 401);
         }
 
-        $token = $user->createToken('API Token')->accessToken;
+        // التحقق من كلمة المرور
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'كلمة المرور غير صحيحة'
+            ], 401);
+        }
+
+        // إنشاء التوكن
+        $token = $user->createToken('eihapkaramvuejs')->accessToken;
+
         return response()->json([
             'success' => true,
             'user' => [
@@ -306,7 +372,6 @@ class UserController extends Controller
             'token' => $token,
         ], 200);
     }
-
     public function logoutphone(Request $request)
     {
         $request->user()->token()->revoke();
@@ -315,6 +380,62 @@ class UserController extends Controller
             'message' => 'تم تسجيل الخروج بنجاح',
         ]);
     }
+    // سوال التحقق 
+    public function getSecurityQuestion(Request $request)
+    {
+        $request->validate([
+            'identifier' => 'required' // البريد أو رقم الهاتف
+        ]);
+
+        $identifier = $request->identifier;
+
+        // البحث حسب الإيميل أو رقم الهاتف
+        $user = User::where('email', $identifier)
+            ->orWhere('phone', $identifier)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
+            ], 404);
+        }
+
+        return response()->json([
+            'question' => $user->security_question
+        ], 200);
+    }
+
+    // اعاده تعين كلمه السر 
+    public function resetPasswordWithSecurity(Request $request)
+    {
+        $request->validate([
+            'identifier' => 'required', // البريد أو رقم الهاتف
+            'security_answer' => 'required|string',
+            'new_password' => 'required|min:8|confirmed',
+        ]);
+
+        $identifier = $request->identifier;
+
+        // البحث حسب الإيميل أو رقم الهاتف
+        $user = User::where('email', $identifier)
+            ->orWhere('phone', $identifier)
+            ->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'], 404);
+        }
+
+        if (strtolower(trim($request->security_answer)) !== strtolower(trim($user->security_answer))) {
+            return response()->json(['message' => 'إجابة السؤال الأمني غير صحيحة.'], 403);
+        }
+
+        $user->password = bcrypt($request->new_password);
+        $user->save();
+
+        return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
+    }
+
+
 
     // ✅ استيراد المستخدمين من ملف Excel
     public function importUsers(Request $request)

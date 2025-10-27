@@ -40,6 +40,8 @@ Route::post('register', [UserController::class, 'register']);
 Route::post('/register-phone', [UserController::class, 'registerWithPhone']);
 Route::post('login', [UserController::class, 'Login'])->name('login');
 Route::post('/login-phone', [UserController::class, 'loginWithPhone']);
+Route::post('/security-question', [UserController::class, 'getSecurityQuestion']);
+Route::post('/reset-password', [UserController::class, 'resetPasswordWithSecurity']);
 Route::get('pro', [ProductController::class, 'index']);
 Route::get('settings', [SettingController::class, 'index']);
 Route::get('/search/cate', [ProductController::class, 'search']);
@@ -73,6 +75,21 @@ Route::get('/products/{filename}', function ($filename) {
 Route::get('/users/{filename}', function ($filename) {
     $filename = urldecode($filename);
     $path = 'users/' . $filename;
+
+    if (!Storage::disk('public')->exists($path)) {
+        return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
+    }
+
+    $mime = Storage::disk('public')->mimeType($path);
+    $file = Storage::disk('public')->get($path);
+
+    return response($file, 200)->header('Content-Type', $mime);
+})->where('filename', '.*');
+
+// ✅ User  imageid
+Route::get('/imageid/{filename}', function ($filename) {
+    $filename = urldecode($filename);
+    $path = 'imageid/' . $filename;
 
     if (!Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
@@ -239,7 +256,7 @@ Route::middleware('auth:api')->group(function () {
 
     //  عرض ارباجحهة الحاليه المندوب
     Route::get('/seller/myProfits', [SellerCustomerController::class, 'myProfits']);
-//سحب كل 
+    //سحب كل 
     Route::post('/seller/withdraw', [SellerCustomerController::class, 'requestWithdraw']);
     //سحب جزء 
     Route::post('/seller/withdraw', [SellerCustomerController::class, 'requestWithdrawpart']);
@@ -300,7 +317,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::get('allorderbyseller/ApprovedOrders', [OrderController::class, 'showApprovedOrdersBySellers']);
     Route::get('orders/customers', [OrderController::class, 'showAllOrdersWithoutSeller']);
     Route::get('orders/show/all', [OrderController::class, 'showAllOrders']);
-    
+
     // عملاء (بدون seller_id)
     Route::post('/orders/import/customers', [OrderController::class, 'importCustomerOrders']);
     //اضافه ارباح لي orders لي seller
@@ -308,12 +325,11 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     // بائعون (approved فقط)
     Route::post('/orders/import/sellers/approved', [OrderController::class, 'importApprovedSellerOrders']);
     //عرض ارباح المنديب
-         Route::get('/sellersProfits', [SellerCustomerController::class, 'sellersProfits']);
-         //موافقه او رفض طلب سحب الارباح 
+    Route::get('/sellersProfits', [SellerCustomerController::class, 'sellersProfits']);
+    //موافقه او رفض طلب سحب الارباح 
     // الإدمن
-     Route::get('/withdraw-requests', [SellerCustomerController::class, 'allWithdrawRequests']);
-     //موافقه او رفض طلب سحب الارباح 
-     Route::patch('/withdraw-requests/{id}', [SellerCustomerController::class, 'updateWithdrawStatus']);
+    Route::get('/withdraw-requests', [SellerCustomerController::class, 'allWithdrawRequests']);
+    //موافقه او رفض طلب سحب الارباح 
+    Route::patch('/withdraw-requests/{id}', [SellerCustomerController::class, 'updateWithdrawStatus']);
     Route::post('/withdraws/{id}/approve', [SellerCustomerController::class, 'approveWithdraw']);
-
 });

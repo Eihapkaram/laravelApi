@@ -18,7 +18,7 @@ class CategorieController extends Controller
             'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
             'banner' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
             'description' => 'required',
-            'page_id' => 'required',
+            'page_id' => 'nullable',
         ]);
         // رفع الصورة
         $imagePath = null;

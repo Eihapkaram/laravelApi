@@ -29,6 +29,11 @@ class User extends Authenticatable
         'img',
         'latitude',   // ✅ أضفت الإحداثيات
         'longitude',
+        'security_question',
+        'security_answer',
+        'wallet_number',
+        'front_id_image',
+        'back_id_image'
     ];
     public function getOrder()
     {
