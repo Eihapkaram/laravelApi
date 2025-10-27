@@ -400,9 +400,10 @@ class UserController extends Controller
             ], 404);
         }
 
-        return response()->json([
-            'question' => $user->security_question
-        ], 200);
+       return response()->json([
+    'question' => $user->security_question
+], 200, [], JSON_UNESCAPED_UNICODE);
+
     }
 
     // اعاده تعين كلمه السر 
