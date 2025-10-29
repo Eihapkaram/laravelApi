@@ -240,6 +240,27 @@ class ProductController extends Controller
             'result' => $products,
         ], 200);
     }
+    public function searchByCategory(Request $request)
+{
+    $query = $request->input('q'); // اسم الفئة المطلوبة
+
+    $category = categorie::with('product') // نجيب الفئة مع منتجاتها
+        ->where('name', 'like', "%{$query}%")
+        ->first();
+
+    if (!$category) {
+        return response()->json([
+            'success' => false,
+            'message' => 'لم يتم العثور على الفئة المطلوبة',
+        ], 404);
+    }
+
+    return response()->json([
+        'success' => true,
+        'category' => $category,
+    ], 200);
+}
+
     
      // ✅ تصدير المنتجات إلى Excel
     public function export()
