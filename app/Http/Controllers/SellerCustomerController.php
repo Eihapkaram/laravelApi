@@ -7,10 +7,12 @@ use App\Models\Order;
 use App\Models\WithdrawRequest;
 use App\Notifications\WithdrawRequestApproved;
 use App\Notifications\WithdrawRequestRejected;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use App\Notifications\WithdrawRequestSubmitted;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\NewWithdrawRequest;
-
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -25,10 +27,11 @@ class SellerCustomerController extends Controller
     }
 
     // مسجل ف الموقع  إضافة عميل للبائع
+    // ✅ إضافة عميل للبائع بالهاتف أو الإيميل
     public function store(Request $request)
     {
         $request->validate([
-            'customer_id' => 'required|exists:users,id',
+            'identifier' => 'required|string', // ممكن يكون phone أو email
         ]);
 
         $seller = Auth::user();
@@ -38,7 +41,17 @@ class SellerCustomerController extends Controller
             return response()->json(['message' => 'غير مصرح لك'], 403);
         }
 
-        $seller->customers()->syncWithoutDetaching([$request->customer_id]);
+        // البحث عن العميل حسب الإيميل أو رقم الهاتف
+        $customer = User::where('email', $request->identifier)
+            ->orWhere('phone', $request->identifier)
+            ->first();
+
+        if (!$customer) {
+            return response()->json(['message' => 'العميل غير موجود في النظام'], 404);
+        }
+
+        // ربط البائع بالعميل بدون تكرار
+        $seller->customers()->syncWithoutDetaching([$customer->id]);
 
         return response()->json(['message' => 'تم إضافة العميل بنجاح']);
     }
@@ -56,38 +69,57 @@ class SellerCustomerController extends Controller
     {
         $seller = Auth::user();
 
-        // تأكد أن المستخدم الحالي هو بائع
         if ($seller->role !== 'seller') {
             return response()->json(['message' => 'غير مصرح لك'], 403);
         }
 
-        // التحقق من البيانات المطلوبة
+        // ✅ التحقق من البيانات المطلوبة
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
         ]);
 
-        // هل يوجد عميل بنفس رقم الهاتف؟
+        // 🔍 البحث عن العميل برقم الهاتف
         $customer = User::where('phone', $validated['phone'])->first();
 
         if (!$customer) {
-            // لو مش موجود → إنشاء عميل جديد
+            // ✅ إنشاء عميل جديد
             $customer = User::create([
                 'name' => $validated['name'],
                 'phone' => $validated['phone'],
+                'latitude' => $validated['latitude'],
+                'longitude' => $validated['longitude'],
                 'role' => 'customer',
-                'password' => bcrypt('12345678'), // مؤقتًا
+                'password' => bcrypt(Str::random(10)), // مؤقت
             ]);
+
+            // إنشاء توكن لتفعيل الحساب
+            $token = Str::random(64);
+            DB::table('password_resets')->insert([
+                'phone' => $customer->phone,
+                'token' => Hash::make($token),
+                'created_at' => now(),
+            ]);
+
+            $activationLink = url("/reset-password?token={$token}&phone={$customer->phone}");
+
+            // ✅ توليد رابط واتساب لإرسال الرابط
+            $message = "مرحباً {$customer->name}!\nتم إنشاء حسابك. لتعيين كلمة المرور اضغط هنا:\n{$activationLink}";
+            $phoneForWa = preg_replace('/[^0-9]/', '', $customer->phone);
+            $waLink = "https://wa.me/{$phoneForWa}?text=" . urlencode($message);
         }
 
-        // ربط العميل بالبائع (بدون تكرار)
+        // ✅ ربط العميل بالبائع (بدون تكرار)
         $seller->customers()->syncWithoutDetaching([$customer->id]);
 
         return response()->json([
             'message' => $customer->wasRecentlyCreated
-                ? 'تم إنشاء العميل وربطه بنجاح'
-                : 'تم ربط العميل الموجود مسبقًا بالبائع بنجاح',
-            'customer' => $customer
+                ? 'تم إنشاء العميل وربطه بنجاح، استخدم رابط واتساب لإرسال التفعيل.'
+                : 'تم ربط العميل الموجود مسبقًا بالبائع بنجاح.',
+            'customer' => $customer,
+            'waLink' => $waLink ?? null,
         ]);
     }
     public function myCustomers(Request $request)
