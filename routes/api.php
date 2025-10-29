@@ -44,7 +44,7 @@ Route::post('/security-question', [UserController::class, 'getSecurityQuestion']
 Route::post('/reset-password', [UserController::class, 'resetPasswordWithSecurity']);
 Route::get('pro', [ProductController::class, 'index']);
 Route::get('settings', [SettingController::class, 'index']);
-Route::get('/search/cate', [ProductController::class, 'search']);
+Route::get('/search/cate', [ProductController::class, 'searchByCategory']);
 Route::get('/search', [PageController::class, 'search']);
 Route::get('pageProducts/show', [PageController::class, 'showPageProduct']);
 Route::get('categorie/show', [CategorieController::class, 'showCateProduct']);
