@@ -302,7 +302,7 @@ class UserController extends Controller
             $user = User::create([
                 'phone' => $request->phone,
                 'name' => $request->name,
-                'password' => $request->password,
+                'password' => bcrypt($request->password),
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
                 'security_question' => $request->security_question ?? 'null',
