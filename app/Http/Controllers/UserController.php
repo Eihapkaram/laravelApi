@@ -447,6 +447,8 @@ class UserController extends Controller
         $request->validate([
             'phone' => 'required',
             'token' => 'required',
+            'security_question' =>'required',
+            'security_answer'  => 'required',
             'new_password' => 'required|min:8|confirmed',
         ]);
 
@@ -465,6 +467,8 @@ class UserController extends Controller
         }
 
         $user->password = bcrypt($request->new_password);
+        $user->security_question = $request->security_question;
+        $user->security_answer = $request->security_answer;
         $user->save();
 
         // حذف السجل بعد إعادة التعيين
