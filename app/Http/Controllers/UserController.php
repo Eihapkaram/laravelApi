@@ -283,7 +283,7 @@ class UserController extends Controller
             'front_id_image'  => 'nullable',
             'back_id_image'  => 'nullable',
             'phone' => [
-                'required',
+                'required|unique:users',
                 'regex:/^(011|012|015|010)[0-9]{8}$/'
             ],
         ], [
