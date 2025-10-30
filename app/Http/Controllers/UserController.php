@@ -442,43 +442,38 @@ class UserController extends Controller
         return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
     }
     // اعاده تعين كلمه السر 
+     // إعادة تعيين كلمة المرور
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'identifier' => 'required', // البريد أو رقم الهاتف
+            'phone' => 'required',
             'token' => 'required',
             'new_password' => 'required|min:8|confirmed',
         ]);
 
-        $identifier = $request->identifier;
-
-        // البحث حسب الإيميل أو رقم الهاتف
-        $user = User::where('email', $identifier)
-            ->orWhere('phone', $identifier)
+        $record = DB::table('password_resets')
+            ->where('phone', $request->phone)
+            ->where('token', $request->token)
             ->first();
 
+        if (!$record) {
+            return response()->json(['message' => 'الرابط غير صالح أو منتهي الصلاحية.'], 400);
+        }
+
+        $user = User::where('phone', $request->phone)->first();
         if (!$user) {
-            return response()->json(['message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'], 404);
+            return response()->json(['message' => 'المستخدم غير موجود.'], 404);
         }
 
-        // التحقق من وجود الـ token في جدول password_resets
-        $passwordReset = DB::table('password_resets')
-            ->where('phone', $user->phone)
-            ->first();
-
-        if (!$passwordReset || !Hash::check($request->token, $passwordReset->token)) {
-            return response()->json(['message' => 'الرابط غير صالح أو منتهي الصلاحية.'], 422);
-        }
-
-        // تغيير كلمة المرور
         $user->password = bcrypt($request->new_password);
         $user->save();
 
-        // حذف السجل من password_resets بعد التغيير
-        DB::table('password_resets')->where('phone', $user->phone)->delete();
+        // حذف السجل بعد إعادة التعيين
+        DB::table('password_resets')->where('phone', $request->phone)->delete();
 
         return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
     }
+}
 
 
 
