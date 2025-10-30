@@ -442,7 +442,6 @@ class UserController extends Controller
         return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
     }
     // اعاده تعين كلمه السر 
-     // إعادة تعيين كلمة المرور
     public function resetPassword(Request $request)
     {
         $request->validate([
@@ -473,7 +472,6 @@ class UserController extends Controller
 
         return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
     }
-}
 
 
 
