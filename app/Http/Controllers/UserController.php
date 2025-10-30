@@ -443,40 +443,63 @@ class UserController extends Controller
     }
     // اعاده تعين كلمه السر 
     public function resetPassword(Request $request)
-    {
-        $request->validate([
-            'phone' => 'required',
-            'token' => 'required',
-            'security_question' =>'required',
-            'security_answer'  => 'required',
-            'new_password' => 'required|min:8|confirmed',
-        ]);
+{
+    $request->validate([
+        'phone' => 'required',
+        'token' => 'required',
+        'security_question' => 'required|string|max:255',
+        'security_answer' => 'required|string|max:255',
+        'new_password' => 'required|min:8|confirmed',
+    ]);
 
-        $record = DB::table('password_resets')
-            ->where('phone', $request->phone)
-            ->where('token', $request->token)
-            ->first();
+    // 🔍 التحقق من وجود سجل إعادة التعيين
+    $record = DB::table('password_resets')
+        ->where('phone', $request->phone)
+        ->where('token', $request->token)
+        ->first();
 
-        if (!$record) {
-            return response()->json(['message' => 'الرابط غير صالح أو منتهي الصلاحية.'], 400);
-        }
-
-        $user = User::where('phone', $request->phone)->first();
-        if (!$user) {
-            return response()->json(['message' => 'المستخدم غير موجود.'], 404);
-        }
-
-        $user->password = bcrypt($request->new_password);
-        $user->security_question = $request->security_question;
-        $user->security_answer = $request->security_answer;
-        $user->save();
-
-        // حذف السجل بعد إعادة التعيين
-        DB::table('password_resets')->where('phone', $request->phone)->delete();
-
-        return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
+    if (!$record) {
+        return response()->json(['message' => 'الرابط غير صالح أو منتهي الصلاحية.'], 400);
     }
 
+    // 🕒 التحقق من صلاحية الرابط (ساعة واحدة)
+    if (now()->diffInMinutes($record->created_at) > 60) {
+        DB::table('password_resets')->where('phone', $request->phone)->delete();
+        return response()->json(['message' => 'انتهت صلاحية رابط إعادة التعيين.'], 400);
+    }
+
+    // 🔍 التحقق من المستخدم
+    $user = User::where('phone', $request->phone)->first();
+    if (!$user) {
+        return response()->json(['message' => 'المستخدم غير موجود.'], 404);
+    }
+
+    // ✅ تحديث كلمة المرور + سؤال وإجابة الأمان
+    $user->update([
+        'password' => Hash::make($request->new_password),
+        'security_question' => $request->security_question,
+        'security_answer' => $request->security_answer,
+    ]);
+
+    // 🗑️ حذف السجل من password_resets
+    DB::table('password_resets')->where('phone', $request->phone)->delete();
+
+    // ✅ تسجيل الدخول تلقائياً
+    Auth::login($user);
+
+    // ✅ إنشاء توكن Passport
+    $tokenResult = $user->createToken('Personal Access Token');
+    $token = $tokenResult->accessToken;
+    $expiresAt = $tokenResult->token->expires_at;
+
+    return response()->json([
+        'message' => 'تم تغيير كلمة المرور وتسجيل الدخول بنجاح ✅',
+        'user' => $user,
+        'access_token' => $token,
+        'token_type' => 'Bearer',
+        'expires_at' => $expiresAt,
+    ]);
+}
 
 
     // ✅ استيراد المستخدمين من ملف Excel
