@@ -35,7 +35,7 @@ class ProductController extends Controller
             'description' => 'required',
             'votes' => 'required',
             'url' => 'required',
-            'inCount'=> 'required',
+            'inCount' => 'required',
             'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
             'price' => 'required',
             'stock' => 'required',
@@ -77,14 +77,14 @@ class ProductController extends Controller
             'inCounttype' => $request->inCounttype,
             'discount' =>  $request->discount,
         ]);
-         $user = auth()->user();
-         if ($product) {
-    // جيب كل المستخدمين اللي رولهم أدمن
-    $admins = User::where('role', 'customer')->get();
+        $user = auth()->user();
+        if ($product) {
+            // جيب كل المستخدمين اللي رولهم أدمن
+            $admins = User::where('role', 'customer')->get();
 
-    // ابعت الإشعار ليهم
-    Notification::send($admins, new NewProduct($user,$product));
-}
+            // ابعت الإشعار ليهم
+            Notification::send($admins, new NewProduct($user, $product));
+        }
 
         // رفع صور إضافية
         if ($request->hasFile('images_url')) {
@@ -125,9 +125,7 @@ class ProductController extends Controller
         ]);
     }
 
-    public function edit(product $product)
-    {
-    }
+    public function edit(product $product) {}
 
     public function update(Request $request, product $product, $id)
     {
@@ -142,7 +140,7 @@ class ProductController extends Controller
             'category_id' => 'required|min:1',
             'page_id' => 'required|min:1',
             'brand' => 'required',
-             'Counttype' => 'required',
+            'Counttype' => 'required',
             'inCounttype' => 'required',
             'discount' => 'required',
         ]);
@@ -157,23 +155,25 @@ class ProductController extends Controller
         if ($request->hasFile('img')) {
             $image = $request->file('img')->getClientOriginalName();
             $path = $request->file('img')->storeAs('products', $image, 'public');
-            $pro->img = $path;
+            $pro->img = $path ?? $pro->img;
             $pro->save();
         }
 
         $pro->update([
-            'titel' => $request->titel,
-            'description' => $request->description,
-            'votes' => $request->votes,
-            'url' => $request->url,
-            'price' => $request->price,
-            'stock' => $request->stock,
-            'category_id' => $request->category_id,
-            'page_id' => $request->page_id,
-            'brand' => $request->brand,
-             'Counttype' => $request->Counttype,
-            'inCounttype' => $request->inCounttype,
-            'discount' =>  $request->discount,
+            'titel' => $request->titel ?? $pro->titel,
+            'description' => $request->description ?? $pro->description,
+            'votes' => $request->votes ?? $pro->votes,
+            'url' => $request->url ?? $pro->url,
+            'img'  => $path ?? $pro->img,
+            'images_url' => $path1 ?? $pro->images_url,
+            'price' => $request->price ?? $pro->price,
+            'stock' => $request->stock ?? $pro->stock,
+            'category_id' => $request->category_id ?? $pro->category_id,
+            'page_id' => $request->page_id ?? $pro->page_id,
+            'brand' => $request->brand ?? $pro->brand,
+            'Counttype' => $request->Counttype ?? $pro->Counttype,
+            'inCounttype' => $request->inCounttype ?? $pro->inCounttype,
+            'discount' =>  $request->discount ?? $pro->discount,
         ]);
 
         // تحديث الصور الإضافية
@@ -186,8 +186,8 @@ class ProductController extends Controller
             }
 
             foreach ($request->file('images_url') as $imageUP) {
-                $imageName = time().'_'.uniqid().'.'.$imageUP->getClientOriginalExtension();
-                $path = $imageUP->storeAs('products', $imageName, 'public');
+                $imageName = time() . '_' . uniqid() . '.' . $imageUP->getClientOriginalExtension();
+                $path1 = $imageUP->storeAs('products', $imageName, 'public');
                 $product->images()->create(['path' => $path]);
             }
         }
@@ -241,28 +241,28 @@ class ProductController extends Controller
         ], 200);
     }
     public function searchByCategory(Request $request)
-{
-    $query = $request->input('q'); // اسم الفئة المطلوبة
+    {
+        $query = $request->input('q'); // اسم الفئة المطلوبة
 
-    $category = categorie::with('product') // نجيب الفئة مع منتجاتها
-        ->where('name', 'like', "%{$query}%")
-        ->first();
+        $category = categorie::with('product') // نجيب الفئة مع منتجاتها
+            ->where('name', 'like', "%{$query}%")
+            ->first();
 
-    if (!$category) {
+        if (!$category) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لم يتم العثور على الفئة المطلوبة',
+            ], 404);
+        }
+
         return response()->json([
-            'success' => false,
-            'message' => 'لم يتم العثور على الفئة المطلوبة',
-        ], 404);
+            'success' => true,
+            'category' => $category,
+        ], 200);
     }
 
-    return response()->json([
-        'success' => true,
-        'category' => $category,
-    ], 200);
-}
 
-    
-     // ✅ تصدير المنتجات إلى Excel
+    // ✅ تصدير المنتجات إلى Excel
     public function export()
     {
         $products = Product::with('page')->get();
@@ -272,9 +272,9 @@ class ProductController extends Controller
 
         // العناوين
         $sheet->fromArray([
-            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID','Counttype','inCounttype','discount']
+            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'discount']
         ]);
-                    
+
         // البيانات
         $rows = [];
         foreach ($products as $product) {
@@ -293,8 +293,8 @@ class ProductController extends Controller
                 $product->Counttype,
                 $product->inCounttype,
                 $product->discount,
-                
-        
+
+
             ];
         }
         $sheet->fromArray($rows, null, 'A2');
@@ -334,7 +334,7 @@ class ProductController extends Controller
                     'category_id' => $row[9] ?? null,
                     'page_id' => $row[10] ?? null,
                     'Counttype' => $row[11] ?? null,
-                   'inCounttype' => $row[12] ?? null,
+                    'inCounttype' => $row[12] ?? null,
                     'discount' => $row[13] ?? null,
                 ]
             );
@@ -342,5 +342,4 @@ class ProductController extends Controller
 
         return response()->json(['message' => 'تم استيراد المنتجات بنجاح']);
     }
-
 }
