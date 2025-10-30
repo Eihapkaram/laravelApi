@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Notifications\WelcomeUser;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
@@ -437,6 +438,44 @@ class UserController extends Controller
 
         $user->password = bcrypt($request->new_password);
         $user->save();
+
+        return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
+    }
+    // اعاده تعين كلمه السر 
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'identifier' => 'required', // البريد أو رقم الهاتف
+            'token' => 'required',
+            'new_password' => 'required|min:8|confirmed',
+        ]);
+
+        $identifier = $request->identifier;
+
+        // البحث حسب الإيميل أو رقم الهاتف
+        $user = User::where('email', $identifier)
+            ->orWhere('phone', $identifier)
+            ->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'], 404);
+        }
+
+        // التحقق من وجود الـ token في جدول password_resets
+        $passwordReset = DB::table('password_resets')
+            ->where('phone', $user->phone)
+            ->first();
+
+        if (!$passwordReset || !Hash::check($request->token, $passwordReset->token)) {
+            return response()->json(['message' => 'الرابط غير صالح أو منتهي الصلاحية.'], 422);
+        }
+
+        // تغيير كلمة المرور
+        $user->password = bcrypt($request->new_password);
+        $user->save();
+
+        // حذف السجل من password_resets بعد التغيير
+        DB::table('password_resets')->where('phone', $user->phone)->delete();
 
         return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
     }
