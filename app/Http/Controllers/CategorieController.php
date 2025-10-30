@@ -51,7 +51,7 @@ class CategorieController extends Controller
     }
     public function showCateProduct()
     {
-        $pro = categorie::with('product','page')->get();
+        $pro = categorie::with('product', 'page')->get();
         return response()->json([
             'massege' => 'show all categore prodcts',
             'pro' => $pro
@@ -68,13 +68,7 @@ class CategorieController extends Controller
     }
     public function UpdateCate(Request $request, $id)
     {
-        $request->validate([
-            'name' => 'required',
-            'slug' => 'required',
-            'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
-            'banner' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
-            'description' => 'required',
-        ]);
+
 
         if (!$request || !$id) {
             return response()->json([
@@ -97,9 +91,9 @@ class CategorieController extends Controller
 
         $pro = categorie::find($id);
         $pro->update([
-            'name' => $request->name,
-            'slug' => $request->slug,
-            'description' => $request->description,
+            'name' => $request->name ?? $pro->name,
+            'slug' => $request->slug ?? $pro->slug,
+            'description' => $request->description ?? $pro->description,
             'img' => $path ?? $pro->img,
             'banner' => $path2 ?? $pro->banner,
         ]);
@@ -108,7 +102,7 @@ class CategorieController extends Controller
             'data' => categorie::get()
         ]);
     }
-   // ✅ تصدير البيانات إلى Excel
+    // ✅ تصدير البيانات إلى Excel
     public function export()
     {
         $spreadsheet = new Spreadsheet();
