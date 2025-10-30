@@ -65,6 +65,7 @@ class SellerCustomerController extends Controller
 
         return response()->json(['message' => 'تم حذف العميل']);
     }
+    // إنشاء عميل جديد وربطه بالبائع + توليد رابط واتساب
     public function createNewCustomer(Request $request)
     {
         $seller = Auth::user();
@@ -73,7 +74,6 @@ class SellerCustomerController extends Controller
             return response()->json(['message' => 'غير مصرح لك'], 403);
         }
 
-        // ✅ التحقق من البيانات المطلوبة
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
@@ -81,21 +81,18 @@ class SellerCustomerController extends Controller
             'longitude' => 'required|numeric',
         ]);
 
-        // 🔍 البحث عن العميل برقم الهاتف
         $customer = User::where('phone', $validated['phone'])->first();
 
         if (!$customer) {
-            // ✅ إنشاء عميل جديد
             $customer = User::create([
                 'name' => $validated['name'],
                 'phone' => $validated['phone'],
                 'latitude' => $validated['latitude'],
                 'longitude' => $validated['longitude'],
                 'role' => 'customer',
-                'password' => bcrypt(Str::random(10)), // كلمة مرور مؤقتة
+                'password' => bcrypt(Str::random(10)),
             ]);
 
-            // إنشاء توكن لتفعيل الحساب (بدون Hash)
             $token = Str::random(64);
             DB::table('password_resets')->insert([
                 'phone' => $customer->phone,
@@ -103,16 +100,13 @@ class SellerCustomerController extends Controller
                 'created_at' => now(),
             ]);
 
-            // رابط إعادة تعيين كلمة المرور
-            $activationLink = url("/reset-password?token={$token}&phone={$customer->phone}");
+            $activationLink = url("/resetpassword?token={$token}&phone={$customer->phone}");
 
-            // ✅ توليد رابط واتساب لإرسال الرابط
             $message = "مرحباً {$customer->name}!\nتم إنشاء حسابك. لتعيين كلمة المرور اضغط هنا:\n{$activationLink}";
             $phoneForWa = preg_replace('/[^0-9]/', '', $customer->phone);
             $waLink = "https://wa.me/{$phoneForWa}?text=" . urlencode($message);
         }
 
-        // ✅ ربط العميل بالبائع (بدون تكرار)
         $seller->customers()->syncWithoutDetaching([$customer->id]);
 
         return response()->json([
