@@ -130,6 +130,7 @@ class ProductController extends Controller
     public function update(Request $request, product $product, $id)
     {
 
+
         if (!$request) {
             return response()->json(['error' => 'faild edit']);
         }
@@ -143,6 +144,23 @@ class ProductController extends Controller
             $pro->img = $path ?? $pro->img;
             $pro->save();
         }
+
+        $pro->update([
+            'titel' => $request->titel ?? $pro->titel,
+            'description' => $request->description ?? $pro->description,
+            'votes' => $request->votes ?? $pro->votes,
+            'url' => $request->url ?? $pro->url,
+
+            'price' => $request->price ?? $pro->price,
+            'stock' => $request->stock ?? $pro->stock,
+            'category_id' => $request->category_id ?? $pro->category_id,
+            'page_id' => $request->page_id ?? $pro->page_id,
+            'brand' => $request->brand ?? $pro->brand,
+            'Counttype' => $request->Counttype ?? $pro->Counttype,
+            'inCounttype' => $request->inCounttype ?? $pro->inCounttype,
+            'discount' =>  $request->discount ?? $pro->discount,
+        ]);
+
         // تحديث الصور الإضافية
         $product = product::findOrFail($id);
 
@@ -158,25 +176,6 @@ class ProductController extends Controller
                 $product->images()->create(['path' => $path]);
             }
         }
-
-        $pro->update([
-            'titel' => $pro->titel ?? $request->titel,
-            'description' => $pro->description ?? $request->description,
-            'votes' => $pro->votes ?? $request->votes,
-            'url' => $pro->url ?? $request->url,
-            'img'  => $pro->img ?? $path,
-            'images_url' => $pro->images_url ?? $path1,
-            'price' =>  $pro->price ?? $request->price,
-            'stock' => $pro->stock ?? $request->stock,
-            'category_id' => $pro->category_id ?? $request->category_id,
-            'page_id' => $pro->page_id ??  $request->page_id,
-            'brand' =>   $pro->brand ?? $request->brand,
-            'Counttype' => $pro->Counttype ?? $request->Counttype,
-            'inCounttype' => $pro->inCounttype ?? $request->inCounttype,
-            'discount' =>  $pro->discount ?? $request->discount,
-        ]);
-
-
 
         return response()->json([
             'sucsse' => 'true',
