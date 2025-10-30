@@ -42,7 +42,7 @@ class PageController extends Controller
 
     public function showPageProduct()
     {
-        $pro = Page::with('pageproducts','categories')->get();
+        $pro = Page::with('pageproducts', 'categories')->get();
 
         return response()->json([
             'massege' => 'show all page prodcts',
@@ -63,7 +63,7 @@ class PageController extends Controller
 
     public function UpdatePage(Request $request, $id)
     {
-        $request->validate(['slug' => 'required', 'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',]);
+
         if (! $request || ! $id) {
             return response()->json([
                 'massege' => 'update Page not done',
@@ -76,14 +76,14 @@ class PageController extends Controller
             $path = $request->file('img')->storeAs('pages', $image, 'public');
             // => هيتخزن في storage/app/public/products
         }
-        $pro->update(['slug' => $request->slug, 'img' => $path ?? $pro->img]);
+        $pro->update(['slug' => $request->slug ?? $pro->slug, 'img' => $path ?? $pro->img]);
 
         return response()->json([
             'massege' => 'update Page is done',
             'data' => Page::get(),
         ]);
     }
-     public function search(Request $request)
+    public function search(Request $request)
     {
         $products = QueryBuilder::for(Page::query())
             ->allowedFilters([
@@ -106,9 +106,9 @@ class PageController extends Controller
         // رؤوس الأعمدة
         $sheet->setCellValue('A1', 'ID');
         $sheet->setCellValue('B1', 'Slug');
-         $sheet->setCellValue('C1', 'img');
+        $sheet->setCellValue('C1', 'img');
         $sheet->setCellValue('D1', 'Created At');
-        
+
 
         // البيانات
         $pages = Page::all();
