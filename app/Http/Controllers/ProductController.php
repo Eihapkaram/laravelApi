@@ -129,21 +129,6 @@ class ProductController extends Controller
 
     public function update(Request $request, product $product, $id)
     {
-        $request->validate([
-            'titel' => 'required',
-            'description' => 'required',
-            'votes' => 'required',
-            'url' => 'required',
-            'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
-            'price' => 'required',
-            'stock' => 'required',
-            'category_id' => 'required|min:1',
-            'page_id' => 'required|min:1',
-            'brand' => 'required',
-            'Counttype' => 'required',
-            'inCounttype' => 'required',
-            'discount' => 'required',
-        ]);
 
         if (!$request) {
             return response()->json(['error' => 'faild edit']);
