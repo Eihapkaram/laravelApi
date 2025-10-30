@@ -307,6 +307,7 @@ class UserController extends Controller
                 'password' => bcrypt($request->password),
                 'latitude' => $request->latitude,
                 'role' => $request->role ?? 'customer',
+                'img' => $path ?? 'null',
                 'longitude' => $request->longitude,
                 'security_question' => $request->security_question ?? 'null',
                 'security_answer'  => $request->security_answer ?? 'null',
