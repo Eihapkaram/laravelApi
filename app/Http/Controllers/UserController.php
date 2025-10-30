@@ -480,6 +480,11 @@ class UserController extends Controller
             return response()->json(['message' => 'المستخدم غير موجود.'], 404);
         }
 
+        // 🚫 منع البائع من إعادة التعيين
+        if ($user->role === 'seller') {
+            return response()->json(['message' => 'غير مسموح للبائعين بإعادة تعيين كلمة المرور.'], 403);
+        }
+
         // ❌ إذا المستخدم سجل دخول من قبل لا يمكن إعادة التعيين
         if ($user->last_seen !== null) {
             return response()->json(['message' => 'لا يمكن إعادة تعيين كلمة المرور بعد تسجيل الدخول.'], 403);
@@ -490,7 +495,7 @@ class UserController extends Controller
             'password' => Hash::make($request->new_password),
             'security_question' => $request->security_question,
             'security_answer' => $request->security_answer,
-            'last_seen' => now(), // ✅ تحديث last_seen عند تسجيل الدخول
+            'last_seen' => now(),
         ]);
 
         // 🗑️ حذف السجل من password_resets
@@ -512,6 +517,7 @@ class UserController extends Controller
             'expires_at' => $expiresAt,
         ]);
     }
+
 
 
 
