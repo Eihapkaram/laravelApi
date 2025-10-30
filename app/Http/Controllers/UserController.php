@@ -481,7 +481,7 @@ class UserController extends Controller
         }
 
         // 🚫 منع البائع من إعادة التعيين
-        if ($user->role === 'seller') {
+        if (auth()->user()->role === 'seller') {
             return response()->json(['message' => 'غير مسموح للبائعين بإعادة تعيين كلمة المرور.'], 403);
         }
 
