@@ -106,7 +106,7 @@ class SellerCustomerController extends Controller
 
         // ✅ رابط الواجهة الأمامية (Vue)
         $frontendUrl = env('FRONTEND_URL', 'https://your-frontend-domain.com');
-        $activationLink = "{$frontendUrl}/reset-password?token={$token}&phone={$customer->phone}";
+        $activationLink = "{$frontendUrl}/resetpassword?token={$token}&phone={$customer->phone}";
 
         // ✅ توليد رسالة ورابط واتساب
         $message = "مرحباً {$customer->name}!\nتم إنشاء حسابك. لتعيين كلمة المرور اضغط هنا:\n{$activationLink}";
