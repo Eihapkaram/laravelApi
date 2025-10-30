@@ -92,17 +92,18 @@ class SellerCustomerController extends Controller
                 'latitude' => $validated['latitude'],
                 'longitude' => $validated['longitude'],
                 'role' => 'customer',
-                'password' => bcrypt(Str::random(10)), // مؤقت
+                'password' => bcrypt(Str::random(10)), // كلمة مرور مؤقتة
             ]);
 
-            // إنشاء توكن لتفعيل الحساب
+            // إنشاء توكن لتفعيل الحساب (بدون Hash)
             $token = Str::random(64);
             DB::table('password_resets')->insert([
                 'phone' => $customer->phone,
-                'token' => Hash::make($token),
+                'token' => $token,
                 'created_at' => now(),
             ]);
 
+            // رابط إعادة تعيين كلمة المرور
             $activationLink = url("/reset-password?token={$token}&phone={$customer->phone}");
 
             // ✅ توليد رابط واتساب لإرسال الرابط
@@ -122,6 +123,7 @@ class SellerCustomerController extends Controller
             'waLink' => $waLink ?? null,
         ]);
     }
+
     public function myCustomers(Request $request)
     {
         $seller = Auth::user();
