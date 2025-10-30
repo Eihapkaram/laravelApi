@@ -277,18 +277,19 @@ class UserController extends Controller
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'role' => 'required',
-            'security_question'  => 'required',
-            'security_answer'  => 'required',
-            'wallet_number'  => 'nullable|numeric',
-            'front_id_image'  => 'nullable',
-            'back_id_image'  => 'nullable',
+            'security_question' => 'required',
+            'security_answer' => 'required',
+            'wallet_number' => 'nullable|numeric',
+            'front_id_image' => 'nullable',
+            'back_id_image' => 'nullable',
             'phone' => [
-                'required|unique:users',
+                'required',
+                'unique:users',
                 'regex:/^(011|012|015|010)[0-9]{8}$/'
             ],
         ], [
             'phone.required' => 'رقم الهاتف مطلوب',
-            'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010او  011 أو 012 أو 015',
+            'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015',
         ]);
 
         $user = User::where('phone', $request->phone)->first();
