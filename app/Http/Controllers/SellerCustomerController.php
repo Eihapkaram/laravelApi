@@ -66,57 +66,66 @@ class SellerCustomerController extends Controller
         return response()->json(['message' => 'تم حذف العميل']);
     }
     // إنشاء عميل جديد وربطه بالبائع + توليد رابط واتساب
-    public function createNewCustomer(Request $request)
-    {
-        $seller = Auth::user();
+   public function createNewCustomer(Request $request)
+{
+    $seller = Auth::user();
 
-        if ($seller->role !== 'seller') {
-            return response()->json(['message' => 'غير مصرح لك'], 403);
-        }
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-        ]);
-
-        $customer = User::where('phone', $validated['phone'])->first();
-
-        if (!$customer) {
-            $customer = User::create([
-                'name' => $validated['name'],
-                'phone' => $validated['phone'],
-                'latitude' => $validated['latitude'],
-                'longitude' => $validated['longitude'],
-                'role' => 'customer',
-                'password' => bcrypt(Str::random(10)),
-            ]);
-
-            $token = Str::random(64);
-            DB::table('password_resets')->insert([
-                'phone' => $customer->phone,
-                'token' => $token,
-                'created_at' => now(),
-            ]);
-
-            $activationLink = url("/resetpassword?token={$token}&phone={$customer->phone}");
-
-            $message = "مرحباً {$customer->name}!\nتم إنشاء حسابك. لتعيين كلمة المرور اضغط هنا:\n{$activationLink}";
-            $phoneForWa = preg_replace('/[^0-9]/', '', $customer->phone);
-            $waLink = "https://wa.me/{$phoneForWa}?text=" . urlencode($message);
-        }
-
-        $seller->customers()->syncWithoutDetaching([$customer->id]);
-
-        return response()->json([
-            'message' => $customer->wasRecentlyCreated
-                ? 'تم إنشاء العميل وربطه بنجاح، استخدم رابط واتساب لإرسال التفعيل.'
-                : 'تم ربط العميل الموجود مسبقًا بالبائع بنجاح.',
-            'customer' => $customer,
-            'waLink' => $waLink ?? null,
-        ]);
+    if ($seller->role !== 'seller') {
+        return response()->json(['message' => 'غير مصرح لك'], 403);
     }
+
+    // ✅ التحقق من صحة البيانات
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'phone' => 'required|string|max:20',
+        'latitude' => 'required|numeric',
+        'longitude' => 'required|numeric',
+    ]);
+
+    // 🔍 البحث عن العميل برقم الهاتف
+    $customer = User::where('phone', $validated['phone'])->first();
+
+    if (!$customer) {
+        // ✅ إنشاء العميل الجديد
+        $customer = User::create([
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'latitude' => $validated['latitude'],
+            'longitude' => $validated['longitude'],
+            'role' => 'customer',
+            'password' => bcrypt(Str::random(10)), // كلمة مرور مؤقتة
+        ]);
+
+        // ✅ إنشاء رمز (token) لتفعيل الحساب
+        $token = Str::random(64);
+        DB::table('password_resets')->insert([
+            'phone' => $customer->phone,
+            'token' => $token,
+            'created_at' => now(),
+        ]);
+
+        // ✅ رابط الواجهة الأمامية (Vue)
+        $frontendUrl = env('FRONTEND_URL', 'https://your-frontend-domain.com');
+        $activationLink = "{$frontendUrl}/reset-password?token={$token}&phone={$customer->phone}";
+
+        // ✅ توليد رسالة ورابط واتساب
+        $message = "مرحباً {$customer->name}!\nتم إنشاء حسابك. لتعيين كلمة المرور اضغط هنا:\n{$activationLink}";
+        $phoneForWa = preg_replace('/[^0-9]/', '', $customer->phone);
+        $waLink = "https://wa.me/{$phoneForWa}?text=" . urlencode($message);
+    }
+
+    // ✅ ربط العميل بالبائع (بدون تكرار)
+    $seller->customers()->syncWithoutDetaching([$customer->id]);
+
+    return response()->json([
+        'message' => $customer->wasRecentlyCreated
+            ? 'تم إنشاء العميل وربطه بنجاح، استخدم رابط واتساب لإرسال التفعيل.'
+            : 'تم ربط العميل الموجود مسبقًا بالبائع بنجاح.',
+        'customer' => $customer,
+        'waLink' => $waLink ?? null,
+    ]);
+}
+
 
     public function myCustomers(Request $request)
     {
