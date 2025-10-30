@@ -275,6 +275,7 @@ class UserController extends Controller
             'password' => 'required|min:8',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
+            'role' => $request->role ?? 'customer',
             'security_question'  => 'required',
             'security_answer'  => 'required',
             'wallet_number'  => 'nullable|numeric',
