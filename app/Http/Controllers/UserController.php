@@ -57,7 +57,7 @@ class UserController extends Controller
             'img' => $path ?? 'null',
             'latitude' => $request->latitude ?? 'null',
             'longitude' => $request->longitude ?? 'null',
-            'security_question' => bcrypt($request->security_question) ?? 'null',
+            'security_question' => $request->security_question ?? 'null',
             'security_answer'  => bcrypt($request->security_answer) ?? 'null',
             'wallet_number' => $request->wallet_number ?? 'null',
             'front_id_image'  => $path1 ?? 'null',
@@ -314,7 +314,7 @@ class UserController extends Controller
                 'role' => $request->role ?? 'customer',
                 'img' => $path ?? 'null',
                 'longitude' => $request->longitude,
-                'security_question' => bcrypt($request->security_question) ?? 'null',
+                'security_question' => $request->security_question ?? 'null',
                 'security_answer'  => bcrypt($request->security_answer) ?? 'null',
                 'wallet_number' => $request->wallet_number ?? 'null',
                 'front_id_image'  => $path3 ?? 'null',
@@ -413,7 +413,7 @@ class UserController extends Controller
         }
 
         return response()->json([
-            'question' => Hash::make($user->security_question)
+            'question' => $user->security_question
         ], 200, [], JSON_UNESCAPED_UNICODE);
     }
 
