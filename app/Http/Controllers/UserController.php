@@ -58,7 +58,7 @@ class UserController extends Controller
             'latitude' => $request->latitude ?? 'null',
             'longitude' => $request->longitude ?? 'null',
             'security_question' => $request->security_question ?? 'null',
-            'security_answer'  => $request->security_answer ?? 'null',
+            'security_answer'  => bcrypt($request->security_answer) ?? 'null',
             'wallet_number' => $request->wallet_number ?? 'null',
             'front_id_image'  => $path1 ?? 'null',
             'back_id_image'  => $path2 ?? 'null',
@@ -315,7 +315,7 @@ class UserController extends Controller
                 'img' => $path ?? 'null',
                 'longitude' => $request->longitude,
                 'security_question' => $request->security_question ?? 'null',
-                'security_answer'  => $request->security_answer ?? 'null',
+                'security_answer'  => bcrypt($request->security_answer) ?? 'null',
                 'wallet_number' => $request->wallet_number ?? 'null',
                 'front_id_image'  => $path3 ?? 'null',
                 'back_id_image'  => $path4 ?? 'null',
@@ -438,7 +438,7 @@ class UserController extends Controller
             return response()->json(['message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'], 404);
         }
 
-        if (strtolower(trim($request->security_answer)) !== strtolower(trim($user->security_answer))) {
+        if (strtolower(trim($request->security_answer)) !== Hash::check(strtolower(trim($user->security_answer)))) {
             return response()->json(['message' => 'إجابة السؤال الأمني غير صحيحة.'], 403);
         }
 
@@ -491,7 +491,7 @@ class UserController extends Controller
         $user->update([
             'password' => Hash::make($request->new_password),
             'security_question' => $request->security_question,
-            'security_answer' => $request->security_answer,
+            'security_answer' => Hash::make($request->security_answer),
             'last_seen' => now(),
         ]);
 
