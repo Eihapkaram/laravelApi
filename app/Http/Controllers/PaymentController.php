@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\User;
 use App\Services\UnifiedPaymobService;
 
 class PaymentController extends Controller
@@ -13,6 +14,8 @@ class PaymentController extends Controller
     {
         $this->paymob = $paymob;
     }
+    $user = auth()->user();
+
 $cart = $user->getcart()->with('proCItem.product')->first();
 
         if (!$cart || $cart->proCItem->isEmpty()) {
