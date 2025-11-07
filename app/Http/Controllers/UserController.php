@@ -420,33 +420,36 @@ class UserController extends Controller
 
     // اعاده تعين كلمه السر 
     public function resetPasswordWithSecurity(Request $request)
-    {
-        $request->validate([
-            'identifier' => 'required', // البريد أو رقم الهاتف
-            'security_answer' => 'required|string',
-            'new_password' => 'required|min:8|confirmed',
-        ]);
+{
+    $request->validate([
+        'identifier' => 'required', // البريد أو رقم الهاتف
+        'security_answer' => 'required|string',
+        'new_password' => 'required|min:8|confirmed',
+    ]);
 
-        $identifier = $request->identifier;
+    $identifier = $request->identifier;
 
-        // البحث حسب الإيميل أو رقم الهاتف
-        $user = User::where('email', $identifier)
-            ->orWhere('phone', $identifier)
-            ->first();
+    // البحث حسب الإيميل أو رقم الهاتف
+    $user = User::where('email', $identifier)
+        ->orWhere('phone', $identifier)
+        ->first();
 
-        if (!$user) {
-            return response()->json(['message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'], 404);
-        }
-
-        if (strtolower(trim($request->security_answer)) !== Hash::check(strtolower(trim($user->security_answer)))) {
-            return response()->json(['message' => 'إجابة السؤال الأمني غير صحيحة.'], 403);
-        }
-
-        $user->password = bcrypt($request->new_password);
-        $user->save();
-
-        return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
+    if (!$user) {
+        return response()->json(['message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'], 404);
     }
+
+    // التحقق من إجابة السؤال الأمني (مع الأخذ بالاعتبار أن الإجابة مخزّنة بشكل مشفّر)
+    if (!Hash::check(strtolower(trim($request->security_answer)), $user->security_answer)) {
+        return response()->json(['message' => 'إجابة السؤال الأمني غير صحيحة.'], 403);
+    }
+
+    // تحديث كلمة المرور
+    $user->password = bcrypt($request->new_password);
+    $user->save();
+
+    return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
+}
+
     // اعاده تعين كلمه السر 
     public function resetPassword(Request $request)
     {
@@ -454,7 +457,7 @@ class UserController extends Controller
             'phone' => 'required',
             'token' => 'required',
             'security_question' => 'required|string|max:255',
-            'security_answer' => 'required|string|max:255',
+           'security_answer' => 'required|string|max:255',
             'new_password' => 'required|min:8|confirmed',
         ]);
 
