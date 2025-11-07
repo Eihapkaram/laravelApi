@@ -439,7 +439,7 @@ class UserController extends Controller
     }
 
     // التحقق من إجابة السؤال الأمني (مع الأخذ بالاعتبار أن الإجابة مخزّنة بشكل مشفّر)
-    if (!Hash::check(strtolower(trim($request->security_answer)), $user->security_answer)) {
+    if (!Hash::check((($request->security_answer)), $user->security_answer)) {
         return response()->json(['message' => 'إجابة السؤال الأمني غير صحيحة.'], 403);
     }
 
