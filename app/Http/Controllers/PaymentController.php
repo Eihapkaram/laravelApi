@@ -32,14 +32,14 @@ class PaymentController extends Controller
 
         // بيانات billing كاملة
        $billingData = [
-    "first_name" => $user->name ?? 'John',
-    "last_name"  => $user->last_name ?? 'Doe',
-    "email"      => $user->email ?? 'example@example.com',
-    "phone_number" => $user->phone ?? '01234567890',
-    "country" => $user->country ?? 'EG',
-    "city" => $user->city ?? 'Cairo',
-    "street" => $user->street ?? '123 Street',
-];
+            "first_name"    => $user->name ?? $request->first_name,
+            "last_name"     => $user->last_name ?? $request->last_name,
+            "email"         => $user->email ?? $request->email,
+            "phone_number"  => $request->phone_number  ?? $user->phone ,
+            "country"       =>  $request->country ?? "eg",
+            "city"          =>  $request->city ?? "cairo",
+            "street"        => $request->street ?? "street" ,
+        ];
 
         $response = $this->paymob->createIntention($amount, $billingData);
 
