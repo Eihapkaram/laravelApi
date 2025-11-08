@@ -14,9 +14,13 @@ class PaymentController extends Controller
     {
         $this->paymob = $paymob;
     }
-    $user = auth()->user();
+   
+    // إنشاء الدفع
+    public function pay(Request $request)
+    {
+         $user = auth()->user();
 
-$cart = $user->getcart()->with('proCItem.product')->first();
+      $cart = $user->getcart()->with('proCItem.product')->first();
 
         if (!$cart || $cart->proCItem->isEmpty()) {
             return response()->json(['message' => 'السلة فارغة'], 400);
@@ -24,9 +28,6 @@ $cart = $user->getcart()->with('proCItem.product')->first();
 
         $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
 
-    // إنشاء الدفع
-    public function pay(Request $request)
-    {
         $amount = $total * 100; // تحويل جنيهات إلى قرش
 
         // بيانات billing كاملة
