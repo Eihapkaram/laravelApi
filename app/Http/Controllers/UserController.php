@@ -419,7 +419,7 @@ class UserController extends Controller
 
 
     // اعاده تعين كلمه السر 
-   public function resetPasswordWithSecurity(Request $request)
+  public function resetPasswordWithSecurity(Request $request)
 {
     $request->validate([
         'identifier' => 'required', // البريد أو رقم الهاتف
@@ -435,13 +435,17 @@ class UserController extends Controller
         ->first();
 
     if (!$user) {
+        \Log::warning("ResetPasswordWithSecurity: user not found for identifier {$identifier}");
         return response()->json([
             'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
         ], 404);
     }
 
-    // التحقق من إجابة السؤال الأمني
-    if (!$user->security_answer || !Hash::check(trim($request->security_answer), $user->security_answer)) {
+    // معالجة الإجابة الأمنية: تجاهل المسافات والحروف الكبيرة
+    $inputAnswer = strtolower(trim($request->security_answer));
+
+    if (!$user->security_answer || !Hash::check($inputAnswer, $user->security_answer)) {
+        \Log::warning("ResetPasswordWithSecurity: wrong security answer for user_id {$user->id}");
         return response()->json([
             'message' => 'إجابة السؤال الأمني غير صحيحة.'
         ], 403);
@@ -449,10 +453,10 @@ class UserController extends Controller
 
     // تحديث كلمة المرور بشكل آمن
     $user->password = Hash::make($request->new_password);
-    $user->last_seen = now(); // تحديث آخر ظهور (اختياري)
+    $user->last_seen = now();
     $user->save();
 
-    // إنشاء توكن جديد (Passport أو Sanctum حسب مشروعك)
+    // إنشاء توكن جديد
     $token = $user->createToken('Personal Access Token')->accessToken;
 
     return response()->json([
