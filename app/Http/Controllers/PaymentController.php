@@ -31,15 +31,15 @@ class PaymentController extends Controller
         $amount = $total * 100; // تحويل جنيهات إلى قرش
 
         // بيانات billing كاملة
-        $billingData = [
-            "first_name"    => $user->name ?? $request->first_name,
-            "last_name"     => $user->last_name ?? $request->last_name,
-            "email"         => $user->email ?? $request->email,
-            "phone_number"  => $user->phone ?? $request->phone_number,
-            "country"       => $user->country ?? $request->country,
-            "city"          => $user->city ??  $request->city,
-            "street"        => $user->street ?? $request->street,
-        ];
+       $billingData = [
+    "first_name" => $user->name ?? 'John',
+    "last_name"  => $user->last_name ?? 'Doe',
+    "email"      => $user->email ?? 'example@example.com',
+    "phone_number" => $user->phone ?? '01234567890',
+    "country" => $user->country ?? 'EG',
+    "city" => $user->city ?? 'Cairo',
+    "street" => $user->street ?? '123 Street',
+];
 
         $response = $this->paymob->createIntention($amount, $billingData);
 
