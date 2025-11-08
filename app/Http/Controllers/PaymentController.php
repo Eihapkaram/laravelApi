@@ -32,7 +32,7 @@ class PaymentController extends Controller
 
         // بيانات billing كاملة
         $billingData = [
-            "first_name"    => $user->first_name ?? $request->first_name"NA",
+            "first_name"    => $user->name ?? $request->first_name,
             "last_name"     => $user->last_name ?? $request->last_name,
             "email"         => $user->email ?? $request->email,
             "phone_number"  => $user->phone ?? $request->phone_number,
