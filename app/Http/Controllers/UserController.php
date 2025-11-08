@@ -419,35 +419,54 @@ class UserController extends Controller
 
 
     // اعاده تعين كلمه السر 
-    public function resetPasswordWithSecurity(Request $request)
+   public function resetPasswordWithSecurity(Request $request)
 {
     $request->validate([
         'identifier' => 'required', // البريد أو رقم الهاتف
         'security_answer' => 'required|string',
-        'new_password' => 'required|min:8|confirmed',
+        'new_password' => 'required|string|min:8|confirmed',
     ]);
 
     $identifier = $request->identifier;
 
-    // البحث حسب الإيميل أو رقم الهاتف
+    // البحث حسب البريد أو رقم الهاتف
     $user = User::where('email', $identifier)
         ->orWhere('phone', $identifier)
         ->first();
 
     if (!$user) {
-        return response()->json(['message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'], 404);
+        return response()->json([
+            'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
+        ], 404);
     }
 
-    // التحقق من إجابة السؤال الأمني (مع الأخذ بالاعتبار أن الإجابة مخزّنة بشكل مشفّر)
-    if (!Hash::check((($request->security_answer)), $user->security_answer)) {
-        return response()->json(['message' => 'إجابة السؤال الأمني غير صحيحة.'], 403);
+    // التحقق من إجابة السؤال الأمني
+    if (!$user->security_answer || !Hash::check(trim($request->security_answer), $user->security_answer)) {
+        return response()->json([
+            'message' => 'إجابة السؤال الأمني غير صحيحة.'
+        ], 403);
     }
 
-    // تحديث كلمة المرور
-    $user->password = bcrypt($request->new_password);
+    // تحديث كلمة المرور بشكل آمن
+    $user->password = Hash::make($request->new_password);
+    $user->last_seen = now(); // تحديث آخر ظهور (اختياري)
     $user->save();
 
-    return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح ✅'], 200);
+    // إنشاء توكن جديد (Passport أو Sanctum حسب مشروعك)
+    $token = $user->createToken('Personal Access Token')->accessToken;
+
+    return response()->json([
+        'message' => 'تم تغيير كلمة المرور وتسجيل الدخول بنجاح ✅',
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'role' => $user->role,
+        ],
+        'access_token' => $token,
+        'token_type' => 'Bearer',
+    ], 200);
 }
 
     // اعاده تعين كلمه السر 
