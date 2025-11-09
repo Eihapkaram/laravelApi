@@ -419,59 +419,38 @@ class UserController extends Controller
 
 
     // اعاده تعين كلمه السر 
-  public function resetPasswordWithSecurity(Request $request)
+public function resetPasswordWithSecurity(Request $request)
 {
-    $request->validate([
-        'identifier' => 'required', // البريد أو رقم الهاتف
+    $data = $request->validate([
+        'identifier' => 'required|string',
         'security_answer' => 'required|string',
         'new_password' => 'required|string|min:8|confirmed',
     ]);
 
-    $identifier = $request->identifier;
-
-    // البحث حسب البريد أو رقم الهاتف
-    $user = User::where('email', $identifier)
-        ->orWhere('phone', $identifier)
+    $user = User::where('email', $data['identifier'])
+        ->orWhere('phone', $data['identifier'])
         ->first();
 
-    if (!$user) {
-        \Log::warning("ResetPasswordWithSecurity: user not found for identifier {$identifier}");
-        return response()->json([
-            'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
-        ], 404);
+    if (!$user || empty($user->security_answer) || 
+        !Hash::check(strtolower(trim($data['security_answer'])), $user->security_answer)) {
+        return response()->json(['message' => 'بيانات الاستعادة غير صحيحة.'], 403);
     }
 
-    // معالجة الإجابة الأمنية: تجاهل المسافات والحروف الكبيرة
-    $inputAnswer = strtolower(trim($request->security_answer));
+    $user->update([
+        'password' => Hash::make($data['new_password']),
+        'last_seen' => now(),
+    ]);
 
-    if (!$user->security_answer || !Hash::check($inputAnswer, $user->security_answer)) {
-        \Log::warning("ResetPasswordWithSecurity: wrong security answer for user_id {$user->id}");
-        return response()->json([
-            'message' => 'إجابة السؤال الأمني غير صحيحة.'
-        ], 403);
-    }
-
-    // تحديث كلمة المرور بشكل آمن
-    $user->password = Hash::make($request->new_password);
-    $user->last_seen = now();
-    $user->save();
-
-    // إنشاء توكن جديد
-    $token = $user->createToken('Personal Access Token')->accessToken;
+    $token = $user->createToken('PasswordReset', ['*'])->accessToken;
 
     return response()->json([
         'message' => 'تم تغيير كلمة المرور وتسجيل الدخول بنجاح ✅',
-        'user' => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'role' => $user->role,
-        ],
+        'user' => $user->only(['id', 'name', 'email', 'phone', 'role']),
         'access_token' => $token,
         'token_type' => 'Bearer',
-    ], 200);
+    ]);
 }
+
 
     // اعاده تعين كلمه السر 
     public function resetPassword(Request $request)
@@ -528,7 +507,7 @@ class UserController extends Controller
         Auth::login($user);
 
         // ✅ إنشاء توكن Passport
-        $tokenResult = $user->createToken('Personal Access Token');
+        $tokenResult = $user->createToken('eihapkaramvuejs');
         $token = $tokenResult->accessToken;
         $expiresAt = $tokenResult->token->expires_at;
 
