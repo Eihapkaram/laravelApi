@@ -93,7 +93,7 @@ class UserController extends Controller
         $user = User::find($id);
         if (!$user) {
             return response()->json([
-                'message' => 'المستخدم غير موجود',
+                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.',
             ], 404);
         }
 
@@ -128,7 +128,7 @@ class UserController extends Controller
 
         if (!$user) {
             return response()->json([
-                'message' => 'المستخدم غير موجود',
+                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.',
             ], 404);
         }
 
@@ -156,7 +156,7 @@ class UserController extends Controller
         $user = auth()->user();
         if (!$user) {
             return response()->json([
-                'message' => 'المستخدم غير موجود',
+                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.',
             ], 404);
         }
 
@@ -183,7 +183,7 @@ class UserController extends Controller
             $user->save();
             return response()->json(['token' => $token], 200);
         } else {
-            return response()->json(['error' => 'field login'], 401);
+            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 401);
         }
     }
 
@@ -201,7 +201,7 @@ class UserController extends Controller
         // تأكد أن عنده إحداثيات
         if (!$user->latitude || !$user->longitude) {
             return response()->json([
-                'message' => '⚠️ لا يوجد إحداثيات محفوظة للمستخدم الحالي.',
+                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.',
             ], 400);
         }
 
@@ -228,7 +228,7 @@ class UserController extends Controller
     {
         $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude', 'created_at')->find($id);
         if (!$userdata) {
-            return response()->json(['message' => 'المستخدم غير موجود'], 404);
+            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 404);
         }
         return response()->json(['user' => $userdata], 200);
     }
@@ -267,7 +267,7 @@ class UserController extends Controller
     public function UserDelete($id)
     {
         if (! User::find($id)) {
-            return response()->json(['message' => 'لم يتم ايجاد حساب المستخدم']);
+            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.']);
         }
         User::find($id)->delete();
         return response()->json(['message' => 'تم ازاله حساب  المستخدم']);
@@ -353,7 +353,7 @@ class UserController extends Controller
         if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'الرقم غير مسجل'
+                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'
             ], 401);
         }
 
@@ -361,7 +361,7 @@ class UserController extends Controller
         if (!Hash::check($request->password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'كلمة المرور غير صحيحة'
+                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'
             ], 401);
         }
 
@@ -408,7 +408,7 @@ class UserController extends Controller
 
         if (!$user) {
             return response()->json([
-                'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
+                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'
             ], 404, [], JSON_UNESCAPED_UNICODE);
         }
 
@@ -470,25 +470,25 @@ public function resetPasswordWithSecurity(Request $request)
             ->first();
 
         if (!$record) {
-            return response()->json(['message' => 'الرابط غير صالح أو منتهي الصلاحية.'], 400);
+            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 400);
         }
 
         // 🕒 التحقق من صلاحية الرابط (ساعة واحدة)
         if (now()->diffInMinutes($record->created_at) > 60) {
             DB::table('password_resets')->where('phone', $request->phone)->delete();
-            return response()->json(['message' => 'انتهت صلاحية رابط إعادة التعيين.'], 400);
+            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 400);
         }
 
         // 🔍 التحقق من المستخدم
         $user = User::where('phone', $request->phone)->first();
         if (!$user) {
-            return response()->json(['message' => 'المستخدم غير موجود.'], 404);
+            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 404);
         }
 
         // 🚫 منع البائع من استخدام رابط إعادة التعيين
         if ($user->role === 'seller') {
             return response()->json([
-                'message' => 'غير مسموح للبائعين باستخدام رابط إعادة تعيين كلمة المرور.',
+                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.',
             ], 403);
         }
 
@@ -619,7 +619,7 @@ public function resetPasswordWithSecurity(Request $request)
             if (!file_exists($tempPath)) {
                 return response()->json([
                     'error' => true,
-                    'message' => 'ملف Excel لم يتم إنشاؤه'
+                    'message' => 'حدث خطأ أثناء تنفيذ العملية، يرجى المحاولة لاحقًا.'
                 ], 500);
             }
 
@@ -627,9 +627,7 @@ public function resetPasswordWithSecurity(Request $request)
         } catch (\Exception $e) {
             return response()->json([
                 'error' => true,
-                'message' => $e->getMessage(),
-                'file' => method_exists($e, 'getFile') ? $e->getFile() : null,
-                'line' => method_exists($e, 'getLine') ? $e->getLine() : null,
+                'message' => 'حدث خطأ أثناء تنفيذ العملية، يرجى المحاولة لاحقًا.',
             ], 500);
         }
     }
