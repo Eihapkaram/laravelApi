@@ -21,7 +21,6 @@ COPY . .
 RUN rm -rf vendor composer.lock && composer clear-cache
 
 # تثبيت الحزم بدون dev packages وتحسين autoloader
-RUN composer install --no-dev --no-interaction --optimize-autoloader
 
 # صلاحيات مجلدات التخزين والcache
 RUN mkdir -p storage/framework/cache storage/logs && chmod -R 775 storage bootstrap/cache
