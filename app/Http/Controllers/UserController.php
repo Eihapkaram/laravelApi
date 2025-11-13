@@ -30,9 +30,9 @@ class UserController extends Controller
             'longitude' => 'required|numeric',
             'security_question'  => 'required',
             'security_answer'  => 'required',
-            'wallet_number'  => 'nullable|numeric',
-            'front_id_image'  => 'nullable',
-            'back_id_image'  => 'nullable',
+            'wallet_number'  => 'required|numeric',
+            'front_id_image'  => 'required',
+            'back_id_image'  => 'required',
         ]);
 
         if ($request->hasFile('img')) {
@@ -283,9 +283,9 @@ class UserController extends Controller
             'role' => 'required',
             'security_question' => 'required',
             'security_answer' => 'required',
-            'wallet_number' => 'nullable|numeric',
-            'front_id_image' => 'nullable',
-            'back_id_image' => 'nullable',
+            'wallet_number' => 'required|numeric',
+            'front_id_image' => 'required',
+            'back_id_image' => 'required',
             'phone' => [
                 'required',
                 'unique:users',
