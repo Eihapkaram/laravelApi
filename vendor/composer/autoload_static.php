@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5
+class ComposerStaticIniteccb490b090f0bbbb25a359be661fbff
 {
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
@@ -63,7 +63,6 @@ class ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5
         'T' => 
         array (
             'TijsVerkoyen\\CssToInlineStyles\\' => 31,
-            'Tests\\' => 6,
             'Termwind\\' => 9,
         ),
         'S' => 
@@ -237,10 +236,6 @@ class ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5
         'TijsVerkoyen\\CssToInlineStyles\\' => 
         array (
             0 => __DIR__ . '/..' . '/tijsverkoyen/css-to-inline-styles/src',
-        ),
-        'Tests\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/tests',
         ),
         'Termwind\\' => 
         array (
@@ -7650,10 +7645,6 @@ class ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5
         'Termwind\\ValueObjects\\Node' => __DIR__ . '/..' . '/nunomaduro/termwind/src/ValueObjects/Node.php',
         'Termwind\\ValueObjects\\Style' => __DIR__ . '/..' . '/nunomaduro/termwind/src/ValueObjects/Style.php',
         'Termwind\\ValueObjects\\Styles' => __DIR__ . '/..' . '/nunomaduro/termwind/src/ValueObjects/Styles.php',
-        'Tests\\CreatesApplication' => __DIR__ . '/../..' . '/tests/CreatesApplication.php',
-        'Tests\\Feature\\ExampleTest' => __DIR__ . '/../..' . '/tests/Feature/ExampleTest.php',
-        'Tests\\TestCase' => __DIR__ . '/../..' . '/tests/TestCase.php',
-        'Tests\\Unit\\ExampleTest' => __DIR__ . '/../..' . '/tests/Unit/ExampleTest.php',
         'TheSeer\\Tokenizer\\Exception' => __DIR__ . '/..' . '/theseer/tokenizer/src/Exception.php',
         'TheSeer\\Tokenizer\\NamespaceUri' => __DIR__ . '/..' . '/theseer/tokenizer/src/NamespaceUri.php',
         'TheSeer\\Tokenizer\\NamespaceUriException' => __DIR__ . '/..' . '/theseer/tokenizer/src/NamespaceUriException.php',
@@ -8109,10 +8100,10 @@ class ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5::$prefixDirsPsr4;
-            $loader->prefixesPsr0 = ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5::$prefixesPsr0;
-            $loader->classMap = ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticIniteccb490b090f0bbbb25a359be661fbff::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticIniteccb490b090f0bbbb25a359be661fbff::$prefixDirsPsr4;
+            $loader->prefixesPsr0 = ComposerStaticIniteccb490b090f0bbbb25a359be661fbff::$prefixesPsr0;
+            $loader->classMap = ComposerStaticIniteccb490b090f0bbbb25a359be661fbff::$classMap;
 
         }, null, ClassLoader::class);
     }
