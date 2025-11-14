@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Page;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use Spatie\QueryBuilder\QueryBuilder;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -15,10 +16,20 @@ class PageController extends Controller
     {
         $request->validate([
             'slug' => 'required',
+            'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
         ]);
+        // رفع الصورة
+        $imagePath = null;
+        if ($request->hasFile('img')) {
+            $image = $request->file('img')->getClientOriginalName();
+            $path = $request->file('img')->storeAs('pages', $image, 'public');
+            // => هيتخزن في storage/app/public/products
+        }
 
-
-        Page::create(['slug' => $request->slug]);
+        Page::create([
+            'slug' => $request->slug,
+            'img' => $path,
+        ]);
 
 
         $pro = Page::get();
@@ -31,7 +42,7 @@ class PageController extends Controller
 
     public function showPageProduct()
     {
-        $pro = Page::with('pageproducts')->get();
+        $pro = Page::with('pageproducts', 'categories')->get();
 
         return response()->json([
             'massege' => 'show all page prodcts',
@@ -52,21 +63,41 @@ class PageController extends Controller
 
     public function UpdatePage(Request $request, $id)
     {
-        $request->validate(['slug' => 'required']);
+
         if (! $request || ! $id) {
             return response()->json([
                 'massege' => 'update Page not done',
             ]);
         }
         $pro = Page::find($id);
-        $pro->update(['slug' => $request->slug]);
+        $imagePath = null;
+        if ($request->hasFile('img')) {
+            $image = $request->file('img')->getClientOriginalName();
+            $path = $request->file('img')->storeAs('pages', $image, 'public');
+            // => هيتخزن في storage/app/public/products
+        }
+        $pro->update(['slug' => $request->slug ?? $pro->slug, 'img' => $path ?? $pro->img]);
 
         return response()->json([
             'massege' => 'update Page is done',
             'data' => Page::get(),
         ]);
     }
-     // ✅ تصدير البيانات إلى Excel
+    public function search(Request $request)
+    {
+        $products = QueryBuilder::for(Page::query())
+            ->allowedFilters([
+                'slug',
+            ])
+            ->with(['categories', 'pageproducts'])
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'result' => $products,
+        ], 200);
+    }
+    // ✅ تصدير البيانات إلى Excel
     public function export()
     {
         $spreadsheet = new Spreadsheet();
@@ -75,7 +106,9 @@ class PageController extends Controller
         // رؤوس الأعمدة
         $sheet->setCellValue('A1', 'ID');
         $sheet->setCellValue('B1', 'Slug');
-        $sheet->setCellValue('C1', 'Created At');
+        $sheet->setCellValue('C1', 'img');
+        $sheet->setCellValue('D1', 'Created At');
+
 
         // البيانات
         $pages = Page::all();
@@ -83,7 +116,8 @@ class PageController extends Controller
         foreach ($pages as $page) {
             $sheet->setCellValue('A' . $row, $page->id);
             $sheet->setCellValue('B' . $row, $page->slug);
-            $sheet->setCellValue('C' . $row, $page->created_at);
+            $sheet->setCellValue('C' . $row, $page->img);
+            $sheet->setCellValue('D' . $row, $page->created_at);
             $row++;
         }
 

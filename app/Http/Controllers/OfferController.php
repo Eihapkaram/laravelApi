@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Offer;
 use Illuminate\Http\Request;
+use App\Models\User;
+use App\Notifications\OfferCreatedNotification;
 use Illuminate\Support\Facades\Storage;
 
 class OfferController extends Controller
@@ -64,14 +66,14 @@ public function activeOffers()
         $path = null;
         if ($request->hasFile('banner')) {
             $image = $request->file('banner')->getClientOriginalName();
-            $path = $request->file('banner')->storeAs('offers', $image, 'public');
+            $path = $request->file('banner')->storeAs('offersbanner', $image, 'public');
         }
 
         $offer = Offer::create([
              
             'title' => $request->title,
             'description' => $request->description,
-            'banner' => $request-> $path,
+            'banner' => $path,
             'product_id' => $request->product_id,
             'discount_value' => $request->discount_value,
             'discount_type' =>$request->discount_type,
@@ -80,7 +82,11 @@ public function activeOffers()
             'is_active' => $request->is_active,
       
         ]);
+$users = User::where('role', '!=', 'admin')->get();
 
+foreach ($users as $user) {
+    $user->notify(new OfferCreatedNotification($offer));
+}
         return response()->json([
             'message' => 'تم إنشاء العرض بنجاح',
             'offer' => $offer
@@ -111,7 +117,7 @@ public function activeOffers()
              // رفع الصورة الرئيسية
         $path = null;
             $image = $request->file('banner')->getClientOriginalName();
-            $path = $request->file('banner')->storeAs('offers', $image, 'public');
+            $path = $request->file('banner')->storeAs('offersbanner', $image, 'public');
             $data['banner'] = $path;
         }
 

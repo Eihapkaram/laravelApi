@@ -7,14 +7,13 @@ return [
     | View Storage Paths
     |--------------------------------------------------------------------------
     |
-    | Most templating systems load templates from disk. Here you may specify
-    | an array of paths that should be checked for your views. Of course
-    | the usual Laravel view path has already been registered for you.
+    | المسار الذي سيبحث فيه Laravel عن ملفات الـ view (Blade أو غيره).
+    | في حالتنا كـ API، لن نستخدم أي ملفات view، لكن المسار يجب أن يكون موجود.
     |
     */
 
     'paths' => [
-        resource_path('views'),
+        resource_path('views'), // عادة موجود تلقائيًا
     ],
 
     /*
@@ -22,9 +21,8 @@ return [
     | Compiled View Path
     |--------------------------------------------------------------------------
     |
-    | This option determines where all the compiled Blade templates will be
-    | stored for your application. Typically, this is within the storage
-    | directory. However, as usual, you are free to change this value.
+    | المسار الذي سيحفظ فيه Laravel الـ compiled views. حتى لو لم تستخدم views،
+    | يجب أن يكون موجود وصالح للكتابة.
     |
     */
 

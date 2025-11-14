@@ -18,7 +18,8 @@ return new class extends Migration
         $table->string('name');
         $table->string('slug')->unique();
         $table->text('description')->nullable();
-         $table->string('img')->nullable();
+        $table->foreignId('page_id')->nullable()->constrained('pages')->cascadeOnDelete();
+        $table->string('img')->nullable();
         $table->string('banner')->nullable();
         $table->timestamps();
         });

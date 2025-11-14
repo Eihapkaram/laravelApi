@@ -2,70 +2,94 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\PaymobService;
+use App\Models\User;
+use App\Services\UnifiedPaymobService;
 
 class PaymentController extends Controller
 {
     private $paymob;
 
-    public function __construct(PaymobService $paymob)
+    public function __construct(UnifiedPaymobService $paymob)
     {
         $this->paymob = $paymob;
     }
-
+   
+    // إنشاء الدفع
     public function pay(Request $request)
     {
-        $token = $this->paymob->authenticate();
+         $user = auth()->user();
 
-        // المنتجات جاية من الـ request كـ Array جاهزة
-       $items = $request->items; 
+      $cart = $user->getcart()->with('proCItem.product')->first();
 
-        $order = $this->paymob->createOrder(
-            $token,
-            $request->amount,
-            'EGP',
-            $items,
-        );
+        if (!$cart || $cart->proCItem->isEmpty()) {
+            return response()->json(['message' => 'السلة فارغة'], 400);
+        }
 
-        if (!isset($order['id'])) {
+        $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
+
+        $amount = $total * 100; // تحويل جنيهات إلى قرش
+
+        // بيانات billing كاملة
+       $billingData = [
+            "first_name"    => $request->first_name ?? "h",
+            "last_name"     => $user->last_name ?? "h",
+            "email"         => $user->email ?? "exampel@rt.gmail.com",
+            "phone_number"  => $request->phone_number  ?? $user->phone ,
+            "country"       =>  $request->country ?? "eg",
+            "city"          =>  $request->city ?? "cairo",
+            "street"        => $request->street ?? "street" ,
+        ];
+
+        $response = $this->paymob->createIntention($amount, $billingData);
+
+        // التحقق بعدم وجود client_secret
+        if (empty($response) || !isset($response['client_secret'])) {
             return response()->json([
                 'error' => true,
-                'message' => 'Order creation failed',
-                'response' => $order
+                'message' => 'Failed to create payment intention',
+                'response' => $response
             ], 500);
         }
 
-        $billingData = [
-            "apartment"     => "NA",
-            "email"         => $request->email ?? "example@test.com",
-            "floor"         => "NA",
-            "first_name"    => $request->first_name ?? "NA",
-            "street"        => $request->street ?? "NA",
-            "building"      => "NA",
-            "phone_number"  => $request->phone_number ?? "NA",
-            "shipping_method" => "NA",
-            "postal_code"   => "NA",
-            "city"          => $request->city ?? "NA",
-            "country"       => $request->country ?? "EG",
-            "last_name"     => $request->last_name ?? "NA",
-            "state"         => "NA"
-        ];
+        $clientSecret = $response['client_secret'];
 
-        $paymentKey = $this->paymob->generatePaymentKey(
-            $token,
-            $order['id'],
-            $request->amount,
-            $billingData
-        );
-
-        $iframeUrl = $this->paymob->getIframeUrl($paymentKey);
+        // الحصول على رابط الدفع
+        $checkoutUrl = $this->paymob->getCheckoutUrl($clientSecret);
 
         return response()->json([
-            'url'   => $iframeUrl,
-            'order' => $order,
-            'items' => $items,
+            'error' => false,
+            'message' => 'Payment intention created successfully',
+            'checkout_url' => $checkoutUrl,
+            'client_secret' => $clientSecret,
+            'response' => $response, // لإضافة التفاصيل في الواجهة
+        ]);
+    }
+
+    // Webhook لاستقبال تفاصيل الدفع
+    public function webhook(Request $request)
+    {
+        \Log::info('Paymob Webhook:', $request->all());
+        // حفظ بيانات الدفع في قاعدة البيانات إذا أردت
+        return response()->json(['status' => 'received']);
+    }
+
+    // Redirect بعد اكتمال الدفع
+    public function redirect(Request $request)
+    {
+        $data = $request->all();
+        $status = $data['success'] ?? false;
+
+        $message = $status
+            ? "✅ تم الدفع بنجاح!"
+            : "❌ فشل الدفع، يرجى المحاولة مرة أخرى.";
+
+        // يمكنك حفظ بيانات الدفع هنا إذا أردت
+
+        return response()->json([
+            'message' => $message,
+            'status' => $status,
+            'data' => $data
         ]);
     }
 }
