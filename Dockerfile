@@ -11,14 +11,14 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 
 WORKDIR /app
 
-COPY composer.json composer.lock ./
+# انسخ المشروع كامل أولاً
+COPY . .
 
+# امسح أي vendor قديم
 RUN rm -rf vendor/
 
-# تثبيت كامل بدون حذف dev
+# نفذ composer install بعد ما artisan بقى موجود
 RUN composer install --no-interaction --optimize-autoloader
-
-COPY . .
 
 ENV APP_ENV=production
 ENV APP_DEBUG=false
