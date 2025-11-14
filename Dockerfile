@@ -1,7 +1,7 @@
 # 1. اختيار صورة PHP مع Composer مسبقاً
 FROM php:8.2-fpm-alpine
 
-# 2. تثبيت الحزم المطلوبة للبناء وتشغيل Laravel
+# 2. تثبيت الحزم المطلوبة للبناء وتشغيل Laravel + GD
 RUN apk add --no-cache \
     bash \
     git \
@@ -10,7 +10,13 @@ RUN apk add --no-cache \
     oniguruma-dev \
     icu-dev \
     curl \
-    && docker-php-ext-install pdo pdo_mysql zip intl bcmath
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
+    && docker-php-ext-configure gd \
+        --with-freetype \
+        --with-jpeg \
+    && docker-php-ext-install pdo pdo_mysql zip intl bcmath gd
 
 # 3. تثبيت Composer (آخر نسخة)
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
