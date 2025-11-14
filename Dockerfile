@@ -14,31 +14,23 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # تعيين مجلد العمل داخل الحاوية
 WORKDIR /app
 
-# نسخ جميع ملفات المشروع
-COPY . .
-
-# تنظيف أي ملفات قديمة
-RUN rm -rf vendor composer.lock && composer clear-cache
+# نسخ ملفات Composer فقط لتثبيت الحزم
+COPY composer.json composer.lock ./
 
 # تثبيت الحزم بدون dev packages وتحسين autoloader
 RUN composer install --no-dev --no-interaction --optimize-autoloader
 
-# صلاحيات مجلدات التخزين والcache
-RUN mkdir -p storage/framework/cache storage/logs && chmod -R 775 storage bootstrap/cache
+# نسخ باقي ملفات المشروع
+COPY . .
 
-# ✅ تمت الإضافة: تأكيد إنشاء باقي مجلدات Laravel المطلوبة
-RUN mkdir -p storage/framework/sessions \
-    && mkdir -p storage/framework/views \
-    && mkdir -p storage/framework/cache \
+# إنشاء مجلدات التخزين وإعطاء الصلاحيات
+RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# ✅ تمت الإضافة: إعداد متغيرات بيئة لتفادي مشاكل التخزين في منصات مثل Railway
+# إعداد متغيرات بيئة لتفادي مشاكل التخزين
 ENV SESSION_DRIVER=array
 ENV VIEW_COMPILED_PATH=/tmp
 ENV CACHE_DRIVER=array
-
-# ✅ تمت الإضافة: تنظيف الكاش قبل التشغيل لضمان عمل التطبيق
-RUN php artisan config:clear && php artisan cache:clear && php artisan view:clear
 
 # فتح المنفذ 8080
 EXPOSE 8080
