@@ -1,39 +1,38 @@
-# استخدام نسخة PHP CLI رسمية
-FROM php:8.2-cli
+# 1. اختيار صورة PHP مع Composer مسبقاً
+FROM php:8.2-fpm-alpine
 
-# تثبيت مكتبات النظام المطلوبة لبناء امتدادات PHP
-RUN apt-get update && apt-get install -y \
-    libpng-dev libjpeg-dev libfreetype6-dev libzip-dev unzip git curl libicu-dev pkg-config g++ zlib1g-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo_mysql zip bcmath opcache intl \
-    && rm -rf /var/lib/apt/lists/*
+# 2. تثبيت الحزم المطلوبة للبناء وتشغيل Laravel
+RUN apk add --no-cache \
+    bash \
+    git \
+    unzip \
+    libzip-dev \
+    oniguruma-dev \
+    icu-dev \
+    curl \
+    && docker-php-ext-install pdo pdo_mysql zip intl bcmath
 
-# تثبيت Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# 3. تثبيت Composer (آخر نسخة)
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# تعيين مجلد العمل داخل الحاوية
-WORKDIR /app
+# 4. تعيين مجلد العمل
+WORKDIR /var/www/html
 
-# نسخ ملفات Composer فقط لتثبيت الحزم
+# 5. نسخ ملفات Composer فقط لتثبيت الحزم أولاً
 COPY composer.json composer.lock ./
 
-# تثبيت الحزم بدون dev packages وتحسين autoloader
+# 6. تثبيت الحزم بدون dev وتحسين autoloader
 RUN composer install --no-dev --no-interaction --optimize-autoloader
 
-# نسخ باقي ملفات المشروع بعد تثبيت الحزم
+# 7. نسخ باقي ملفات المشروع
 COPY . .
 
-# إنشاء مجلدات التخزين وإعطاء الصلاحيات
+# 8. إعداد صلاحيات المجلدات
 RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# إعداد متغيرات بيئة لتفادي مشاكل التخزين
-ENV SESSION_DRIVER=array
-ENV VIEW_COMPILED_PATH=/tmp
-ENV CACHE_DRIVER=array
+# 9. تعيين مستخدم www-data
+RUN chown -R www-data:www-data /var/www/html
 
-# فتح المنفذ 8080
-EXPOSE 8080
-
-# تشغيل Laravel
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
+# 10. الأمر الإفتراضي لتشغيل PHP-FPM
+CMD ["php-fpm"]
