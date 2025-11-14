@@ -20,7 +20,7 @@ COPY composer.json composer.lock ./
 # تثبيت الحزم بدون dev packages وتحسين autoloader
 RUN composer install --no-dev --no-interaction --optimize-autoloader
 
-# نسخ باقي ملفات المشروع
+# نسخ باقي ملفات المشروع بعد تثبيت الحزم
 COPY . .
 
 # إنشاء مجلدات التخزين وإعطاء الصلاحيات
