@@ -1,6 +1,5 @@
 FROM php:8.2-fpm
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     libpng-dev libjpeg-dev libfreetype6-dev \
     libzip-dev zip unzip git curl \
@@ -15,31 +14,36 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 
 WORKDIR /app
 
-# ---------- Install PHP Dependencies ----------
+# ----------------------------------------------------
+# 1) Copy composer files ONLY
+# ----------------------------------------------------
 COPY composer.json composer.lock ./
-COPY database ./database
 
-# لازم تعمل install قبل copy باقي الملفات
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+# ----------------------------------------------------
+# 2) Install vendor WITHOUT running scripts
+#    (من غير ما يشغّل artisan package:discover)
+# ----------------------------------------------------
+RUN composer install --no-dev --no-scripts --prefer-dist --optimize-autoloader --no-interaction
 
-# ---------- Copy application files ----------
+# ----------------------------------------------------
+# 3) Copy the rest of the application
+# ----------------------------------------------------
 COPY . .
 
-# ---------- Laravel Optimizations ----------
+# ----------------------------------------------------
+# 4) Run Laravel optimization scripts AFTER code exists
+# ----------------------------------------------------
 RUN php artisan config:clear || true
 RUN php artisan route:clear || true
 RUN php artisan view:clear || true
 
-# Build optimized caches
 RUN php artisan config:cache || true
 RUN php artisan route:cache || true
 RUN php artisan view:cache || true
 
-# ---------- Set environment ----------
 ENV APP_ENV=production
 ENV APP_DEBUG=false
 
 EXPOSE 8080
 
-# ---------- Run PHP server ----------
-CMD ["php", "-S", "0.0.0.0:8080", "-t", "public"]
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
