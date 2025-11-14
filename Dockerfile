@@ -15,14 +15,13 @@ COPY composer.json composer.lock ./
 
 RUN rm -rf vendor/
 
-RUN composer install --no-dev --no-interaction --optimize-autoloader --no-scripts
+# تثبيت كامل بدون حذف dev
+RUN composer install --no-interaction --optimize-autoloader
 
 COPY . .
 
-# Laravel production variables
 ENV APP_ENV=production
 ENV APP_DEBUG=false
 ENV APP_KEY=base64:dummyKeyWillBeReplacedByRailway
 
-# Serve the app
 CMD ["php", "-S", "0.0.0.0:8080", "-t", "public"]
