@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit5c43d1e46607f9fb8114783226d9c86f
+class ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5
 {
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
@@ -706,6 +706,8 @@ class ComposerStaticInit5c43d1e46607f9fb8114783226d9c86f
         'App\\Http\\Controllers\\PaymentController' => __DIR__ . '/../..' . '/app/Http/Controllers/PaymentController.php',
         'App\\Http\\Controllers\\ProductController' => __DIR__ . '/../..' . '/app/Http/Controllers/ProductController.php',
         'App\\Http\\Controllers\\ReviewController' => __DIR__ . '/../..' . '/app/Http/Controllers/ReviewController.php',
+        'App\\Http\\Controllers\\SellerCustomerController' => __DIR__ . '/../..' . '/app/Http/Controllers/SellerCustomerController.php',
+        'App\\Http\\Controllers\\SettingController' => __DIR__ . '/../..' . '/app/Http/Controllers/SettingController.php',
         'App\\Http\\Controllers\\UserController' => __DIR__ . '/../..' . '/app/Http/Controllers/UserController.php',
         'App\\Http\\Kernel' => __DIR__ . '/../..' . '/app/Http/Kernel.php',
         'App\\Http\\Middleware\\Authenticate' => __DIR__ . '/../..' . '/app/Http/Middleware/Authenticate.php',
@@ -732,18 +734,24 @@ class ComposerStaticInit5c43d1e46607f9fb8114783226d9c86f
         'App\\Models\\Order_item' => __DIR__ . '/../..' . '/app/Models/Order_item.php',
         'App\\Models\\Page' => __DIR__ . '/../..' . '/app/Models/Page.php',
         'App\\Models\\Review' => __DIR__ . '/../..' . '/app/Models/Review.php',
+        'App\\Models\\Setting' => __DIR__ . '/../..' . '/app/Models/Setting.php',
         'App\\Models\\User' => __DIR__ . '/../..' . '/app/Models/User.php',
+        'App\\Models\\WithdrawRequest' => __DIR__ . '/../..' . '/app/Models/WithdrawRequest.php',
         'App\\Notifications\\AdminNotification' => __DIR__ . '/../..' . '/app/Notifications/AdminNotification.php',
         'App\\Notifications\\CreatOrder' => __DIR__ . '/../..' . '/app/Notifications/CreatOrder.php',
         'App\\Notifications\\NewInquiryNotification' => __DIR__ . '/../..' . '/app/Notifications/NewInquiryNotification.php',
         'App\\Notifications\\NewOrderNotification' => __DIR__ . '/../..' . '/app/Notifications/NewOrderNotification.php',
         'App\\Notifications\\NewProduct' => __DIR__ . '/../..' . '/app/Notifications/NewProduct.php',
+        'App\\Notifications\\NewWithdrawRequest' => __DIR__ . '/../..' . '/app/Notifications/NewWithdrawRequest.php',
         'App\\Notifications\\OfferCreatedNotification' => __DIR__ . '/../..' . '/app/Notifications/OfferCreatedNotification.php',
         'App\\Notifications\\OrderApprovedNotification' => __DIR__ . '/../..' . '/app/Notifications/OrderApprovedNotification.php',
         'App\\Notifications\\OrderCreatedBySellerNotification' => __DIR__ . '/../..' . '/app/Notifications/OrderCreatedBySellerNotification.php',
         'App\\Notifications\\OrderRejectedNotification' => __DIR__ . '/../..' . '/app/Notifications/OrderRejectedNotification.php',
         'App\\Notifications\\UpdateOrder' => __DIR__ . '/../..' . '/app/Notifications/UpdateOrder.php',
         'App\\Notifications\\WelcomeUser' => __DIR__ . '/../..' . '/app/Notifications/WelcomeUser.php',
+        'App\\Notifications\\WithdrawRequestApproved' => __DIR__ . '/../..' . '/app/Notifications/WithdrawRequestApproved.php',
+        'App\\Notifications\\WithdrawRequestRejected' => __DIR__ . '/../..' . '/app/Notifications/WithdrawRequestRejected.php',
+        'App\\Notifications\\WithdrawRequestSubmitted' => __DIR__ . '/../..' . '/app/Notifications/WithdrawRequestSubmitted.php',
         'App\\Providers\\AppServiceProvider' => __DIR__ . '/../..' . '/app/Providers/AppServiceProvider.php',
         'App\\Providers\\AuthServiceProvider' => __DIR__ . '/../..' . '/app/Providers/AuthServiceProvider.php',
         'App\\Providers\\BroadcastServiceProvider' => __DIR__ . '/../..' . '/app/Providers/BroadcastServiceProvider.php',
@@ -8069,10 +8077,10 @@ class ComposerStaticInit5c43d1e46607f9fb8114783226d9c86f
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit5c43d1e46607f9fb8114783226d9c86f::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit5c43d1e46607f9fb8114783226d9c86f::$prefixDirsPsr4;
-            $loader->prefixesPsr0 = ComposerStaticInit5c43d1e46607f9fb8114783226d9c86f::$prefixesPsr0;
-            $loader->classMap = ComposerStaticInit5c43d1e46607f9fb8114783226d9c86f::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5::$prefixDirsPsr4;
+            $loader->prefixesPsr0 = ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5::$prefixesPsr0;
+            $loader->classMap = ComposerStaticInitdf6ae6499a3bb95fe20a305eca2b0ad5::$classMap;
 
         }, null, ClassLoader::class);
     }
