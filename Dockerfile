@@ -1,37 +1,46 @@
-FROM php:8.2-fpm-alpine
+# استخدام نسخة PHP CLI رسمية
+FROM php:8.2-cli
 
-# تثبيت dependencies اللازمة
-RUN apk add --no-cache \
-    bash \
-    git \
-    unzip \
-    libzip-dev \
-    oniguruma-dev \
-    icu-dev \
-    curl \
-    freetype-dev \
-    libjpeg-turbo-dev \
-    libpng-dev \
+# تثبيت مكتبات النظام المطلوبة لبناء امتدادات PHP
+RUN apt-get update && apt-get install -y \
+    libpng-dev libjpeg-dev libfreetype6-dev libzip-dev unzip git curl libicu-dev pkg-config g++ zlib1g-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql zip intl bcmath gd
+    && docker-php-ext-install gd pdo_mysql zip bcmath opcache intl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# تثبيت Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-WORKDIR /var/www/html
+# تعيين مجلد العمل داخل الحاوية
+WORKDIR /app
 
-# نسخ ملفات المشروع
+# نسخ جميع ملفات المشروع
 COPY . .
 
-# حذف أي مجلد vendor و lock قديم
-RUN rm -rf vendor composer.lock
+# تنظيف أي ملفات قديمة
 
-# تثبيت الحزم بدون dev وتحسين autoloader
+# تثبيت الحزم بدون dev packages وتحسين autoloader
 RUN composer install --no-dev --no-interaction --optimize-autoloader
 
-# إعداد صلاحيات المجلدات
-RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache \
-    && chown -R www-data:www-data /var/www/html
+# صلاحيات مجلدات التخزين والcache
+RUN mkdir -p storage/framework/cache storage/logs && chmod -R 775 storage bootstrap/cache
 
-CMD ["php-fpm"]
+# ✅ تمت الإضافة: تأكيد إنشاء باقي مجلدات Laravel المطلوبة
+RUN mkdir -p storage/framework/sessions \
+    && mkdir -p storage/framework/views \
+    && mkdir -p storage/framework/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# ✅ تمت الإضافة: إعداد متغيرات بيئة لتفادي مشاكل التخزين في منصات مثل Railway
+ENV SESSION_DRIVER=array
+ENV VIEW_COMPILED_PATH=/tmp
+ENV CACHE_DRIVER=array
+
+# ✅ تمت الإضافة: تنظيف الكاش قبل التشغيل لضمان عمل التطبيق
+RUN php artisan config:clear && php artisan cache:clear && php artisan view:clear
+
+# فتح المنفذ 8080
+EXPOSE 8080
+
+# تشغيل Laravel
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
