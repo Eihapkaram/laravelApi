@@ -22,11 +22,13 @@ class PaymentController extends Controller
   if (!$user) {
     return response()->json(['message' => 'User not authenticated'], 401);
   }
-     $cart->proCItem->each(function($item) {
-    \Log::info("Product: {$item->product->name}, Price: {$item->product->price}, Qty: {$item->quantity}");
-});
+     $cart = $user->getcart()->with('proCItem.product')->first();
 
-    $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
+        if (!$cart || $cart->proCItem->isEmpty()) {
+            return response()->json(['message' => 'السلة فارغة'], 400);
+        }
+
+        $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
      \Log::info("Total before payment: {$total}");
 
      $amount = $total * 100;
