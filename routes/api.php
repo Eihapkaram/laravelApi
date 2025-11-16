@@ -209,6 +209,7 @@ Route::middleware('auth:api')->group(function () {
     // Cart
     Route::post('cart/add', [AddToController::class, 'addfun']);
     Route::get('cart/show', [AddToController::class, 'CartShow']);
+    Route::put('/cart/item/{id}/update', [AddToController::class, 'updateQuantity']);
     Route::delete('cart/delete/{id}', [AddToController::class, 'deleteCartItem']);
     Route::delete('cart/deleteAll', [AddToController::class, 'deleteAllCartItems']);
 
