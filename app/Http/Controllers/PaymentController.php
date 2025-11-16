@@ -19,7 +19,9 @@ class PaymentController extends Controller
     public function pay(Request $request)
     {
          $user = auth()->user();
-
+  if (!$user) {
+    return response()->json(['message' => 'User not authenticated'], 401);
+  }
      $cart->proCItem->each(function($item) {
     \Log::info("Product: {$item->product->name}, Price: {$item->product->price}, Qty: {$item->quantity}");
 });
