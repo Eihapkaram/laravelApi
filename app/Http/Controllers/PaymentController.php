@@ -20,15 +20,15 @@ class PaymentController extends Controller
     {
          $user = auth()->user();
 
-      $cart = $user->getcart()->with('proCItem.product')->first();
+     $cart->proCItem->each(function($item) {
+    \Log::info("Product: {$item->product->name}, Price: {$item->product->price}, Qty: {$item->quantity}");
+});
 
-        if (!$cart || $cart->proCItem->isEmpty()) {
-            return response()->json(['message' => 'السلة فارغة'], 400);
-        }
+    $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
+     \Log::info("Total before payment: {$total}");
 
-        $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
-
-        $amount = $total * 100; // تحويل جنيهات إلى قرش
+     $amount = $total * 100;
+     \Log::info("Amount sent to Paymob: {$amount}");
 
         // بيانات billing كاملة
        $billingData = [
