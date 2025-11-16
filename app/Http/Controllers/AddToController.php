@@ -38,6 +38,39 @@ class AddToController extends Controller
             'cart' => $cart->load('proCItem.product') //cart
         ]);
     }
+    public function updateQuantity(Request $request, $id)
+{
+    $request->validate([
+        'quantity' => 'required|integer|min:1'
+    ]);
+
+    $user = auth()->user();
+
+    if (!$user) {
+        return response()->json([
+            'message' => 'You must be logged in to update cart items',
+        ], 401);
+    }
+
+    $cart = $user->getcart()->firstOrCreate([]);
+    $cartItem = $cart->proCItem()->find($id);
+
+    if (!$cartItem) {
+        return response()->json([
+            'message' => 'Cart item not found',
+        ], 404);
+    }
+
+    // تحديث الكمية مباشرة
+    $cartItem->quantity = $request->quantity;
+    $cartItem->save();
+
+    return response()->json([
+        'message' => 'Quantity updated successfully',
+        'cart'    => $cart->load('proCItem.product')
+    ], 200);
+}
+
     public function CartShow()
     {
         $user = auth()->user(); //User modle
