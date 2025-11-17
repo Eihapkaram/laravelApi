@@ -110,4 +110,73 @@ class AddToController extends Controller
             'message' => 'done delete All CartItem successfully',
         ], 201);
     }
+    public function increaseQuantity(Request $request, $id)
+{
+    $user = auth()->user();
+
+    if (!$user) {
+        return response()->json([
+            'message' => 'You must be logged in to update cart items',
+        ], 401);
+    }
+
+    $cart = $user->getcart()->firstOrCreate([]);
+    $cartItem = $cart->proCItem()->find($id);
+
+    if (!$cartItem) {
+        return response()->json([
+            'message' => 'Cart item not found',
+        ], 404);
+    }
+
+    // ⬆️ زيادة الكمية
+    $cartItem->quantity += 1;
+    $cartItem->save();
+
+    return response()->json([
+        'message' => 'Quantity increased successfully',
+        'cart'    => $cart->load('proCItem.product')
+    ], 200);
+}
+
+
+
+public function decreaseQuantity(Request $request, $id)
+{
+    $user = auth()->user();
+
+    if (!$user) {
+        return response()->json([
+            'message' => 'You must be logged in to update cart items',
+        ], 401);
+    }
+
+    $cart = $user->getcart()->firstOrCreate([]);
+    $cartItem = $cart->proCItem()->find($id);
+
+    if (!$cartItem) {
+        return response()->json([
+            'message' => 'Cart item not found',
+        ], 404);
+    }
+
+    // ⬇️ إنقاص الكمية
+    if ($cartItem->quantity > 1) {
+        $cartItem->quantity -= 1;
+        $cartItem->save();
+    } else {
+        // ❗ لو عايز تمسحه لما يوصل 1
+        $cartItem->delete();
+        return response()->json([
+            'message' => 'Item removed from cart',
+            'cart'    => $cart->load('proCItem.product')
+        ], 200);
+    }
+
+    return response()->json([
+        'message' => 'Quantity decreased successfully',
+        'cart'    => $cart->load('proCItem.product')
+    ], 200);
+}
+
 }
