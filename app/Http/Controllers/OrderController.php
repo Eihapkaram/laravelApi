@@ -466,6 +466,26 @@ class OrderController extends Controller
         }
 
         $order->update(['status' => $request->status]);
+        // 📌 لو الحالة الجديدة هي "shipped" هنخصم الكمية من مخزون المنتجات
+if ($request->status === 'shipped') {
+    foreach ($order->orderdetels as $item) {
+        $product = $item->product;
+
+        if ($product) {
+            // تأكد إن المخزون يكفي، لو مش كفاية رجّع رسالة خطأ
+            if ($product->stock < $item->quantity) {
+                return response()->json([
+                    'message' => "المخزون غير كافي للمنتج: {$product->titel}"
+                ], 400);
+            }
+
+            // 🟢 خصم الكمية
+            $product->stock -= $item->quantity;
+            $product->save();
+        }
+    }
+}
+
 
         return response()->json([
             'message' => 'تم تحديث حالة الطلب بنجاح',
