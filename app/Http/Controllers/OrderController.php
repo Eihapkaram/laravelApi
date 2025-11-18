@@ -465,13 +465,13 @@ class OrderController extends Controller
             }
         }
 
-        $order->update(['status' => $request->status]);
-        // 📌 لو الحالة الجديدة هي "shipped" هنخصم الكمية من مخزون المنتجات
-if ($request->status === 'shipped') {
+       // 📌 لو الحالة الجديدة هي "completed" هنخصم الكمية من مخزون المنتجات
+if ($request->status === 'completed') {
     foreach ($order->orderdetels as $item) {
         $product = $item->product;
 
         if ($product) {
+
             // تأكد إن المخزون يكفي، لو مش كفاية رجّع رسالة خطأ
             if ($product->stock < $item->quantity) {
                 return response()->json([
@@ -479,12 +479,13 @@ if ($request->status === 'shipped') {
                 ], 400);
             }
 
-            // 🟢 خصم الكمية
+            // 🟢 خصم الكمية من المخزون
             $product->stock -= $item->quantity;
             $product->save();
         }
     }
 }
+
 
 
         return response()->json([
