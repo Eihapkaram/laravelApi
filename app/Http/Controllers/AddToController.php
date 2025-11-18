@@ -120,7 +120,7 @@ class AddToController extends Controller
         ], 401);
     }
 
-    $cart = $user->getcart()->firstOrCreate([]);
+     $cart = $user->getcart()->firstOrCreate([]);
     $cartItem = $cart->proCItem()->find($id);
 
     if (!$cartItem) {
