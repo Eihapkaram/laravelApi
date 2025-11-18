@@ -122,6 +122,11 @@ class AddToController extends Controller
 
      $cart = $user->getcart()->firstOrCreate([]);
     $cartItem = $cart->proCItem()->find($id);
+     if (!$cartItem) {
+        return response()->json([
+            'message' => 'Cart item not found',
+        ], 404);
+    }
 
     // ⬆️ زيادة الكمية
     $cartItem->quantity += 1;
@@ -147,6 +152,11 @@ public function decreaseQuantity(Request $request, $id)
 
     $cart = $user->getcart()->firstOrCreate([]);
     $cartItem = $cart->proCItem()->find($id);
+     if (!$cartItem) {
+        return response()->json([
+            'message' => 'Cart item not found',
+        ], 404);
+    }
 
     // ⬇️ إنقاص الكمية
     if ($cartItem->quantity > 1) {
