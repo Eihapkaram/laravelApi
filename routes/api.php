@@ -210,8 +210,8 @@ Route::middleware('auth:api')->group(function () {
     Route::post('cart/add', [AddToController::class, 'addfun']);
     Route::get('cart/show', [AddToController::class, 'CartShow']);
     Route::put('/cart/item/{id}/update', [AddToController::class, 'updateQuantity']);
-    Route::put('/cart/item/{id}/increase', [AddToController::class, 'increaseQuantity']);
-    Route::put('/cart/item/{id}/decrease', [AddToController::class, 'decreaseQuantity']);
+    Route::post('/cart/item/{id}/increase', [AddToController::class, 'increaseQuantity']);
+    Route::post('/cart/item/{id}/decrease', [AddToController::class, 'decreaseQuantity']);
     Route::delete('cart/delete/{id}', [AddToController::class, 'deleteCartItem']);
     Route::delete('cart/deleteAll', [AddToController::class, 'deleteAllCartItems']);
 
