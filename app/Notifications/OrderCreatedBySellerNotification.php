@@ -42,9 +42,8 @@ class OrderCreatedBySellerNotification extends Notification
             ->greeting('مرحباً ' . $notifiable->name . ' 👋')
             ->line('قام المندوب ' . $this->seller->name . ' بإنشاء طلب جديد لك.')
             ->line('قيمة الطلب: ' . $this->order->total_price . ' جنيه.')
-             ->line(' الرجاء تأكيد الطلبية ب ا لموافقة أو الرفض لكي يتم تاكيد الطلبية و شحنها لك ')
+            ->line('الرجاء تأكيد الطلبية بالموافقة أو الرفض لكي يتم شحنها لك.')
             ->action('عرض الطلب', url('/orders/' . $this->order->id));
-           
     }
 
     /**
@@ -52,12 +51,27 @@ class OrderCreatedBySellerNotification extends Notification
      */
     public function toArray($notifiable)
     {
+        // جلب تفاصيل الطلب الحالي فقط مع المنتج
+        $orderDetels = $this->order->orderdetels->map(function($detel) {
+            return [
+                'id' => $detel->id,
+                'product_id' => $detel->product_id,
+                'quantity' => $detel->quantity,
+                'price' => $detel->price,
+                'product' => [
+                    'id' => $detel->product->id,
+                    'titel' => $detel->product->titel,
+                    'price' => $detel->product->price,
+                ]
+            ];
+        });
+
         return [
             'type' => 'order_created_by_seller',
-            'message' => "قام {$this->seller->name} بإنشاء طلبية رقم{$this->order->id}# لك جديد بقيمة {$this->order->total_price}جنيه.من فضلك اكد الطلبيه من صفحة مشترياتك ليتم شحنها لك",
+            'message' => "قام {$this->seller->name} بإنشاء طلبية رقم {$this->order->id} بقيمة {$this->order->total_price} جنيه. من فضلك أكد الطلب من صفحة مشترياتك ليتم شحنها لك.",
             'order_id' => $this->order->id,
             'seller_name' => $this->seller->name,
-            'orderDetels' => $this->order->with('orderdetels.product')->get(),
+            'orderDetels' => $orderDetels,
         ];
     }
 }
