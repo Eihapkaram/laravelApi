@@ -507,7 +507,7 @@ class OrderController extends Controller
     }
     public function topSellingProductsByPage($pageId)
 {
-    $products = product::where('page_id', $pageId)
+    $products = Order::where('page_id', $pageId)
         ->withSum('orderdetels as total_sold', 'quantity') // مجموع الكميات المباعة لكل منتج
         ->withCount('orderdetels as total_orders') // عدد مرات الطلب لكل منتج
         ->orderByDesc('total_sold') // ترتيب حسب الكمية المباعة
@@ -521,7 +521,7 @@ class OrderController extends Controller
 }
 public function mostOrderedProducts()
 {
-    $products = product::withCount('orderdetels as total_orders') // عدد الطلبات لكل منتج
+    $products = Order::withCount('orderdetels as total_orders') // عدد الطلبات لكل منتج
         ->orderByDesc('total_orders') // ترتيب تنازلي
         ->get();
 
