@@ -6,6 +6,7 @@ use Mpdf\Mpdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Order;
+use App\Models\product;
 use App\Notifications\CreatOrder;
 use App\Notifications\NewOrderNotification;
 use App\Notifications\UpdateOrder;
@@ -14,6 +15,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Notifications\Notifiable;
 use App\Notifications\OrderCreatedBySellerNotification;
+use App\Notifications\LowStockNotification;
 use App\Notifications\OrderApprovedNotification;
 use App\Notifications\OrderRejectedNotification;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -467,24 +469,28 @@ class OrderController extends Controller
 
         $order->update(['status' => $request->status]);
         // 📌 لو الحالة الجديدة هي "shipped" هنخصم الكمية من مخزون المنتجات
-if ($request->status === 'completed') {
-    foreach ($order->orderdetels as $item) {
-        $product = $item->product;
+        if ($request->status === 'completed') {
+            foreach ($order->orderdetels as $item) {
+                $product = $item->product;
 
-        if ($product) {
-            // تأكد إن المخزون يكفي، لو مش كفاية رجّع رسالة خطأ
-            if ($product->stock < $item->quantity) {
-                return response()->json([
-                    'message' => "المخزون غير كافي للمنتج: {$product->titel}"
-                ], 400);
+                if ($product) {
+                    // تأكد إن المخزون يكفي، لو مش كفاية رجّع رسالة خطأ
+                    if ($product->stock < $item->quantity) {
+                        return response()->json([
+                            'message' => "المخزون غير كافي للمنتج: {$product->titel}"
+                        ], 400);
+                    }
+
+                    // 🟢 خصم الكمية
+                    $product->stock -= $item->quantity;
+                    $product->save();
+                    if ($product->stock <= 10) {
+                        $admins = User::where('role', 'admin')->get();
+                        Notification::send($admins, new LowStockNotification($product));
+                    }
+                }
             }
-
-            // 🟢 خصم الكمية
-            $product->stock -= $item->quantity;
-            $product->save();
         }
-    }
-}
 
 
         return response()->json([
@@ -499,6 +505,32 @@ if ($request->status === 'completed') {
             Notification::send($admins, new UpdateOrder($user));
         }
     }
+    public function topSellingProductsByPage($pageId)
+{
+    $products = product::where('page_id', $pageId)
+        ->withSum('orderdetels as total_sold', 'quantity') // مجموع الكميات المباعة لكل منتج
+        ->withCount('orderdetels as total_orders') // عدد مرات الطلب لكل منتج
+        ->orderByDesc('total_sold') // ترتيب حسب الكمية المباعة
+        ->take(10) // أعلى 10 منتجات
+        ->get();
+
+    return response()->json([
+        'message' => 'أكثر المنتجات مبيعًا على هذه الصفحة',
+        'products' => $products
+    ]);
+}
+public function mostOrderedProducts()
+{
+    $products = product::withCount('orderdetels as total_orders') // عدد الطلبات لكل منتج
+        ->orderByDesc('total_orders') // ترتيب تنازلي
+        ->get();
+
+    return response()->json([
+        'message' => 'أكثر المنتجات طلبًا تم جلبها بنجاح',
+        'products' => $products
+    ]);
+}
+
     //فاتور
     public function generateInvoice($id)
     {
