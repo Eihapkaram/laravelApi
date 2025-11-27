@@ -509,7 +509,7 @@ class OrderController extends Controller
 {
     $products = product::where('page_id', $pageId)
         ->withSum('orderdetils as total_sold', 'quantity') // مجموع الكميات المباعة لكل منتج
-        ->withCount('orderdetels as total_orders') // عدد مرات الطلب لكل منتج
+        ->withCount('orderdetils as total_orders') // عدد مرات الطلب لكل منتج
         ->orderByDesc('total_sold') // ترتيب حسب الكمية المباعة
         ->take(10) // أعلى 10 منتجات
         ->get();
