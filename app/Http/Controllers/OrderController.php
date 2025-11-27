@@ -505,20 +505,41 @@ class OrderController extends Controller
             Notification::send($admins, new UpdateOrder($user));
         }
     }
-    public function topSellingProductsByPage($pageId)
+   public function topSellingProductsByPage($pageId)
 {
-    $products = product::where('page_id', $pageId)
-        ->withSum('orderdetils as total_sold', 'quantity') // مجموع الكميات المباعة لكل منتج
-        ->withCount('orderdetils as total_orders') // عدد مرات الطلب لكل منتج
-        ->orderByDesc('total_sold') // ترتيب حسب الكمية المباعة
-        ->take(10) // أعلى 10 منتجات
+    // التحقق هل الصفحة موجودة
+    $page = Page::find($pageId);
+    if (!$page) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الصفحة غير موجودة'
+        ], 404);
+    }
+
+    // جلب أعلى المنتجات مبيعاً
+    $products = Product::where('page_id', $pageId)
+        ->withSum('orderdetils as total_sold', 'quantity')
+        ->withCount('orderdetils as total_orders')
+        ->orderByDesc('total_sold')
+        ->take(10)
         ->get();
 
+    // لو مفيش منتجات
+    if ($products->isEmpty()) {
+        return response()->json([
+            'success' => true,
+            'message' => 'لا يوجد منتجات مباعة على هذه الصفحة حتى الآن',
+            'products' => []
+        ]);
+    }
+
     return response()->json([
+        'success' => true,
         'message' => 'أكثر المنتجات مبيعًا على هذه الصفحة',
         'products' => $products
     ]);
 }
+
 public function mostOrderedProducts()
 {
     $products = product::withCount('orderdetils as total_orders') // عدد الطلبات لكل منتج
