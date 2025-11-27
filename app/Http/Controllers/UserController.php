@@ -349,13 +349,14 @@ class UserController extends Controller
 
         $user = User::where('phone', $request->phone)->first();
 
+
         if (!$user) {
             return response()->json([
                 'success' => false,
                 'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'
             ], 401);
         }
-      
+
         // التحقق من كلمة المرور
         if (!Hash::check($request->password, $user->password)) {
             return response()->json([
