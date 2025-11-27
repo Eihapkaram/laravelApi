@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Order;
 use App\Models\product;
+use App\Models\Page;
 use App\Notifications\CreatOrder;
 use App\Notifications\NewOrderNotification;
 use App\Notifications\UpdateOrder;
