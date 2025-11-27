@@ -277,12 +277,12 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'password' => 'required|min:8',
+            'password' => 'required|string|min:8',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'role' => 'required',
-            'security_question' => 'required',
-            'security_answer' => 'required',
+            'security_question' => 'required|string',
+            'security_answer' => 'required|string',
             'wallet_number' => 'nullable|numeric',
             'front_id_image' => 'nullable',
             'back_id_image' => 'nullable',
@@ -339,7 +339,7 @@ class UserController extends Controller
                 'required',
                 'regex:/^(011|012|015|010)[0-9]{8}$/'
             ],
-            'password' => 'required|min:8'
+            'password' => 'required|string|min:8'
         ], [
             'phone.required' => 'رقم الهاتف مطلوب',
             'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015',
