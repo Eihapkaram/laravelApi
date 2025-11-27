@@ -6,245 +6,189 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Notifications\WelcomeUser;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    // =============================
-    // Register (Email + Password)
-    // =============================
+    /* ============================
+        🔹 Register (Email)
+       ============================ */
     public function register(Request $request)
     {
-        $this->validate($request, [
+        $request->validate([
             'name' => 'required',
+            'last_name' => 'required',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:8',
-            'last_name' => 'required',
-            'img' => 'image|mimes:jpeg,png,jpg,gif,webp'
+            'role' => 'nullable|string',
+            'img' => 'nullable|image',
         ]);
 
-        // رفع الصورة
+        $path = null;
         if ($request->hasFile('img')) {
-            $imge = $request->file('img')->getClientOriginalName();
-            $path = $request->file('img')->storeAs('users', $imge, 'public');
+            $path = $request->file('img')->store('users', 'public');
         }
 
-        // إنشاء المستخدم
         $user = User::create([
             'name' => $request->name,
             'last_name' => $request->last_name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),  // صح
+            'password' => bcrypt($request->password),
             'role' => $request->role ?? 'customer',
-            'img' => $path ?? null,
+            'img' => $path,
         ]);
 
-        // إنشاء Access Token
-        $token = $user->createToken('eihapkaramvuejs')->accessToken;
+        $token = $user->createToken('auth')->accessToken;
 
-        // إرسال إشعار
         $user->notify(new WelcomeUser($user));
 
         return response()->json([
             'message' => 'تم التسجيل بنجاح، برجاء التحقق من بريدك الإلكتروني',
-            'token' => $token,
-        ], 200);
+            'token' => $token
+        ]);
     }
 
+    /* ============================
+        🔹 Login (Email)
+       ============================ */
+    public function login(Request $request)
+    {
+        $data = $request->only('email', 'password');
 
-    // =============================
-    // User Update (FIXED)
-    // =============================
+        if (!Auth::attempt($data)) {
+            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 401);
+        }
+
+        $user = Auth::user();
+        $user->update(['last_seen' => now()]);
+
+        return response()->json([
+            'token' => $user->createToken('auth')->accessToken
+        ]);
+    }
+
+    /* ============================
+        🔹 Update User
+       ============================ */
     public function userUpdate(Request $request, $id)
     {
-        $this->validate($request, [
+        $request->validate([
             'name' => 'required',
-            'password' => 'required|min:8',
             'last_name' => 'required',
-            'img' => 'image|mimes:jpeg,png,jpg,gif,webp'
+            'password' => 'required|min:8',
+            'img' => 'nullable|image'
         ]);
 
         $user = User::find($id);
+        if (!$user) return response()->json(['message' => 'المستخدم غير موجود'], 404);
 
-        if (!$user) {
-            return response()->json([
-                'message' => 'المستخدم غير موجود',
-            ], 404);
-        }
-
-        // رفع صورة جديدة لو موجودة
+        $path = $user->img;
         if ($request->hasFile('img')) {
-            $imge = $request->file('img')->getClientOriginalName();
-            $path = $request->file('img')->storeAs('users', $imge, 'public');
+            $path = $request->file('img')->store('users', 'public');
         }
-
-        // ❌ المشكلة كانت هنا:
-        // email & phone كانو يتجابو من auth()->user() غلط
 
         $user->update([
             'name' => $request->name,
             'last_name' => $request->last_name,
-            'email' => $user->email,   // صح
-            'phone' => $user->phone,   // صح
-            'password' => Hash::make($request->password),
-            'role' => $request->role ?? $user->role,
-            'img' => $path ?? $user->img,
+            'password' => bcrypt($request->password),
+            'img' => $path,
         ]);
 
-        return response()->json([
-            'message' => 'تم التعديل بنجاح',
-            'user' => $user,
-        ], 200);
+        return response()->json(['message' => 'تم التعديل بنجاح', 'user' => $user]);
     }
 
-
-    // =============================
-    // Login (Email + Password)
-    // =============================
-    public function Login(Request $request)
-    {
-        $data = [
-            'email' => $request->email,
-            'password' => $request->password,
-        ];
-
-        if (auth()->attempt($data)) {
-
-            $token = auth()->user()->createToken('eihapkaramvuejs')->accessToken;
-
-            return response()->json(['token' => $token], 200);
-        }
-
-        return response()->json(['error' => 'بيانات تسجيل الدخول غير صحيحة'], 401);
-    }
-
-
-    // =============================
-    // Get All Users
-    // =============================
-    public function userinfo()
-    {
-        return response()->json(['user' => User::get()], 200);
-    }
-
-    public function OneUserinfo($id)
-    {
-        return response()->json(['user' => User::find($id)], 200);
-    }
-
-
-    // =============================
-    // Logout
-    // =============================
-    public function logout(Request $request)
-    {
-        $request->user()->token()->revoke();
-
-        return response()->json([
-            'message' => 'تم تسجيل الخروج بنجاح',
-        ]);
-    }
-
-    public function logoutAll(Request $request)
-    {
-        $request->user()->token()->revoke();
-
-        return response()->json([
-            'message' => 'تم تسجيل الخروج',
-        ]);
-    }
-
-
-    // =============================
-    // Delete User
-    // =============================
-    public function UserDelete($id)
-    {
-        $user = User::find($id);
-
-        if (!$user) {
-            return response()->json(['message' => 'لم يتم ايجاد حساب المستخدم']);
-        }
-
-        $user->delete();
-
-        return response()->json(['message' => 'تم ازاله حساب المستخدم']);
-    }
-
-
-    // =============================
-    // Register with Phone
-    // =============================
+    /* ============================
+        🔹 Register With Phone
+       ============================ */
     public function registerWithPhone(Request $request)
     {
         $request->validate([
             'name' => 'required',
-            'phone' => [
-                'required',
-                'regex:/^(011|012|015|010)[0-9]{8}$/'
-            ],
+            'phone' => 'required|unique:users|regex:/^(010|011|012|015)[0-9]{8}$/',
         ]);
 
-        $user = User::where('phone', $request->phone)->first();
-
-        if (!$user) {
-            $user = User::create([
-                'phone' => $request->phone,
-                'name' => $request->name,
-            ]);
-        }
-
-        $token = $user->createToken('API Token')->accessToken;
-
-        return response()->json([
-            'success' => true,
-            'user' => $user,
-            'token' => $token,
+        $user = User::create([
+            'name' => $request->name,
+            'phone' => $request->phone
         ]);
+
+        $token = $user->createToken('auth')->accessToken;
+
+        return response()->json(['success' => true, 'user' => $user, 'token' => $token]);
     }
 
-
-    // =============================
-    // Login with Phone
-    // =============================
+    /* ============================
+        🔹 Login With Phone
+       ============================ */
     public function loginWithPhone(Request $request)
     {
         $request->validate([
-            'phone' => [
-                'required',
-                'regex:/^(011|012|015|010)[0-9]{8}$/'
-            ],
+            'phone' => 'required|regex:/^(010|011|012|015)[0-9]{8}$/',
+            'password' => 'required|min:8'
         ]);
 
         $user = User::where('phone', $request->phone)->first();
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'user' => 'الرقم غير مسجل',
-            ], 401);
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 401);
         }
 
-        $token = $user->createToken('API Token')->accessToken;
+        $user->update(['last_seen' => now()]);
 
         return response()->json([
             'success' => true,
             'user' => $user,
-            'token' => $token,
-        ], 200);
+            'token' => $user->createToken('auth')->accessToken
+        ]);
     }
 
-
-    // =============================
-    // Logout Phone
-    // =============================
-    public function logoutphone(Request $request)
+    /* ============================
+        🔹 Logout
+       ============================ */
+    public function logout(Request $request)
     {
         $request->user()->token()->revoke();
+        return response()->json(['message' => 'تم تسجيل الخروج بنجاح']);
+    }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'تم تسجيل الخروج بنجاح',
+    /* ============================
+        🔹 Get Security Question
+       ============================ */
+    public function getSecurityQuestion(Request $request)
+    {
+        $request->validate(['identifier' => 'required']);
+
+        $user = User::where('email', $request->identifier)
+                    ->orWhere('phone', $request->identifier)
+                    ->first();
+
+        if (!$user) return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 404);
+
+        return response()->json(['question' => $user->security_question]);
+    }
+
+    /* ============================
+        🔹 Reset Password With Security Answer
+       ============================ */
+    public function resetPasswordWithSecurity(Request $request)
+    {
+        $data = $request->validate([
+            'identifier' => 'required',
+            'security_answer' => 'required',
+            'new_password' => 'required|min:8|confirmed',
         ]);
+
+        $user = User::where('email', $data['identifier'])
+                    ->orWhere('phone', $data['identifier'])
+                    ->first();
+
+        if (!$user || !Hash::check(strtolower($data['security_answer']), $user->security_answer)) {
+            return response()->json(['message' => 'إجابة السؤال غير صحيحة'], 403);
+        }
+
+        $user->update(['password' => Hash::make($data['new_password'])]);
+
+        return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح']);
     }
 }
