@@ -323,6 +323,12 @@ class UserController extends Controller
             ]);
             $user->notify(new WelcomeUser($user));
         }
+if (!$user) {
+    return response()->json([
+        'success' => false,
+        'message' => 'لم يتم التسجيل، حدث خطأ غير متوقع'
+    ], 400);
+}
 
         $token = $user->createToken('eihapkaramvuejs')->accessToken;
         return response()->json([
