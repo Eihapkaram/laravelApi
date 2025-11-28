@@ -45,7 +45,7 @@ Route::post('/resetpassword', [UserController::class, 'resetPassword']);
 Route::post('/reset-password', [UserController::class, 'resetPasswordWithSecurity']);
 Route::get('pro', [ProductController::class, 'index']);
 // الأكثر مبيعًا حسب page_id
-Route::get('/products/top-sold/{pageId}', [OrderController::class, 'topSellingProductsByPage']);
+Route::get('/products/top-sold/{slug}', [OrderController::class, 'topSellingProductsByPage']);
 
 // الأكثر طلبًا بدون page_id
 Route::get('/products/most-ordered', [OrderController::class, 'mostOrderedProducts']);
