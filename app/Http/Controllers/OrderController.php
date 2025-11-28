@@ -506,10 +506,11 @@ class OrderController extends Controller
             Notification::send($admins, new UpdateOrder($user));
         }
     }
-   public function topSellingProductsByPage($pageId)
+    public function topSellingProductsByPage($slug)
 {
-    // التحقق هل الصفحة موجودة
-    $page = Page::find($pageId);
+    // التحقق هل الصفحة موجودة عبر الـ slug
+    $page = Page::where('slug', $slug)->first();
+
     if (!$page) {
         return response()->json([
             'success' => false,
@@ -517,8 +518,8 @@ class OrderController extends Controller
         ], 404);
     }
 
-    // جلب أعلى المنتجات مبيعاً
-    $products = Product::where('page_id', $pageId)
+    // جلب أعلى المنتجات مبيعاً اعتماداً على page_id
+    $products = Product::where('page_id', $page->id)
         ->withSum('orderdetils as total_sold', 'quantity')
         ->withCount('orderdetils as total_orders')
         ->orderByDesc('total_sold')
@@ -539,8 +540,7 @@ class OrderController extends Controller
         'message' => 'أكثر المنتجات مبيعًا على هذه الصفحة',
         'products' => $products
     ]);
-}
-
+} 
 public function mostOrderedProducts()
 {
     $products = product::withCount('orderdetils as total_orders') // عدد الطلبات لكل منتج
