@@ -14,35 +14,35 @@ class PaymentController extends Controller
     {
         $this->paymob = $paymob;
     }
-   
+
     // إنشاء الدفع
     public function pay(Request $request)
     {
-         $user = auth()->user();
-  if (!$user) {
-    return response()->json(['message' => 'User not authenticated'], 401);
-  }
-     $cart = $user->getcart()->with('proCItem.product')->first();
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['message' => 'User not authenticated'], 401);
+        }
+        $cart = $user->getcart()->with('proCItem.product')->first();
 
         if (!$cart || $cart->proCItem->isEmpty()) {
             return response()->json(['message' => 'السلة فارغة'], 400);
         }
 
         $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
-     \Log::info("Total before payment: {$total}");
+        \Log::info("Total before payment: {$total}");
 
-     $amount = $total * 100;
-     \Log::info("Amount sent to Paymob: {$amount}");
+        $amount = $total * 100;
+        \Log::info("Amount sent to Paymob: {$amount}");
 
         // بيانات billing كاملة
-       $billingData = [
+        $billingData = [
             "first_name"    => $request->first_name ?? "h",
             "last_name"     => $user->last_name ?? "h",
             "email"         => $user->email ?? "exampel@rt.gmail.com",
-            "phone_number"  => $request->phone_number  ?? $user->phone ,
+            "phone_number"  => $request->phone_number  ?? $user->phone,
             "country"       =>  $request->country ?? "eg",
             "city"          =>  $request->city ?? "cairo",
-            "street"        => $request->street ?? "street" ,
+            "street"        => $request->street ?? "street",
         ];
 
         $response = $this->paymob->createIntention($amount, $billingData);
@@ -73,27 +73,45 @@ class PaymentController extends Controller
     // Webhook لاستقبال تفاصيل الدفع
     public function webhook(Request $request)
     {
-        \Log::info('Paymob Webhook:', $request->all());
-        // حفظ بيانات الدفع في قاعدة البيانات إذا أردت
-        return response()->json(['status' => 'received']);
+        $data = $request->all();
+
+    // Paymob transaction object
+    $transaction = $data['obj'] ?? null;
+
+    if (!$transaction) {
+        \Log::error('No transaction object in webhook');
+        return response()->json(['error' => 'invalid webhook'], 400);
+    }
+
+    $success = $transaction['success'] ?? false;
+    $pending = $transaction['pending'] ?? false;
+    $orderId = $transaction['order']['id'] ?? null;
+    $merchantOrderId = $transaction['order']['merchant_order_id'] ?? null;
+
+    \Log::info('Paymob Transaction:', $transaction);
+
+    return response()->json([
+        'status' => $success ? 'paid' : ($pending ? 'pending' : 'failed'),
+        'order_id' => $orderId,
+        'merchant_order_id' => $merchantOrderId
+    ]);
     }
 
     // Redirect بعد اكتمال الدفع
     public function redirect(Request $request)
     {
-        $data = $request->all();
-        $status = $data['success'] ?? false;
+        $success = filter_var($request->input('success', false), FILTER_VALIDATE_BOOLEAN);
+    $txnCode = $request->input('txn_response_code');
 
-        $message = $status
-            ? "✅ تم الدفع بنجاح!"
-            : "❌ فشل الدفع، يرجى المحاولة مرة أخرى.";
+    // الدفع ناجح لو:
+    $isPaid = ($success && ($txnCode === 'APPROVED' || $txnCode === '00'));
 
-        // يمكنك حفظ بيانات الدفع هنا إذا أردت
-
-        return response()->json([
-            'message' => $message,
-            'status' => $status,
-            'data' => $data
-        ]);
+    if ($isPaid) {
+        return redirect('/paymob/success.html');
+    } else {
+        return redirect('/paymob/failed.html');
     }
+    }
+   
+
 }
