@@ -93,7 +93,7 @@ class UserController extends Controller
         $user = User::find($id);
         if (!$user) {
             return response()->json([
-                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.',
+                'message' => 'المستخدم غير موجود',
             ], 404);
         }
 
@@ -128,7 +128,7 @@ class UserController extends Controller
 
         if (!$user) {
             return response()->json([
-                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.',
+                'message' => 'المستخدم غير موجود',
             ], 404);
         }
 
@@ -156,7 +156,7 @@ class UserController extends Controller
         $user = auth()->user();
         if (!$user) {
             return response()->json([
-                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.',
+                'message' => 'المستخدم غير موجود',
             ], 404);
         }
 
@@ -183,7 +183,7 @@ class UserController extends Controller
             $user->save();
             return response()->json(['token' => $token], 200);
         } else {
-            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 401);
+            return response()->json(['error' => 'field login'], 401);
         }
     }
 
@@ -201,7 +201,7 @@ class UserController extends Controller
         // تأكد أن عنده إحداثيات
         if (!$user->latitude || !$user->longitude) {
             return response()->json([
-                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.',
+                'message' => '⚠️ لا يوجد إحداثيات محفوظة للمستخدم الحالي.',
             ], 400);
         }
 
@@ -228,7 +228,7 @@ class UserController extends Controller
     {
         $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude', 'created_at')->find($id);
         if (!$userdata) {
-            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 404);
+            return response()->json(['message' => 'المستخدم غير موجود'], 404);
         }
         return response()->json(['user' => $userdata], 200);
     }
@@ -267,7 +267,7 @@ class UserController extends Controller
     public function UserDelete($id)
     {
         if (! User::find($id)) {
-            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.']);
+            return response()->json(['message' => 'لم يتم ايجاد حساب المستخدم']);
         }
         User::find($id)->delete();
         return response()->json(['message' => 'تم ازاله حساب  المستخدم']);
@@ -277,12 +277,12 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'password' => 'required|string|min:8',
+            'password' => 'required|min:8',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'role' => 'required',
-            'security_question' => 'required|string',
-            'security_answer' => 'required|string',
+            'security_question' => 'required',
+            'security_answer' => 'required',
             'wallet_number' => 'nullable|numeric',
             'front_id_image' => 'nullable',
             'back_id_image' => 'nullable',
@@ -323,12 +323,6 @@ class UserController extends Controller
             ]);
             $user->notify(new WelcomeUser($user));
         }
-if (!$user) {
-    return response()->json([
-        'success' => false,
-        'message' => 'لم يتم التسجيل، حدث خطأ غير متوقع'
-    ], 400);
-}
 
         $token = $user->createToken('eihapkaramvuejs')->accessToken;
         return response()->json([
@@ -359,7 +353,7 @@ if (!$user) {
         if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'
+                'message' => 'الرقم غير مسجل'
             ], 401);
         }
 
@@ -367,7 +361,7 @@ if (!$user) {
         if (!Hash::check($request->password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'
+                'message' => 'كلمة المرور غير صحيحة'
             ], 401);
         }
 
@@ -414,7 +408,7 @@ if (!$user) {
 
         if (!$user) {
             return response()->json([
-                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'
+                'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
             ], 404, [], JSON_UNESCAPED_UNICODE);
         }
 
@@ -425,38 +419,55 @@ if (!$user) {
 
 
     // اعاده تعين كلمه السر 
-public function resetPasswordWithSecurity(Request $request)
+   public function resetPasswordWithSecurity(Request $request)
 {
-    $data = $request->validate([
-        'identifier' => 'required|string',
+    $request->validate([
+        'identifier' => 'required', // البريد أو رقم الهاتف
         'security_answer' => 'required|string',
         'new_password' => 'required|string|min:8|confirmed',
     ]);
 
-    $user = User::where('email', $data['identifier'])
-        ->orWhere('phone', $data['identifier'])
+    $identifier = $request->identifier;
+
+    // البحث حسب البريد أو رقم الهاتف
+    $user = User::where('email', $identifier)
+        ->orWhere('phone', $identifier)
         ->first();
 
-    if (!$user || empty($user->security_answer) || 
-        !Hash::check(strtolower(trim($data['security_answer'])), $user->security_answer)) {
-        return response()->json(['message' => 'بيانات الاستعادة غير صحيحة.'], 403);
+    if (!$user) {
+        return response()->json([
+            'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
+        ], 404);
     }
 
-    $user->update([
-        'password' => Hash::make($data['new_password']),
-        'last_seen' => now(),
-    ]);
+    // التحقق من إجابة السؤال الأمني
+    if (!$user->security_answer || !Hash::check(trim($request->security_answer), $user->security_answer)) {
+        return response()->json([
+            'message' => 'إجابة السؤال الأمني غير صحيحة.'
+        ], 403);
+    }
 
-    $token = $user->createToken('PasswordReset', ['*'])->accessToken;
+    // تحديث كلمة المرور بشكل آمن
+    $user->password = Hash::make($request->new_password);
+    $user->last_seen = now(); // تحديث آخر ظهور (اختياري)
+    $user->save();
+
+    // إنشاء توكن جديد (Passport أو Sanctum حسب مشروعك)
+    $token = $user->createToken('Personal Access Token')->accessToken;
 
     return response()->json([
         'message' => 'تم تغيير كلمة المرور وتسجيل الدخول بنجاح ✅',
-        'user' => $user->only(['id', 'name', 'email', 'phone', 'role']),
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'role' => $user->role,
+        ],
         'access_token' => $token,
         'token_type' => 'Bearer',
-    ]);
+    ], 200);
 }
-
 
     // اعاده تعين كلمه السر 
     public function resetPassword(Request $request)
@@ -476,25 +487,25 @@ public function resetPasswordWithSecurity(Request $request)
             ->first();
 
         if (!$record) {
-            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 400);
+            return response()->json(['message' => 'الرابط غير صالح أو منتهي الصلاحية.'], 400);
         }
 
         // 🕒 التحقق من صلاحية الرابط (ساعة واحدة)
         if (now()->diffInMinutes($record->created_at) > 60) {
             DB::table('password_resets')->where('phone', $request->phone)->delete();
-            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 400);
+            return response()->json(['message' => 'انتهت صلاحية رابط إعادة التعيين.'], 400);
         }
 
         // 🔍 التحقق من المستخدم
         $user = User::where('phone', $request->phone)->first();
         if (!$user) {
-            return response()->json(['message' => 'بيانات الدخول أو الاستعادة غير صحيحة.'], 404);
+            return response()->json(['message' => 'المستخدم غير موجود.'], 404);
         }
 
         // 🚫 منع البائع من استخدام رابط إعادة التعيين
         if ($user->role === 'seller') {
             return response()->json([
-                'message' => 'بيانات الدخول أو الاستعادة غير صحيحة.',
+                'message' => 'غير مسموح للبائعين باستخدام رابط إعادة تعيين كلمة المرور.',
             ], 403);
         }
 
@@ -513,7 +524,7 @@ public function resetPasswordWithSecurity(Request $request)
         Auth::login($user);
 
         // ✅ إنشاء توكن Passport
-        $tokenResult = $user->createToken('eihapkaramvuejs');
+        $tokenResult = $user->createToken('Personal Access Token');
         $token = $tokenResult->accessToken;
         $expiresAt = $tokenResult->token->expires_at;
 
@@ -625,7 +636,7 @@ public function resetPasswordWithSecurity(Request $request)
             if (!file_exists($tempPath)) {
                 return response()->json([
                     'error' => true,
-                    'message' => 'حدث خطأ أثناء تنفيذ العملية، يرجى المحاولة لاحقًا.'
+                    'message' => 'ملف Excel لم يتم إنشاؤه'
                 ], 500);
             }
 
@@ -633,7 +644,9 @@ public function resetPasswordWithSecurity(Request $request)
         } catch (\Exception $e) {
             return response()->json([
                 'error' => true,
-                'message' => 'حدث خطأ أثناء تنفيذ العملية، يرجى المحاولة لاحقًا.',
+                'message' => $e->getMessage(),
+                'file' => method_exists($e, 'getFile') ? $e->getFile() : null,
+                'line' => method_exists($e, 'getLine') ? $e->getLine() : null,
             ], 500);
         }
     }
