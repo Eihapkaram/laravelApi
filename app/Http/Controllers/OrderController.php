@@ -16,6 +16,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Notifications\Notifiable;
 use App\Notifications\OrderCreatedBySellerNotification;
+use App\Notifications\NewOrderForSupplierNotification;
 use App\Notifications\LowStockNotification;
 use App\Notifications\OrderApprovedNotification;
 use App\Notifications\OrderRejectedNotification;
@@ -101,44 +102,41 @@ class OrderController extends Controller
 
     public function createBySeller(Request $request)
     {
-        $seller = auth()->user();
+        $user = auth()->user(); // ممكن يكون admin أو seller
 
-        if ($seller->role !== 'seller') {
+        if (!in_array($user->role, ['admin', 'seller'])) {
             return response()->json(['error' => 'غير مصرح لك بإنشاء طلبات'], 403);
         }
 
         $request->validate([
-            'user_id'       => 'required|exists:users,id',
-            'city'          => 'required|string|max:100',
-            'governorate'   => 'required|string|max:100',
-            'street'        => 'required|string|max:255',
-            'phone'         => ['required', 'regex:/^(010|011|012|015)[0-9]{8}$/'],
-            'store_name'    => 'nullable|string|max:255',
-            'status'        => 'nullable|string|in:pending,paid,shipped,completed,cancelled',
+            'user_id'        => 'required|exists:users,id',
+            'city'           => 'required|string|max:100',
+            'governorate'    => 'required|string|max:100',
+            'street'         => 'required|string|max:255',
+            'phone'          => ['required', 'regex:/^(010|011|012|015)[0-9]{8}$/'],
+            'store_name'     => 'nullable|string|max:255',
+            'status'         => 'nullable|string|in:pending,paid,shipped,completed,cancelled',
             'payment_method' => 'nullable|string|in:cod,credit_card,paypal',
         ]);
 
-        // جلب العميل
-        $customer = User::find($request->user_id);
+        $recipient = User::find($request->user_id);
 
-        if ($customer->role !== 'customer') {
-            return response()->json(['error' => 'يمكنك فقط إنشاء طلبات لعملاء'], 400);
+        // السماح للـ Admin بعمل Order لأي مستخدم بما في ذلك Supplier
+        if ($user->role === 'seller' && $recipient->role !== 'customer') {
+            return response()->json(['error' => 'يمكنك فقط إنشاء طلبات لعملاء'], 403);
         }
 
-        // ✅ اجلب سلة البائع نفسه
-        $cart = $seller->getcart()->with('proCItem.product')->first();
+        $cart = $user->getcart()->with('proCItem.product')->first();
 
         if (!$cart || $cart->proCItem->isEmpty()) {
-            return response()->json(['message' => 'سلة البائع فارغة'], 400);
+            return response()->json(['message' => 'السلة فارغة'], 400);
         }
 
-        // حساب الإجمالي
         $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
 
-        // إنشاء الطلب للعميل
         $order = Order::create([
-            'user_id'        => $customer->id,
-            'seller_id'      => $seller->id,
+            'user_id'        => $recipient->id,
+            'seller_id'      => $user->role === 'seller' ? $user->id : null,
             'total_price'    => $total,
             'status'         => $request->status ?? 'pending',
             'city'           => $request->city,
@@ -147,15 +145,10 @@ class OrderController extends Controller
             'phone'          => $request->phone,
             'store_name'     => $request->store_name,
             'payment_method' => $request->payment_method,
+            'approval_status' => $recipient->role === 'supplier' ? 'pending' : 'approved',
+            // ✅ إذا المستلم Supplier يبقى pending للموافقة
         ]);
 
-        // إرسال إشعارات
-        if ($order) {
-            $admins = User::where('role', 'admin')->get();
-            Notification::send($admins, new CreatOrder($seller, $order)); // إشعار للأدمن
-        }
-
-        // نسخ تفاصيل السلة إلى تفاصيل الطلب
         foreach ($cart->proCItem as $item) {
             $order->orderdetels()->create([
                 'product_id' => $item->product_id,
@@ -163,18 +156,30 @@ class OrderController extends Controller
                 'price'      => $item->product->price,
             ]);
         }
-        $customer->notify(new OrderCreatedBySellerNotification($order, $seller));
-        // مسح سلة البائع بعد إنشاء الطلب
+
+       // إشعارات
+if ($order) {
+    // إشعار لجميع الأدمن
+    $admins = User::where('role', 'admin')->get();
+    Notification::send($admins, new CreatOrder($user, $order));
+
+    // إشعار للمستلم حسب دوره
+    if ($recipient->role === 'supplier') {
+        // إشعار للمورد عند استلام طلبية
+        $recipient->notify(new NewOrderForSupplierNotification($order, $user));
+    } else {
+        // إشعار للبقية (مثل العملاء)
+        $recipient->notify(new OrderCreatedBySellerNotification($order, $user));
+    }
+}
+
         $cart->proCItem()->truncate();
 
         return response()->json([
-            'message' => 'تم إنشاء الطلب بنجاح للعميل',
+            'message' => 'تم إنشاء الطلب بنجاح',
             'order'   => $order->load('orderdetels.product', 'userorder'),
         ], 201);
     }
-
-
-
 
     // ✅ موافقة العميل على الطلب
     public function approveOrder($id)
@@ -507,51 +512,51 @@ class OrderController extends Controller
         }
     }
     public function topSellingProductsByPage($slug)
-{
-    // التحقق هل الصفحة موجودة عبر الـ slug
-    $page = Page::where('slug', $slug)->first();
+    {
+        // التحقق هل الصفحة موجودة عبر الـ slug
+        $page = Page::where('slug', $slug)->first();
 
-    if (!$page) {
-        return response()->json([
-            'success' => false,
-            'message' => 'الصفحة غير موجودة'
-        ], 404);
-    }
+        if (!$page) {
+            return response()->json([
+                'success' => false,
+                'message' => 'الصفحة غير موجودة'
+            ], 404);
+        }
 
-    // جلب أعلى المنتجات مبيعاً اعتماداً على page_id
-    $products = Product::where('page_id', $page->id)
-        ->withSum('orderdetils as total_sold', 'quantity')
-        ->withCount('orderdetils as total_orders')
-        ->orderByDesc('total_sold')
-        ->take(10)
-        ->get();
+        // جلب أعلى المنتجات مبيعاً اعتماداً على page_id
+        $products = Product::where('page_id', $page->id)
+            ->withSum('orderdetils as total_sold', 'quantity')
+            ->withCount('orderdetils as total_orders')
+            ->orderByDesc('total_sold')
+            ->take(10)
+            ->get();
 
-    // لو مفيش منتجات
-    if ($products->isEmpty()) {
+        // لو مفيش منتجات
+        if ($products->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'لا يوجد منتجات مباعة على هذه الصفحة حتى الآن',
+                'products' => []
+            ]);
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'لا يوجد منتجات مباعة على هذه الصفحة حتى الآن',
-            'products' => []
+            'message' => 'أكثر المنتجات مبيعًا على هذه الصفحة',
+            'products' => $products
         ]);
     }
+    public function mostOrderedProducts()
+    {
+        $products = product::withCount('orderdetils as total_orders') // عدد الطلبات لكل منتج
+            ->orderByDesc('total_orders') // ترتيب تنازلي
+            ->get();
 
-    return response()->json([
-        'success' => true,
-        'message' => 'أكثر المنتجات مبيعًا على هذه الصفحة',
-        'products' => $products
-    ]);
-} 
-public function mostOrderedProducts()
-{
-    $products = product::withCount('orderdetils as total_orders') // عدد الطلبات لكل منتج
-        ->orderByDesc('total_orders') // ترتيب تنازلي
-        ->get();
-
-    return response()->json([
-        'message' => 'أكثر المنتجات طلبًا تم جلبها بنجاح',
-        'products' => $products
-    ]);
-}
+        return response()->json([
+            'message' => 'أكثر المنتجات طلبًا تم جلبها بنجاح',
+            'products' => $products
+        ]);
+    }
 
     //فاتور
     public function generateInvoice($id)

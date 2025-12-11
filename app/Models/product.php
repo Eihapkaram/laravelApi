@@ -9,6 +9,7 @@ use App\Models\Cart_item;
 use App\Models\categorie;
 use App\Models\Order_item;
 use App\Models\Image;
+use App\Models\User;
 use App\Models\Review;
 use App\Models\Page;
 
@@ -76,4 +77,9 @@ class Product extends Model
     {
         return $this->hasMany(Review::class, 'product_id');
     }
+    public function suppliers()
+{
+    return $this->belongsToMany(User::class, 'supplier_product', 'product_id', 'supplier_id');
+}
+
 }

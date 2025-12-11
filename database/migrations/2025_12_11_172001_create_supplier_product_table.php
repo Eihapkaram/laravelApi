@@ -12,13 +12,14 @@ return new class extends Migration
      * @return void
      */
     public function up()
-    {
-        Schema::create('password_resets', function (Blueprint $table) {
-            $table->string('identifier')->primary(); // يمكن أن يكون email أو phone
-            $table->string('token');
-            $table->timestamp('created_at')->nullable();
-        });
-    }
+{
+    Schema::create('supplier_product', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('supplier_id')->constrained('users')->onDelete('cascade');
+        $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
+        $table->timestamps();
+    });
+}
 
     /**
      * Reverse the migrations.
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('password_resets');
+        Schema::dropIfExists('supplier_product');
     }
 };

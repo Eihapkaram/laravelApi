@@ -11,6 +11,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use App\Http\Controllers\SupplierProductController;
 use App\Http\Controllers\OfferController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -221,7 +222,7 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('cart/deleteAll', [AddToController::class, 'deleteAllCartItems']);
 
     // Order 
-    Route::post('order/add', [OrderController::class, 'createOrder']);
+    Route::post('order/add', [OrderController::class, 'createOrder'])->middleware(['blockSupplierOrder']);;
     Route::get('order/show', [OrderController::class, 'showOrder']);
 
     //orders Seller 
@@ -283,7 +284,22 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('/products/import', [ProductController::class, 'import']);
     Route::post('update/{id}', [ProductController::class, 'update']);
     Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
+    // ربط منتجات بمورد
+    Route::post('suppliers/{supplierId}/products/attach', [
+        SupplierProductController::class,
+        'attachProducts'
+    ]);
+    // جلب منتجات مورد معيّن
+    Route::get('suppliers/{supplierId}/products', [
+        SupplierProductController::class,
+        'supplierProducts'
+    ]);
 
+    // جلب الموردين المرتبطين بمنتج معيّن
+    Route::get('products/{productId}/suppliers', [
+        SupplierProductController::class,
+        'productSuppliers'
+    ]);
     // Category
     Route::post('categorie/add', [CategorieController::class, 'AddCate']);
     Route::post('categories/import', [CategorieController::class, 'import']);

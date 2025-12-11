@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use App\Models\Order;
+use App\Models\product;
 use App\Models\Cart;
 use App\Models\Review;
 
@@ -50,6 +51,10 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(User::class, 'seller_customers', 'customer_id', 'seller_id');
     }
+public function suppliedProducts()
+{
+    return $this->belongsToMany(product::class, 'supplier_product', 'supplier_id', 'product_id');
+}
 
     public function sales()
     {
