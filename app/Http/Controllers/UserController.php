@@ -470,7 +470,7 @@ class UserController extends Controller
 }
 
     // اعاده تعين كلمه السر 
-    public function resetPassword(Request $request)
+   public function resetPassword(Request $request)
     {
         $request->validate([
             'phone' => 'required',
@@ -536,9 +536,6 @@ class UserController extends Controller
             'expires_at' => $expiresAt,
         ]);
     }
-
-
-
 
 
     // ✅ استيراد المستخدمين من ملف Excel
