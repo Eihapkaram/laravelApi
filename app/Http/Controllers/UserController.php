@@ -35,64 +35,43 @@ class UserController extends Controller
             'back_id_image'  => 'nullable',
         ]);
 
-        try {
-            if ($request->hasFile('img')) {
-                $imge = $request->file('img')->getClientOriginalName();
-                $path = $request->file('img')->storeAs('users', $imge, 'public');
-            }
-            if ($request->hasFile('front_id_image')) {
-                $imge1 = $request->file('front_id_image')->getClientOriginalName();
-                $path1 = $request->file('front_id_image')->storeAs('imageid', $imge1, 'public');
-            }
-            if ($request->hasFile('back_id_image')) {
-                $imge2 = $request->file('back_id_image')->getClientOriginalName();
-                $path2 = $request->file('back_id_image')->storeAs('imageid', $imge2, 'public');
-            }
-
-            $user = User::create([
-                'name' => $request->name,
-                'last_name' => $request->last_name,
-                'email' => $request->email,
-                'password' => bcrypt($request->password),
-                'role' => $request->role ?? 'customer',
-                'img' => $path ?? 'null',
-                'latitude' => $request->latitude ?? 'null',
-                'longitude' => $request->longitude ?? 'null',
-                'security_question' => $request->security_question ?? 'null',
-                'security_answer'  => bcrypt($request->security_answer) ?? 'null',
-                'wallet_number' => $request->wallet_number ?? 'null',
-                'front_id_image'  => $path1 ?? 'null',
-                'back_id_image'  => $path2 ?? 'null',
-            ]);
-
-            if (!$user) {
-                return response()->json([
-                    'message' => 'حدث خطأ أثناء إنشاء الحساب، يرجى المحاولة مرة أخرى'
-                ], 500);
-            }
-
-            $token = $user->createToken('eihapkaramvuejs')->accessToken;
-
-            if (!$token) {
-                return response()->json([
-                    'message' => 'فشل تسجيل الدخول تلقائياً، يرجى تسجيل الدخول يدوياً'
-                ], 500);
-            }
-
-            $user->notify(new WelcomeUser($user));
-
-            return response()->json([
-                'message' => 'تم التسجيل بنجاح، برجاء التحقق من بريدك الإلكتروني',
-                'token' => $token,
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'حدث خطأ غير متوقع أثناء التسجيل',
-                'error' => 'حدث خطأ غير متوقع أثناء التسجيل',
-            ], 500);
+        if ($request->hasFile('img')) {
+            $imge = $request->file('img')->getClientOriginalName();
+            $path = $request->file('img')->storeAs('users', $imge, 'public');
         }
-    }
+        if ($request->hasFile('front_id_image')) {
+            $imge1 = $request->file('front_id_image')->getClientOriginalName();
+            $path1 = $request->file('front_id_image')->storeAs('imageid', $imge1, 'public');
+        }
+        if ($request->hasFile('back_id_image')) {
+            $imge2 = $request->file('back_id_image')->getClientOriginalName();
+            $path2 = $request->file('back_id_image')->storeAs('imageid', $imge2, 'public');
+        }
 
+        $user = User::create([
+            'name' => $request->name,
+            'last_name' => $request->last_name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'role' => $request->role ?? 'customer',
+            'img' => $path ?? 'null',
+            'latitude' => $request->latitude ?? 'null',
+            'longitude' => $request->longitude ?? 'null',
+            'security_question' => $request->security_question ?? 'null',
+            'security_answer'  => bcrypt($request->security_answer) ?? 'null',
+            'wallet_number' => $request->wallet_number ?? 'null',
+            'front_id_image'  => $path1 ?? 'null',
+            'back_id_image'  => $path2 ?? 'null',
+        ]);
+
+        $token = $user->createToken('eihapkaramvuejs')->accessToken;
+        $user->notify(new WelcomeUser($user));
+
+        return response()->json([
+            'message' => 'تم التسجيل بنجاح، برجاء التحقق من بريدك الإلكتروني',
+            'token' => $token,
+        ], 200);
+    }
 
     public function userUpdate(Request $request, $id)
     {
@@ -207,17 +186,7 @@ class UserController extends Controller
             return response()->json(['error' => 'field login'], 401);
         }
     }
-    public function getSuppliers()
-    {
-        $suppliers = User::with('suppliedProducts')  // تحميل العلاقة
-            ->where('role', 'supplier')
-            ->get();
 
-        return response()->json([
-            'count' => $suppliers->count(),
-            'suppliers' => $suppliers
-        ], 200);
-    }
     public function userinfo()
     {
         $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude', 'created_at')->get();
@@ -450,70 +419,70 @@ class UserController extends Controller
 
 
     // اعاده تعين كلمه السر 
-    public function resetPasswordWithSecurity(Request $request)
-    {
-        $request->validate([
-            'identifier' => 'required', // البريد أو رقم الهاتف
-            'security_answer' => 'required|string',
-            'new_password' => 'required|string|min:8|confirmed',
-        ]);
+   public function resetPasswordWithSecurity(Request $request)
+{
+    $request->validate([
+        'identifier' => 'required', // البريد أو رقم الهاتف
+        'security_answer' => 'required|string',
+        'new_password' => 'required|string|min:8|confirmed',
+    ]);
 
-        $identifier = $request->identifier;
+    $identifier = $request->identifier;
 
-        // البحث حسب البريد أو رقم الهاتف
-        $user = User::where('email', $identifier)
-            ->orWhere('phone', $identifier)
-            ->first();
+    // البحث حسب البريد أو رقم الهاتف
+    $user = User::where('email', $identifier)
+        ->orWhere('phone', $identifier)
+        ->first();
 
-        if (!$user) {
-            return response()->json([
-                'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
-            ], 404);
-        }
-
-        // التحقق من إجابة السؤال الأمني
-        if (!$user->security_answer || !Hash::check(trim($request->security_answer), $user->security_answer)) {
-            return response()->json([
-                'message' => 'إجابة السؤال الأمني غير صحيحة.'
-            ], 403);
-        }
-
-        // تحديث كلمة المرور بشكل آمن
-        $user->password = Hash::make($request->new_password);
-        $user->last_seen = now(); // تحديث آخر ظهور (اختياري)
-        $user->save();
-
-        // إنشاء توكن جديد (Passport أو Sanctum حسب مشروعك)
-        $token = $user->createToken('Personal Access Token')->accessToken;
-
+    if (!$user) {
         return response()->json([
-            'message' => 'تم تغيير كلمة المرور وتسجيل الدخول بنجاح ✅',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'role' => $user->role,
-            ],
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ], 200);
+            'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
+        ], 404);
     }
 
+    // التحقق من إجابة السؤال الأمني
+    if (!$user->security_answer || !Hash::check(trim($request->security_answer), $user->security_answer)) {
+        return response()->json([
+            'message' => 'إجابة السؤال الأمني غير صحيحة.'
+        ], 403);
+    }
+
+    // تحديث كلمة المرور بشكل آمن
+    $user->password = Hash::make($request->new_password);
+    $user->last_seen = now(); // تحديث آخر ظهور (اختياري)
+    $user->save();
+
+    // إنشاء توكن جديد (Passport أو Sanctum حسب مشروعك)
+    $token = $user->createToken('Personal Access Token')->accessToken;
+
+    return response()->json([
+        'message' => 'تم تغيير كلمة المرور وتسجيل الدخول بنجاح ✅',
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'role' => $user->role,
+        ],
+        'access_token' => $token,
+        'token_type' => 'Bearer',
+    ], 200);
+}
+
     // اعاده تعين كلمه السر 
-    public function resetPassword(Request $request)
+   public function resetPassword(Request $request)
     {
         $request->validate([
-            'identifier' => 'required', // email أو phone
+            'phone' => 'required',
             'token' => 'required',
             'security_question' => 'required|string|max:255',
-            'security_answer' => 'required|string|max:255',
+           'security_answer' => 'required|string|max:255',
             'new_password' => 'required|min:8|confirmed',
         ]);
 
         // 🔍 التحقق من وجود سجل إعادة التعيين
         $record = DB::table('password_resets')
-            ->where('identifier', $request->identifier)
+            ->where('phone', $request->phone)
             ->where('token', $request->token)
             ->first();
 
@@ -523,15 +492,12 @@ class UserController extends Controller
 
         // 🕒 التحقق من صلاحية الرابط (ساعة واحدة)
         if (now()->diffInMinutes($record->created_at) > 60) {
-            DB::table('password_resets')->where('identifier', $request->identifier)->delete();
+            DB::table('password_resets')->where('phone', $request->phone)->delete();
             return response()->json(['message' => 'انتهت صلاحية رابط إعادة التعيين.'], 400);
         }
 
-        // 🔍 التحقق من المستخدم سواء بالـ phone أو email
-        $user = User::where('phone', $request->identifier)
-            ->orWhere('email', $request->identifier)
-            ->first();
-
+        // 🔍 التحقق من المستخدم
+        $user = User::where('phone', $request->phone)->first();
         if (!$user) {
             return response()->json(['message' => 'المستخدم غير موجود.'], 404);
         }
@@ -552,7 +518,7 @@ class UserController extends Controller
         ]);
 
         // 🗑️ حذف السجل من password_resets
-        DB::table('password_resets')->where('identifier', $request->identifier)->delete();
+        DB::table('password_resets')->where('phone', $request->phone)->delete();
 
         // ✅ تسجيل الدخول تلقائياً بعد التعيين
         Auth::login($user);
@@ -570,7 +536,6 @@ class UserController extends Controller
             'expires_at' => $expiresAt,
         ]);
     }
-
 
 
     // ✅ استيراد المستخدمين من ملف Excel
