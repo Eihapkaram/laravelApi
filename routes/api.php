@@ -222,7 +222,7 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('cart/deleteAll', [AddToController::class, 'deleteAllCartItems']);
 
     // Order 
-    Route::post('order/add', [OrderController::class, 'createOrder'])->middleware(['blockSupplierOrder']);;
+    Route::post('order/add', [OrderController::class, 'createOrder'])->middleware(['blockSupplierOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
 
     //orders Seller 
@@ -300,6 +300,8 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
         SupplierProductController::class,
         'productSuppliers'
     ]);
+    //جلب كل الموردين 
+    Route::get('/suppliers', [UserController::class, 'getSuppliers']);
     // Category
     Route::post('categorie/add', [CategorieController::class, 'AddCate']);
     Route::post('categories/import', [CategorieController::class, 'import']);
@@ -324,7 +326,14 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('user/update/{id}', [UserController::class, 'userUpdate']);
     Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateOrderStatus']);
-
+//seller 
+    Route::get('/seller/customers', [SellerCustomerController::class, 'index']);
+    Route::get('/seller/customers/{id}', [SellerCustomerController::class, 'show']);
+    Route::get('/seller/customers/{id}/orders', [SellerCustomerController::class, 'customerOrders']);
+    Route::get('/seller/customersHeAdd', [SellerCustomerController::class, 'myCustomers']);
+    Route::post('seller/customers/new', [SellerCustomerController::class, 'createNewCustomer']);
+    Route::post('/seller/customers', [SellerCustomerController::class, 'store']);
+    Route::delete('/seller/customers/{id}', [SellerCustomerController::class, 'destroy']);
     // 🔥 مسار إرسال إشعار من الأدمن
     Route::post('/notifications/send', [NotificationController::class, 'sendByAdmin']);
     //offers

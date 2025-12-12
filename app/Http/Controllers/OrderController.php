@@ -145,7 +145,7 @@ class OrderController extends Controller
             'phone'          => $request->phone,
             'store_name'     => $request->store_name,
             'payment_method' => $request->payment_method,
-            'approval_status' => $recipient->role === 'supplier' ? 'pending' : 'approved',
+            'approval_status' => $recipient->role === 'supplier' ? 'pending' : 'pending',
             // ✅ إذا المستلم Supplier يبقى pending للموافقة
         ]);
 

@@ -36,10 +36,11 @@ class SellerCustomerController extends Controller
 
         $seller = Auth::user();
 
-        // تأكد أن المستخدم فعلاً بائع
-        if ($seller->role !== 'seller') {
+        // تأكد أن المستخدم فعلاً بائع او ادمن
+        if (!in_array($seller->role, ['seller', 'admin'])) {
             return response()->json(['message' => 'غير مصرح لك'], 403);
         }
+
 
         // البحث عن العميل حسب الإيميل أو رقم الهاتف
         $customer = User::where('email', $request->identifier)
@@ -66,72 +67,74 @@ class SellerCustomerController extends Controller
         return response()->json(['message' => 'تم حذف العميل']);
     }
     // إنشاء عميل جديد وربطه بالبائع + توليد رابط واتساب
-   public function createNewCustomer(Request $request)
-{
-    $seller = Auth::user();
+    public function createNewCustomer(Request $request)
+    {
+        $seller = Auth::user();
 
-    if ($seller->role !== 'seller') {
-        return response()->json(['message' => 'غير مصرح لك'], 403);
-    }
+        // تأكد أن المستخدم فعلاً بائع او ادمن
+        if (!in_array($seller->role, ['seller', 'admin'])) {
+            return response()->json(['message' => 'غير مصرح لك'], 403);
+        }
 
-    // ✅ التحقق من صحة البيانات
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'phone' => 'required|string|max:20',
-        'latitude' => 'required|numeric',
-        'longitude' => 'required|numeric',
-    ]);
-
-    // 🔍 البحث عن العميل برقم الهاتف
-    $customer = User::where('phone', $validated['phone'])->first();
-
-    if (!$customer) {
-        // ✅ إنشاء العميل الجديد
-        $customer = User::create([
-            'name' => $validated['name'],
-            'phone' => $validated['phone'],
-            'latitude' => $validated['latitude'],
-            'longitude' => $validated['longitude'],
-            'role' => 'customer',
-            'password' => bcrypt(Str::random(10)), // كلمة مرور مؤقتة
+        // ✅ التحقق من صحة البيانات
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
         ]);
 
-        // ✅ إنشاء رمز (token) لتفعيل الحساب
-        $token = Str::random(64);
-        DB::table('password_resets')->insert([
-            'phone' => $customer->phone,
-            'token' => $token,
-            'created_at' => now(),
+        // 🔍 البحث عن العميل برقم الهاتف
+        $customer = User::where('phone', $validated['phone'])->first();
+
+        if (!$customer) {
+            // ✅ إنشاء العميل الجديد
+            $customer = User::create([
+                'name' => $validated['name'],
+                'phone' => $validated['phone'],
+                'latitude' => $validated['latitude'],
+                'longitude' => $validated['longitude'],
+                'role' => 'customer',
+                'password' => bcrypt(Str::random(10)), // كلمة مرور مؤقتة
+            ]);
+
+            // ✅ إنشاء رمز (token) لتفعيل الحساب
+            $token = Str::random(64);
+            DB::table('password_resets')->insert([
+                'phone' => $customer->phone,
+                'token' => $token,
+                'created_at' => now(),
+            ]);
+
+            // ✅ رابط الواجهة الأمامية (Vue)
+            $frontendUrl = env('FRONTEND_URL', 'https://your-frontend-domain.com');
+            $activationLink = "{$frontendUrl}/resetpassword?token={$token}&phone={$customer->phone}";
+
+            // ✅ توليد رسالة ورابط واتساب
+            $message = "مرحباً {$customer->name}!\nتم إنشاء حسابك. لتعيين كلمة المرور اضغط هنا:\n{$activationLink}";
+            $phoneForWa = preg_replace('/[^0-9]/', '', $customer->phone);
+            $waLink = "https://wa.me/{$phoneForWa}?text=" . urlencode($message);
+        }
+
+        // ✅ ربط العميل بالبائع (بدون تكرار)
+        $seller->customers()->syncWithoutDetaching([$customer->id]);
+
+        return response()->json([
+            'message' => $customer->wasRecentlyCreated
+                ? 'تم إنشاء العميل وربطه بنجاح، استخدم رابط واتساب لإرسال التفعيل.'
+                : 'تم ربط العميل الموجود مسبقًا بالبائع بنجاح.',
+            'customer' => $customer,
+            'waLink' => $waLink ?? null,
         ]);
-
-        // ✅ رابط الواجهة الأمامية (Vue)
-        $frontendUrl = env('FRONTEND_URL', 'https://your-frontend-domain.com');
-        $activationLink = "{$frontendUrl}/resetpassword?token={$token}&phone={$customer->phone}";
-
-        // ✅ توليد رسالة ورابط واتساب
-        $message = "مرحباً {$customer->name}!\nتم إنشاء حسابك. لتعيين كلمة المرور اضغط هنا:\n{$activationLink}";
-        $phoneForWa = preg_replace('/[^0-9]/', '', $customer->phone);
-        $waLink = "https://wa.me/{$phoneForWa}?text=" . urlencode($message);
     }
-
-    // ✅ ربط العميل بالبائع (بدون تكرار)
-    $seller->customers()->syncWithoutDetaching([$customer->id]);
-
-    return response()->json([
-        'message' => $customer->wasRecentlyCreated
-            ? 'تم إنشاء العميل وربطه بنجاح، استخدم رابط واتساب لإرسال التفعيل.'
-            : 'تم ربط العميل الموجود مسبقًا بالبائع بنجاح.',
-        'customer' => $customer,
-        'waLink' => $waLink ?? null,
-    ]);
-}
 
 
     public function myCustomers(Request $request)
     {
         $seller = Auth::user();
 
-        if ($seller->role !== 'seller') {
+        // تأكد أن المستخدم فعلاً بائع او ادمن
+        if (!in_array($seller->role, ['seller', 'admin'])) {
             return response()->json(['message' => 'غير مصرح لك'], 403);
         }
 
@@ -176,33 +179,40 @@ class SellerCustomerController extends Controller
     {
         $seller = Auth::user();
 
-        // تأكد أن العميل فعلاً تابع للبائع
-        $isLinked = $seller->customers()->where('users.id', $customerId)->exists();
+        // السماح للبائع أو الأدمن
+        if (!in_array($seller->role, ['seller', 'admin'])) {
+            return response()->json(['message' => 'غير مصرح لك'], 403);
+        }
+
+        // تأكد أن العميل تابع فعلاً للبائع (أو الأدمن ممكن يشوف كل العملاء)
+        $isLinked = $seller->role === 'admin' || $seller->customers()->where('users.id', $customerId)->exists();
 
         if (!$isLinked) {
             return response()->json(['message' => 'العميل غير تابع لك'], 403);
         }
 
-        // جلب الطلبات اللي أنشأها هذا البائع لهذا العميل
+        // جلب الطلبات
         $orders = Order::with('orderdetels.product')
-            ->where('seller_id', $seller->id)
+            ->where('seller_id', $seller->role === 'admin' ? $customerId : $seller->id)
             ->where('user_id', $customerId)
             ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json($orders);
     }
+
     // Route: GET /seller/customers/{customer}/orders
     public function sellerCustomerOrders($customer_id)
     {
         $seller = auth()->user();
 
-        if ($seller->role !== 'seller') {
+        // السماح للبائع أو الأدمن
+        if (!in_array($seller->role, ['seller', 'admin'])) {
             return response()->json(['error' => 'غير مصرح لك'], 403);
         }
 
         $orders = Order::with(['orderdetels.product'])
-            ->where('seller_id', $seller->id)
+            ->where('seller_id', $seller->role === 'admin' ? $customer_id : $seller->id)
             ->where('user_id', $customer_id)
             ->whereHas('userorder', function ($q) {
                 $q->where('role', 'customer');
@@ -211,6 +221,7 @@ class SellerCustomerController extends Controller
 
         return response()->json($orders);
     }
+
     //عرض الارباح لكل مندوب
     // ✅ عرض أرباح المندوب الحالية بعد عمليات السحب
     public function myProfits()
