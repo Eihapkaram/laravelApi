@@ -285,24 +285,29 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('update/{id}', [ProductController::class, 'update']);
     Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
     // جلب منتجات المورد مع بيانات pivot
-Route::get('suppliers/{supplierId}/products', [SupplierProductController::class, 'supplierProducts']);
+    Route::get('suppliers/{supplierId}/products', [SupplierProductController::class, 'supplierProducts']);
     // ربط منتجات بمورد
     Route::post('suppliers/{supplierId}/products/attach', [
         SupplierProductController::class,
         'attachProduct'
     ]);
     // حذف منتج من المورد
-Route::post('suppliers/{supplierId}/products/detach', [SupplierProductController::class, 'detachProduct'])
-    ;
+    Route::post('suppliers/{supplierId}/products/detach', [SupplierProductController::class, 'detachProduct']);
 
-// تحديث بيانات pivot (سعر المورد، الحد الأدنى، الحالة)
-Route::post('suppliers/{supplierId}/products/update-pivot', [SupplierProductController::class, 'updatePivot'])
-    ;
+    // تحديث بيانات pivot (سعر المورد، الحد الأدنى، الحالة)
+    Route::post('suppliers/{supplierId}/products/update-pivot', [SupplierProductController::class, 'updatePivot']);
     // جلب الموردين المرتبطين بمنتج معيّن
     Route::get('products/{productId}/suppliers', [
         SupplierProductController::class,
         'productSuppliers'
     ]);
+    // تصدير منتجات المورد مع بيانات pivot
+    Route::get('suppliers/{supplierId}/products/export', [SupplierProductController::class, 'exportSupplierProducts'])
+        ->name('suppliers.products.export');
+
+    // تصدير بيانات المنتجات نفسها (بدون pivot)
+    Route::get('suppliers/{supplierId}/products/export-data', [SupplierProductController::class, 'exportSupplierProductsData'])
+        ->name('suppliers.products.export-data');
     //جلب كل الموردين 
     Route::get('/suppliers', [UserController::class, 'getSuppliers']);
     // Category
@@ -329,7 +334,7 @@ Route::post('suppliers/{supplierId}/products/update-pivot', [SupplierProductCont
     Route::post('user/update/{id}', [UserController::class, 'userUpdate']);
     Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateOrderStatus']);
-//seller 
+    //seller 
     Route::get('/seller/customers', [SellerCustomerController::class, 'index']);
     Route::get('/seller/customers/{id}', [SellerCustomerController::class, 'show']);
     Route::get('/seller/customers/{id}/orders', [SellerCustomerController::class, 'customerOrders']);

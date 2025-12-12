@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\product;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class SupplierProductController extends Controller
 {
@@ -105,4 +108,88 @@ class SupplierProductController extends Controller
             'product_id' => $request->product_id
         ]);
     }
+    // ✅ دالة تصدير منتجات المورد إلى Excel
+    public function exportSupplierProducts($supplierId)
+    {
+        $supplier = User::where('role', 'supplier')->findOrFail($supplierId);
+
+        $products = $supplier->suppliedProducts()
+            ->withPivot('supplier_price', 'min_quantity', 'active')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // العناوين
+        $sheet->fromArray([
+            ['ID', 'Title', 'Price', 'Stock', 'Supplier Price', 'Min Quantity', 'Active']
+        ]);
+
+        // البيانات
+        $rows = [];
+        foreach ($products as $product) {
+            $rows[] = [
+                $product->id,
+                $product->titel,
+                $product->price,
+                $product->stock,
+                $product->pivot->supplier_price,
+                $product->pivot->min_quantity,
+                $product->pivot->active ? 'نشط' : 'موقوف',
+            ];
+        }
+        $sheet->fromArray($rows, null, 'A2');
+
+        // حفظ الملف مؤقتًا وإرساله
+        $fileName = 'supplier_'.$supplierId.'_products.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        $tempPath = storage_path('app/' . $fileName);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath)->deleteFileAfterSend(true);
+    }
+    // ✅ دالة تصدير بيانات المنتجات المرتبطة بالمورد فقط (بدون بيانات pivot)
+public function exportSupplierProductsData($supplierId)
+{
+    $supplier = User::where('role', 'supplier')->findOrFail($supplierId);
+
+    $products = $supplier->suppliedProducts()->get();
+
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // العناوين
+    $sheet->fromArray([
+        ['ID', 'Title', 'Description', 'Price', 'Stock', 'Brand', 'InCount', 'Counttype', 'inCounttype', 'Discount']
+    ]);
+
+    // البيانات
+    $rows = [];
+    foreach ($products as $product) {
+        $rows[] = [
+            $product->id,
+            $product->titel,
+            $product->description,
+            $product->price,
+            $product->stock,
+            $product->brand,
+            $product->inCount,
+            $product->Counttype,
+            $product->inCounttype,
+            $product->discount,
+        ];
+    }
+
+    $sheet->fromArray($rows, null, 'A2');
+
+    // حفظ الملف مؤقتًا وإرساله
+    $fileName = 'supplier_'.$supplierId.'_products_data.xlsx';
+    $writer = new Xlsx($spreadsheet);
+    $tempPath = storage_path('app/' . $fileName);
+    $writer->save($tempPath);
+
+    return response()->download($tempPath)->deleteFileAfterSend(true);
 }
+
+}
+
