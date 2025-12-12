@@ -29,6 +29,25 @@ class SupplierProductController extends Controller
             'attached_products' => $request->product_ids
         ], 200);
     }
+    public function attachProduct(Request $request, $supplierId)
+    {
+        // تحقق من صحة البيانات
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+        ]);
+
+        $supplier = User::where('role', 'supplier')->findOrFail($supplierId);
+
+        // ربط المنتج بالمورد بدون حذف المنتجات السابقة
+        $supplier->suppliedProducts()->syncWithoutDetaching([$request->product_id]);
+
+        return response()->json([
+            'message' => 'Product assigned successfully',
+            'supplier_id' => $supplierId,
+            'attached_product' => $request->product_id
+        ], 200);
+    }
+
 
     /**
      * جلب منتجات مورد

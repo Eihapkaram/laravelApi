@@ -287,7 +287,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     // ربط منتجات بمورد
     Route::post('suppliers/{supplierId}/products/attach', [
         SupplierProductController::class,
-        'attachProducts'
+        'attachProduct'
     ]);
     // جلب منتجات مورد معيّن
     Route::get('suppliers/{supplierId}/products', [
