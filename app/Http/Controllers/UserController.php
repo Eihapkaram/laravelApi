@@ -73,6 +73,7 @@ class UserController extends Controller
         ], 200);
     }
 
+
     public function userUpdate(Request $request, $id)
     {
         $this->validate($request, [
@@ -186,7 +187,17 @@ class UserController extends Controller
             return response()->json(['error' => 'field login'], 401);
         }
     }
+    public function getSuppliers()
+    {
+        $suppliers = User::with('suppliedProducts')  // تحميل العلاقة
+            ->where('role', 'supplier')
+            ->get();
 
+        return response()->json([
+            'count' => $suppliers->count(),
+            'suppliers' => $suppliers
+        ], 200);
+    }
     public function userinfo()
     {
         $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude', 'created_at')->get();
@@ -419,70 +430,70 @@ class UserController extends Controller
 
 
     // اعاده تعين كلمه السر 
-   public function resetPasswordWithSecurity(Request $request)
-{
-    $request->validate([
-        'identifier' => 'required', // البريد أو رقم الهاتف
-        'security_answer' => 'required|string',
-        'new_password' => 'required|string|min:8|confirmed',
-    ]);
-
-    $identifier = $request->identifier;
-
-    // البحث حسب البريد أو رقم الهاتف
-    $user = User::where('email', $identifier)
-        ->orWhere('phone', $identifier)
-        ->first();
-
-    if (!$user) {
-        return response()->json([
-            'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
-        ], 404);
-    }
-
-    // التحقق من إجابة السؤال الأمني
-    if (!$user->security_answer || !Hash::check(trim($request->security_answer), $user->security_answer)) {
-        return response()->json([
-            'message' => 'إجابة السؤال الأمني غير صحيحة.'
-        ], 403);
-    }
-
-    // تحديث كلمة المرور بشكل آمن
-    $user->password = Hash::make($request->new_password);
-    $user->last_seen = now(); // تحديث آخر ظهور (اختياري)
-    $user->save();
-
-    // إنشاء توكن جديد (Passport أو Sanctum حسب مشروعك)
-    $token = $user->createToken('Personal Access Token')->accessToken;
-
-    return response()->json([
-        'message' => 'تم تغيير كلمة المرور وتسجيل الدخول بنجاح ✅',
-        'user' => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'role' => $user->role,
-        ],
-        'access_token' => $token,
-        'token_type' => 'Bearer',
-    ], 200);
-}
-
-    // اعاده تعين كلمه السر 
-   public function resetPassword(Request $request)
+    public function resetPasswordWithSecurity(Request $request)
     {
         $request->validate([
-            'phone' => 'required',
+            'identifier' => 'required', // البريد أو رقم الهاتف
+            'security_answer' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $identifier = $request->identifier;
+
+        // البحث حسب البريد أو رقم الهاتف
+        $user = User::where('email', $identifier)
+            ->orWhere('phone', $identifier)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف.'
+            ], 404);
+        }
+
+        // التحقق من إجابة السؤال الأمني
+        if (!$user->security_answer || !Hash::check(trim($request->security_answer), $user->security_answer)) {
+            return response()->json([
+                'message' => 'إجابة السؤال الأمني غير صحيحة.'
+            ], 403);
+        }
+
+        // تحديث كلمة المرور بشكل آمن
+        $user->password = Hash::make($request->new_password);
+        $user->last_seen = now(); // تحديث آخر ظهور (اختياري)
+        $user->save();
+
+        // إنشاء توكن جديد (Passport أو Sanctum حسب مشروعك)
+        $token = $user->createToken('Personal Access Token')->accessToken;
+
+        return response()->json([
+            'message' => 'تم تغيير كلمة المرور وتسجيل الدخول بنجاح ✅',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+            ],
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+        ], 200);
+    }
+
+    // اعاده تعين كلمه السر 
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'identifier' => 'required', // email أو phone
             'token' => 'required',
             'security_question' => 'required|string|max:255',
-           'security_answer' => 'required|string|max:255',
+            'security_answer' => 'required|string|max:255',
             'new_password' => 'required|min:8|confirmed',
         ]);
 
         // 🔍 التحقق من وجود سجل إعادة التعيين
         $record = DB::table('password_resets')
-            ->where('phone', $request->phone)
+            ->where('identifier', $request->identifier)
             ->where('token', $request->token)
             ->first();
 
@@ -492,12 +503,15 @@ class UserController extends Controller
 
         // 🕒 التحقق من صلاحية الرابط (ساعة واحدة)
         if (now()->diffInMinutes($record->created_at) > 60) {
-            DB::table('password_resets')->where('phone', $request->phone)->delete();
+            DB::table('password_resets')->where('identifier', $request->identifier)->delete();
             return response()->json(['message' => 'انتهت صلاحية رابط إعادة التعيين.'], 400);
         }
 
-        // 🔍 التحقق من المستخدم
-        $user = User::where('phone', $request->phone)->first();
+        // 🔍 التحقق من المستخدم سواء بالـ phone أو email
+        $user = User::where('phone', $request->identifier)
+            ->orWhere('email', $request->identifier)
+            ->first();
+
         if (!$user) {
             return response()->json(['message' => 'المستخدم غير موجود.'], 404);
         }
@@ -518,7 +532,7 @@ class UserController extends Controller
         ]);
 
         // 🗑️ حذف السجل من password_resets
-        DB::table('password_resets')->where('phone', $request->phone)->delete();
+        DB::table('password_resets')->where('identifier', $request->identifier)->delete();
 
         // ✅ تسجيل الدخول تلقائياً بعد التعيين
         Auth::login($user);
@@ -536,6 +550,7 @@ class UserController extends Controller
             'expires_at' => $expiresAt,
         ]);
     }
+
 
 
     // ✅ استيراد المستخدمين من ملف Excel
