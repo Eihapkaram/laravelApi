@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Models\Product;
+use App\Models\product;
 use Illuminate\Http\Request;
 
 class SupplierProductController extends Controller
@@ -48,7 +48,7 @@ class SupplierProductController extends Controller
      */
     public function productSuppliers($productId)
     {
-        $product = Product::findOrFail($productId);
+        $product = product::findOrFail($productId);
 
         return response()->json([
             'product' => $product->name,
