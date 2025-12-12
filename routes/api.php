@@ -284,17 +284,20 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('/products/import', [ProductController::class, 'import']);
     Route::post('update/{id}', [ProductController::class, 'update']);
     Route::delete('destroy/{id}', [ProductController::class, 'destroy']);
+    // جلب منتجات المورد مع بيانات pivot
+Route::get('suppliers/{supplierId}/products', [SupplierProductController::class, 'supplierProducts']);
     // ربط منتجات بمورد
     Route::post('suppliers/{supplierId}/products/attach', [
         SupplierProductController::class,
         'attachProduct'
     ]);
-    // جلب منتجات مورد معيّن
-    Route::get('suppliers/{supplierId}/products', [
-        SupplierProductController::class,
-        'supplierProducts'
-    ]);
+    // حذف منتج من المورد
+Route::post('suppliers/{supplierId}/products/detach', [SupplierProductController::class, 'detachProduct'])
+    ;
 
+// تحديث بيانات pivot (سعر المورد، الحد الأدنى، الحالة)
+Route::post('suppliers/{supplierId}/products/update-pivot', [SupplierProductController::class, 'updatePivot'])
+    ;
     // جلب الموردين المرتبطين بمنتج معيّن
     Route::get('products/{productId}/suppliers', [
         SupplierProductController::class,
