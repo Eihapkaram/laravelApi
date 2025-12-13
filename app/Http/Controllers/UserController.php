@@ -73,7 +73,6 @@ class UserController extends Controller
         ], 200);
     }
 
-
     public function userUpdate(Request $request, $id)
     {
         $this->validate($request, [
@@ -187,17 +186,7 @@ class UserController extends Controller
             return response()->json(['error' => 'field login'], 401);
         }
     }
-    public function getSuppliers()
-    {
-        $suppliers = User::with('suppliedProducts')  // تحميل العلاقة
-            ->where('role', 'supplier')
-            ->get();
 
-        return response()->json([
-            'count' => $suppliers->count(),
-            'suppliers' => $suppliers
-        ], 200);
-    }
     public function userinfo()
     {
         $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude', 'created_at')->get();
@@ -342,7 +331,17 @@ class UserController extends Controller
             'token' => $token,
         ]);
     }
+    public function getSuppliers()
+    {
+        $suppliers = User::with('suppliedProducts')  // تحميل العلاقة
+            ->where('role', 'supplier')
+            ->get();
 
+        return response()->json([
+            'count' => $suppliers->count(),
+            'suppliers' => $suppliers
+        ], 200);
+    }
     public function loginWithPhone(Request $request)
     {
         $request->validate([
@@ -484,7 +483,7 @@ class UserController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'identifier' => 'required', // email أو phone
+            'phone' => 'required',
             'token' => 'required',
             'security_question' => 'required|string|max:255',
             'security_answer' => 'required|string|max:255',
@@ -493,7 +492,7 @@ class UserController extends Controller
 
         // 🔍 التحقق من وجود سجل إعادة التعيين
         $record = DB::table('password_resets')
-            ->where('identifier', $request->identifier)
+            ->where('phone', $request->phone)
             ->where('token', $request->token)
             ->first();
 
@@ -503,15 +502,12 @@ class UserController extends Controller
 
         // 🕒 التحقق من صلاحية الرابط (ساعة واحدة)
         if (now()->diffInMinutes($record->created_at) > 60) {
-            DB::table('password_resets')->where('identifier', $request->identifier)->delete();
+            DB::table('password_resets')->where('phone', $request->phone)->delete();
             return response()->json(['message' => 'انتهت صلاحية رابط إعادة التعيين.'], 400);
         }
 
-        // 🔍 التحقق من المستخدم سواء بالـ phone أو email
-        $user = User::where('phone', $request->identifier)
-            ->orWhere('email', $request->identifier)
-            ->first();
-
+        // 🔍 التحقق من المستخدم
+        $user = User::where('phone', $request->phone)->first();
         if (!$user) {
             return response()->json(['message' => 'المستخدم غير موجود.'], 404);
         }
@@ -532,7 +528,7 @@ class UserController extends Controller
         ]);
 
         // 🗑️ حذف السجل من password_resets
-        DB::table('password_resets')->where('identifier', $request->identifier)->delete();
+        DB::table('password_resets')->where('phone', $request->phone)->delete();
 
         // ✅ تسجيل الدخول تلقائياً بعد التعيين
         Auth::login($user);
@@ -550,7 +546,6 @@ class UserController extends Controller
             'expires_at' => $expiresAt,
         ]);
     }
-
 
 
     // ✅ استيراد المستخدمين من ملف Excel

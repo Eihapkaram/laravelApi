@@ -13,6 +13,7 @@ use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\SupplierProductController;
 use App\Http\Controllers\OfferController;
+use App\Http\Controllers\Api\SupplierOrderController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingController;
@@ -224,7 +225,16 @@ Route::middleware('auth:api')->group(function () {
     // Order 
     Route::post('order/add', [OrderController::class, 'createOrder'])->middleware(['blockSupplierOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
+    //supplier/orders المورد
+    Route::get('supplier/orders', [SupplierOrderController::class, 'supplierOrders']);
+    Route::patch('supplier/orders/{id}/status', [SupplierOrderController::class, 'updateStatus']);
 
+    // المورد
+    Route::post('supplier/orders/{id}/accept', [SupplierOrderController::class, 'accept']);
+    Route::post('supplier/orders/{id}/reject', [SupplierOrderController::class, 'reject']);
+
+    // تنزيل فاتورة PDF للطلب
+    Route::get('/supplier-orders/{id}/invoice', [SupplierOrderController::class, 'generateSupplierOrderInvoice']);
     //orders Seller 
     Route::get('sellerPosition', [OrderController::class, 'getpositionSellersByApprovedOrders']);
     Route::get('sellerApprovedOrdershow', [OrderController::class, 'showCurrentSellerApprovedOrders']);
@@ -301,6 +311,8 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
         SupplierProductController::class,
         'productSuppliers'
     ]);
+    // أدمن
+    Route::post('orders/supplier-create', [SupplierOrderController::class, 'store']);
     // تصدير منتجات المورد مع بيانات pivot
     Route::get('suppliers/{supplierId}/products/export', [SupplierProductController::class, 'exportSupplierProducts'])
         ->name('suppliers.products.export');
@@ -308,6 +320,8 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     // تصدير بيانات المنتجات نفسها (بدون pivot)
     Route::get('suppliers/{supplierId}/products/export-data', [SupplierProductController::class, 'exportSupplierProductsData'])
         ->name('suppliers.products.export-data');
+    // تنزيل كل فواتير المورد
+    Route::get('/supplier-orders/{supplierId}/invoices', [SupplierOrderController::class, 'downloadAllInvoices']);
     //جلب كل الموردين 
     Route::get('/suppliers', [UserController::class, 'getSuppliers']);
     // Category
