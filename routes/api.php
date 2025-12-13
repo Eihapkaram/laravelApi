@@ -13,7 +13,7 @@ use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\SupplierProductController;
 use App\Http\Controllers\OfferController;
-use App\Http\Controllers\Api\SupplierOrderController;
+use App\Http\Controllers\SupplierOrderController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingController;
