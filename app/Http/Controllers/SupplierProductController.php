@@ -15,7 +15,7 @@ class SupplierProductController extends Controller
     // جلب الموردين المرتبطين بمنتج معيّن مع بيانات pivot
     public function productSuppliers($productId)
     {
-        $product = Product::findOrFail($productId);
+        $product = product::findOrFail($productId);
 
         $suppliers = $product->suppliers()
             ->withPivot('supplier_price', 'min_quantity', 'active')
