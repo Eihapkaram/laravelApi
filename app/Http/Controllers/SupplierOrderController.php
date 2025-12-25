@@ -1,8 +1,8 @@
+
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\SupplierOrder;
 use App\Models\SupplierOrderItem;
 use App\Notifications\SupplierOrderCreated;
@@ -27,7 +27,7 @@ class SupplierOrderController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // تأكد إن اللي بينفذ أدمن
+        // ✅ تحقق role = admin
         if (auth()->user()->role !== 'admin') {
             return response()->json(['message' => 'غير مصرح'], 403);
         }
@@ -35,7 +35,6 @@ class SupplierOrderController extends Controller
         DB::beginTransaction();
 
         try {
-            // إنشاء الطلب
             $order = SupplierOrder::create([
                 'supplier_id' => $request->supplier_id,
                 'created_by' => auth()->id(),
@@ -63,6 +62,7 @@ class SupplierOrderController extends Controller
             $order->update(['total_price' => $total]);
 
             DB::commit();
+
             // إشعار المورد
             $order->supplier->notify(new SupplierOrderCreated($order));
 
@@ -70,6 +70,7 @@ class SupplierOrderController extends Controller
                 'message' => 'تم إنشاء طلب التجهيز بنجاح',
                 'order' => $order->load('items.product', 'supplier'),
             ], 201);
+
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -114,6 +115,9 @@ class SupplierOrderController extends Controller
         ]);
     }
 
+    /**
+     * قبول الطلب (المورد)
+     */
     public function accept($id)
     {
         $order = SupplierOrder::where('id', $id)
@@ -125,6 +129,7 @@ class SupplierOrderController extends Controller
             'status' => 'preparing',
             'responded_at' => now(),
         ]);
+
         $order->creator->notify(new SupplierOrderResponded($order));
 
         return response()->json([
@@ -133,6 +138,9 @@ class SupplierOrderController extends Controller
         ]);
     }
 
+    /**
+     * رفض الطلب (المورد)
+     */
     public function reject(Request $request, $id)
     {
         $request->validate([
@@ -149,6 +157,7 @@ class SupplierOrderController extends Controller
             'responded_at' => now(),
             'supplier_reject_reason' => $request->reason,
         ]);
+
         $order->creator->notify(new SupplierOrderResponded($order));
 
         return response()->json([
@@ -157,15 +166,15 @@ class SupplierOrderController extends Controller
         ]);
     }
 
+    /**
+     * تحميل فاتورة الطلب PDF
+     */
     public function generateSupplierOrderInvoice($id)
     {
-        ini_set('max_execution_time', 300);
-        ini_set('memory_limit', '512M');
-
         $order = SupplierOrder::with('items.product', 'supplier', 'creator')->findOrFail($id);
-
-        // التأكد إن المستخدم يحق له الوصول: المورد نفسه أو الأدمن اللي أنشأ الطلب
         $user = auth()->user();
+
+        // ✅ role = admin
         if (
             $user->id !== $order->supplier_id &&
             $user->id !== $order->created_by &&
@@ -174,74 +183,9 @@ class SupplierOrderController extends Controller
             return response()->json(['message' => 'غير مصرح'], 403);
         }
 
-        $settings = Setting::first();
-        $logoPath = $settings && $settings->logo ? public_path('storage/'.$settings->logo) : null;
-
-        $html = '
-    <html lang="ar" dir="rtl">
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            body { font-family: "dejavusans", sans-serif; text-align: right; direction: rtl; font-size: 14px; color: #333; }
-            h3 { margin-bottom: 5px; color: #1e3a8a; }
-            table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 13px; }
-            th, td { border: 1px solid #000; padding: 10px; text-align: center; }
-            th { background-color: #f3f4f6; color: #111827; }
-            tbody tr:nth-child(even) { background-color: #f9fafb; }
-            .total { font-weight: bold; font-size: 15px; color: #1e40af; }
-            .signature { margin-top: 40px; font-size: 16px; font-weight: bold; color: #1e3a8a; }
-        </style>
-    </head>
-    <body>
-        <div align="center">'
-            .(file_exists($logoPath) ? '<img src="'.$logoPath.'" width="120">' : '').'
-            <h3>فاتورة طلب المورد</h3>
-        </div>
-
-        <p><strong>رقم الطلب:</strong> '.$order->id.'</p>
-        <p><strong>تاريخ الطلب:</strong> '.$order->created_at->format('Y-m-d').'</p>
-        <p><strong>حالة الطلب:</strong> '.$order->status.'</p>
-
-        <h4>معلومات المورد</h4>
-        <p><strong>الاسم:</strong> '.$order->supplier->name.'</p>
-        <p><strong>الهاتف:</strong> '.$order->supplier->phone.'</p>
-        <p><strong>البريد الإلكتروني:</strong> '.$order->supplier->email.'</p>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>المنتج</th>
-                    <th>الكمية</th>
-                    <th>سعر المورد</th>
-                    <th>الإجمالي</th>
-                </tr>
-            </thead>
-            <tbody>';
-
-        foreach ($order->items as $item) {
-            $html .= '<tr>
-            <td>'.$item->product->titel.'</td>
-            <td>'.$item->quantity.'</td>
-            <td>'.number_format(round($item->supplier_price), 2).'</td>
-            <td>'.number_format(round($item->total_price), 2).'</td>
-        </tr>';
-        }
-
-        $html .= '
-            </tbody>
-        </table>
-
-        <p class="total"><strong>المجموع الكلي:</strong> '.number_format(round($order->total_price), 2).'</p>
-
-        <div class="signature" align="left">
-            <p>توقيع الشركة:</p>
-            '.($settings && $settings->site_name ? '<strong>'.$settings->site_name.'</strong>' : '').'
-        </div>
-    </body>
-    </html>';
+        $html = view('pdf.supplier-order', compact('order'))->render();
 
         $mpdf = new Mpdf([
-            'tempDir' => storage_path('app/mpdf_temp'),
             'mode' => 'utf-8',
             'format' => 'A4',
             'default_font' => 'dejavusans',
@@ -249,11 +193,15 @@ class SupplierOrderController extends Controller
 
         $mpdf->WriteHTML($html);
 
-        return response()->streamDownload(function () use ($mpdf) {
-            echo $mpdf->Output('', 'S');
-        }, 'supplier-order-'.$order->id.'.pdf');
+        return response()->streamDownload(
+            fn () => print ($mpdf->Output('', 'S')),
+            'supplier-order-'.$order->id.'.pdf'
+        );
     }
 
+    /**
+     * تحميل كل فواتير مورد
+     */
     public function downloadAllInvoices($supplierId)
     {
         $user = auth()->user();
