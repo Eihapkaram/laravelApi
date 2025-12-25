@@ -17,6 +17,9 @@ class Setting extends Model
         'whatsApp',
         'phone1',
         'phone2',
-        'hotphone'
+        'hotphone',
+        'terms_and_conditions',
+        'shipping_and_return_policy',
+        'privacy_policy',
     ];
 }

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Setting;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class SettingController extends Controller
@@ -13,13 +13,13 @@ class SettingController extends Controller
     {
         $settings = Setting::first();
 
-        if (!$settings) {
+        if (! $settings) {
             return response()->json(['error' => 'Settings not found'], 404);
         }
 
         return response()->json([
             'success' => true,
-            'settings' => $settings
+            'settings' => $settings,
         ]);
     }
 
@@ -31,28 +31,32 @@ class SettingController extends Controller
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp',
             'signature' => 'nullable|image|mimes:jpg,jpeg,png,webp',
             'email' => 'nullable|email',
-            'facebook' => 'nullable|string',
-            'instgrame' => 'nullable|string',
-            'twiter' => 'nullable|string',
-            'whatsApp' => 'nullable|string',
+            'facebook' => 'nullable|url',
+            'instgrame' => 'nullable|url',
+            'twiter' => 'nullable|url',
+            'whatsApp' => 'nullable|url',
             'phone1' => 'nullable|string|max:20',
             'phone2' => 'nullable|string|max:20',
             'hotphone' => 'nullable|string|max:20',
             'location' => 'nullable|string',
+            'terms_and_conditions' => 'nullable|string',
+            'shipping_and_return_policy' => 'nullable|string',
+            'privacy_policy' => 'nullable|string',
+
         ]);
 
         try {
-            $settings = new Setting();
+            $settings = new Setting;
 
             if ($request->hasFile('logo')) {
                 $file = $request->file('logo');
-                $path = $file->storeAs('settings', time() . '_logo.' . $file->getClientOriginalExtension(), 'public');
+                $path = $file->storeAs('settings', time().'_logo.'.$file->getClientOriginalExtension(), 'public');
                 $settings->logo = $path;
             }
 
             if ($request->hasFile('signature')) {
                 $file = $request->file('signature');
-                $path = $file->storeAs('settings', time() . '_signature.' . $file->getClientOriginalExtension(), 'public');
+                $path = $file->storeAs('settings', time().'_signature.'.$file->getClientOriginalExtension(), 'public');
                 $settings->signature = $path;
             }
 
@@ -67,13 +71,16 @@ class SettingController extends Controller
             $settings->phone2 = $request->phone2;
             $settings->hotphone = $request->hotphone;
             $settings->location = $request->location;
+            $settings->terms_and_conditions = $request->terms_and_conditions;
+            $settings->shipping_and_return_policy = $request->shipping_and_return_policy;
+            $settings->privacy_policy = $request->privacy_policy;
 
             $settings->save();
 
             return response()->json([
                 'success' => true,
                 'message' => 'تم حفظ الإعدادات بنجاح',
-                'settings' => $settings
+                'settings' => $settings,
             ]);
         } catch (\Throwable $th) {
             return response()->json([
@@ -92,19 +99,22 @@ class SettingController extends Controller
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
             'signature' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
             'email' => 'nullable|email',
-            'facebook' => 'nullable|string',
-            'instgrame' => 'nullable|string',
-            'twiter' => 'nullable|string',
-            'whatsApp' => 'nullable|string|max:20',
+            'facebook' => 'nullable|url',
+            'instgrame' => 'nullable|url',
+            'twiter' => 'nullable|url',
+            'whatsApp' => 'nullable|url',
             'phone1' => 'nullable|string|max:20',
             'phone2' => 'nullable|string|max:20',
             'hotphone' => 'nullable|string|max:20',
             'location' => 'nullable|string',
+            'terms_and_conditions' => 'nullable|string',
+            'shipping_and_return_policy' => 'nullable|string',
+            'privacy_policy' => 'nullable|string',
         ]);
 
         $settings = Setting::first();
 
-        if (!$settings) {
+        if (! $settings) {
             return response()->json(['error' => 'Settings not found'], 404);
         }
 
@@ -112,7 +122,7 @@ class SettingController extends Controller
             if ($settings->logo && Storage::disk('public')->exists($settings->logo)) {
                 Storage::disk('public')->delete($settings->logo);
             }
-            $imageName = time() . '_' . uniqid() . '.' . $request->file('logo')->getClientOriginalExtension();
+            $imageName = time().'_'.uniqid().'.'.$request->file('logo')->getClientOriginalExtension();
             $path = $request->file('logo')->storeAs('settings', $imageName, 'public');
             $settings->logo = $path;
         }
@@ -121,7 +131,7 @@ class SettingController extends Controller
             if ($settings->signature && Storage::disk('public')->exists($settings->signature)) {
                 Storage::disk('public')->delete($settings->signature);
             }
-            $imageName = time() . '_' . uniqid() . '.' . $request->file('signature')->getClientOriginalExtension();
+            $imageName = time().'_'.uniqid().'.'.$request->file('signature')->getClientOriginalExtension();
             $path = $request->file('signature')->storeAs('settings', $imageName, 'public');
             $settings->signature = $path;
         }
@@ -137,13 +147,16 @@ class SettingController extends Controller
         $settings->phone2 = $request->phone2;
         $settings->hotphone = $request->hotphone;
         $settings->location = $request->location;
+        $settings->terms_and_conditions = $request->terms_and_conditions;
+        $settings->shipping_and_return_policy = $request->shipping_and_return_policy;
+        $settings->privacy_policy = $request->privacy_policy;
 
         $settings->save();
 
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث إعدادات الموقع بنجاح!',
-            'settings' => $settings
+            'settings' => $settings,
         ]);
     }
 }
