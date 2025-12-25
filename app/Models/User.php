@@ -7,14 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
-use App\Models\Order;
-use App\Models\product;
-use App\Models\Cart;
-use App\Models\Review;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -34,12 +31,15 @@ class User extends Authenticatable
         'security_answer',
         'wallet_number',
         'front_id_image',
-        'back_id_image'
+        'back_id_image',
+        'terms_accepted',
     ];
+
     public function getOrder()
     {
         return $this->hasMany(Order::class, 'user_id');
     }
+
     // العملاء التابعين للبائع
     public function customers()
     {
@@ -51,6 +51,7 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(User::class, 'seller_customers', 'customer_id', 'seller_id');
     }
+
     public function suppliedProducts()
     {
         return $this->belongsToMany(product::class, 'supplier_product', 'supplier_id', 'product_id')
@@ -63,27 +64,31 @@ class User extends Authenticatable
         // الطلبات اللي أنشأها المستخدم كـ "بائع"
         return $this->hasMany(Order::class, 'seller_id');
     }
+
     public function getcart()
     {
         return $this->hasOne(Cart::class);
     }
+
     public function userReviwes()
     {
         return $this->hasMany(Review::class);
     }
+
     public function scopeNearby($query, $latitude, $longitude, $distance = 10)
     {
-        return $query->selectRaw("*,
+        return $query->selectRaw('*,
             ( 6371 * acos(
                 cos(radians(?)) *
                 cos(radians(latitude)) *
                 cos(radians(longitude) - radians(?)) +
                 sin(radians(?)) *
                 sin(radians(latitude))
-            )) AS distance", [$latitude, $longitude, $latitude])
-            ->having("distance", "<", $distance)
-            ->orderBy("distance", "asc");
+            )) AS distance', [$latitude, $longitude, $latitude])
+            ->having('distance', '<', $distance)
+            ->orderBy('distance', 'asc');
     }
+
     /**
      * The attributes that should be hidden for serialization.
      *

@@ -21,7 +21,7 @@ class SupplierOrderCreated extends Notification
         return [
             'type' => 'supplier_order_created',
             'order_id' => $this->order->id,
-            'message' => `لديك طلب تجهيز جديد رقم الطلب  {$this->order->id}`,
+            'message' => `لديك طلب تجهيز جديد رقم الطلب  #{$this->order->id}`,
             'status' => $this->order->status,
         ];
     }
