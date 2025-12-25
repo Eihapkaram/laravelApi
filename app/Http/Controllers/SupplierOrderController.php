@@ -1,16 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\SupplierOrder;
 use App\Models\SupplierOrderItem;
+use App\Notifications\SupplierOrderCreated;
+use App\Notifications\SupplierOrderResponded;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Notifications\SupplierOrderCreated;
 use Mpdf\Mpdf;
-use ZipArchive;
-use App\Notifications\SupplierOrderResponded;
 
 class SupplierOrderController extends Controller
 {
@@ -29,7 +27,7 @@ class SupplierOrderController extends Controller
         ]);
 
         // تأكد إن اللي بينفذ أدمن
-        if (!auth()->user()->is_admin) {
+        if (! auth()->user()->is_admin) {
             return response()->json(['message' => 'غير مصرح'], 403);
         }
 
@@ -39,9 +37,9 @@ class SupplierOrderController extends Controller
             // إنشاء الطلب
             $order = SupplierOrder::create([
                 'supplier_id' => $request->supplier_id,
-                'created_by'  => auth()->id(),
-                'status'      => 'sent',
-                'notes'       => $request->notes,
+                'created_by' => auth()->id(),
+                'status' => 'sent',
+                'notes' => $request->notes,
                 'total_price' => 0,
             ]);
 
@@ -52,10 +50,10 @@ class SupplierOrderController extends Controller
 
                 SupplierOrderItem::create([
                     'supplier_order_id' => $order->id,
-                    'product_id'        => $item['product_id'],
-                    'quantity'          => $item['quantity'],
-                    'supplier_price'    => $item['supplier_price'],
-                    'total_price'       => $itemTotal,
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                    'supplier_price' => $item['supplier_price'],
+                    'total_price' => $itemTotal,
                 ]);
 
                 $total += $itemTotal;
@@ -66,15 +64,17 @@ class SupplierOrderController extends Controller
             DB::commit();
             // إشعار المورد
             $order->supplier->notify(new SupplierOrderCreated($order));
+
             return response()->json([
                 'message' => 'تم إنشاء طلب التجهيز بنجاح',
-                'order'   => $order->load('items.product', 'supplier'),
+                'order' => $order->load('items.product', 'supplier'),
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'حدث خطأ',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -109,9 +109,10 @@ class SupplierOrderController extends Controller
 
         return response()->json([
             'message' => 'تم تحديث حالة الطلب',
-            'order' => $order
+            'order' => $order,
         ]);
     }
+
     public function accept($id)
     {
         $order = SupplierOrder::where('id', $id)
@@ -124,11 +125,13 @@ class SupplierOrderController extends Controller
             'responded_at' => now(),
         ]);
         $order->creator->notify(new SupplierOrderResponded($order));
+
         return response()->json([
             'message' => 'تم قبول طلب التجهيز بنجاح',
-            'order' => $order
+            'order' => $order,
         ]);
     }
+
     public function reject(Request $request, $id)
     {
         $request->validate([
@@ -146,11 +149,13 @@ class SupplierOrderController extends Controller
             'supplier_reject_reason' => $request->reason,
         ]);
         $order->creator->notify(new SupplierOrderResponded($order));
+
         return response()->json([
             'message' => 'تم رفض الطلب',
-            'order' => $order
+            'order' => $order,
         ]);
     }
+
     public function generateSupplierOrderInvoice($id)
     {
         ini_set('max_execution_time', 300);
@@ -162,7 +167,7 @@ class SupplierOrderController extends Controller
         $user = auth()->user();
 
         if (
-            !(
+            ! (
                 $user->role === 'admin' ||
                 ($user->role === 'supplier' && $user->id === $order->supplier_id)
             )
@@ -170,9 +175,8 @@ class SupplierOrderController extends Controller
             return response()->json(['message' => 'غير مصرح'], 403);
         }
 
-
         $settings = Setting::first();
-        $logoPath = $settings && $settings->logo ? public_path('storage/' . $settings->logo) : null;
+        $logoPath = $settings && $settings->logo ? public_path('storage/'.$settings->logo) : null;
 
         $html = '
     <html lang="ar" dir="rtl">
@@ -191,18 +195,18 @@ class SupplierOrderController extends Controller
     </head>
     <body>
         <div align="center">'
-            . (file_exists($logoPath) ? '<img src="' . $logoPath . '" width="120">' : '') . '
+            .(file_exists($logoPath) ? '<img src="'.$logoPath.'" width="120">' : '').'
             <h3>فاتورة طلب المورد</h3>
         </div>
 
-        <p><strong>رقم الطلب:</strong> ' . $order->id . '</p>
-        <p><strong>تاريخ الطلب:</strong> ' . $order->created_at->format('Y-m-d') . '</p>
-        <p><strong>حالة الطلب:</strong> ' . $order->status . '</p>
+        <p><strong>رقم الطلب:</strong> '.$order->id.'</p>
+        <p><strong>تاريخ الطلب:</strong> '.$order->created_at->format('Y-m-d').'</p>
+        <p><strong>حالة الطلب:</strong> '.$order->status.'</p>
 
         <h4>معلومات المورد</h4>
-        <p><strong>الاسم:</strong> ' . $order->supplier->name . '</p>
-        <p><strong>الهاتف:</strong> ' . $order->supplier->phone . '</p>
-        <p><strong>البريد الإلكتروني:</strong> ' . $order->supplier->email . '</p>
+        <p><strong>الاسم:</strong> '.$order->supplier->name.'</p>
+        <p><strong>الهاتف:</strong> '.$order->supplier->phone.'</p>
+        <p><strong>البريد الإلكتروني:</strong> '.$order->supplier->email.'</p>
 
         <table>
             <thead>
@@ -217,10 +221,10 @@ class SupplierOrderController extends Controller
 
         foreach ($order->items as $item) {
             $html .= '<tr>
-            <td>' . $item->product->titel . '</td>
-            <td>' . $item->quantity . '</td>
-            <td>' . number_format(round($item->supplier_price), 2) . '</td>
-            <td>' . number_format(round($item->total_price), 2) . '</td>
+            <td>'.$item->product->titel.'</td>
+            <td>'.$item->quantity.'</td>
+            <td>'.number_format(round($item->supplier_price), 2).'</td>
+            <td>'.number_format(round($item->total_price), 2).'</td>
         </tr>';
         }
 
@@ -228,11 +232,11 @@ class SupplierOrderController extends Controller
             </tbody>
         </table>
 
-        <p class="total"><strong>المجموع الكلي:</strong> ' . number_format(round($order->total_price), 2) . '</p>
+        <p class="total"><strong>المجموع الكلي:</strong> '.number_format(round($order->total_price), 2).'</p>
 
         <div class="signature" align="left">
             <p>توقيع الشركة:</p>
-            ' . ($settings && $settings->site_name ? '<strong>' . $settings->site_name . '</strong>' : '') . '
+            '.($settings && $settings->site_name ? '<strong>'.$settings->site_name.'</strong>' : '').'
         </div>
     </body>
     </html>';
@@ -241,28 +245,28 @@ class SupplierOrderController extends Controller
             'tempDir' => storage_path('app/mpdf_temp'),
             'mode' => 'utf-8',
             'format' => 'A4',
-            'default_font' => 'dejavusans'
+            'default_font' => 'dejavusans',
         ]);
 
         $mpdf->WriteHTML($html);
 
         return response()->streamDownload(function () use ($mpdf) {
             echo $mpdf->Output('', 'S');
-        }, 'supplier-order-' . $order->id . '.pdf');
+        }, 'supplier-order-'.$order->id.'.pdf');
     }
+
     public function downloadAllInvoices($supplierId)
     {
         $user = auth()->user();
 
         if (
-            !(
+            ! (
                 $user->role === 'admin' ||
                 ($user->role === 'supplier' && $user->id == $supplierId)
             )
         ) {
             return response()->json(['message' => 'غير مصرح'], 403);
         }
-
 
         $orders = SupplierOrder::where('supplier_id', $supplierId)
             ->with('items.product', 'supplier')
@@ -272,9 +276,9 @@ class SupplierOrderController extends Controller
             return response()->json(['message' => 'لا توجد طلبات لهذا المورد'], 404);
         }
 
-        $zip = new \ZipArchive();
-        $zipName = 'supplier_orders_' . $supplierId . '.zip';
-        $zipPath = storage_path('app/public/' . $zipName);
+        $zip = new \ZipArchive;
+        $zipName = 'supplier_orders_'.$supplierId.'.zip';
+        $zipPath = storage_path('app/public/'.$zipName);
 
         if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
             return response()->json(['message' => 'فشل في إنشاء ملف مضغوط'], 500);

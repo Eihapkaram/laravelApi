@@ -2,22 +2,22 @@
 
 use App\Http\Controllers\AddToController;
 use App\Http\Controllers\CategorieController;
+use App\Http\Controllers\InquiryController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OfferController;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReviewController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\InquiryController;
+use App\Http\Controllers\SellerCustomerController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SupplierOrderController;
+use App\Http\Controllers\SupplierProductController;
 use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
-use App\Http\Controllers\SupplierProductController;
-use App\Http\Controllers\OfferController;
-use App\Http\Controllers\SupplierOrderController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\SettingController;
-use App\Http\Controllers\SellerCustomerController;
 use Illuminate\Support\Facades\Storage;
 
 /*
@@ -29,11 +29,13 @@ use Illuminate\Support\Facades\Storage;
 // ✅ Email Verification
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill();
+
     return response()->json(['message' => 'Email verified successfully']);
 })->middleware(['auth:api', 'signed'])->name('verification.verify');
 
 Route::post('/email/verification-notification', function (Request $request) {
     $request->user()->sendEmailVerificationNotification();
+
     return response()->json(['message' => 'Verification link sent!']);
 })->middleware(['auth:api', 'throttle:6,1'])->name('verification.send');
 
@@ -64,13 +66,12 @@ Route::get('show/{id}', [ProductController::class, 'show']);
 Route::get('categorie/proshow', [CategorieController::class, 'showCateProduct']);
 Route::get('show/reviwe/{id}', [ReviewController::class, 'showProReviwes']);
 
-
 // ✅ Product Image
 Route::get('/products/{filename}', function ($filename) {
     $filename = urldecode($filename);
-    $path = 'products/' . $filename;
+    $path = 'products/'.$filename;
 
-    if (!Storage::disk('public')->exists($path)) {
+    if (! Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
@@ -83,9 +84,9 @@ Route::get('/products/{filename}', function ($filename) {
 // ✅ User Images
 Route::get('/users/{filename}', function ($filename) {
     $filename = urldecode($filename);
-    $path = 'users/' . $filename;
+    $path = 'users/'.$filename;
 
-    if (!Storage::disk('public')->exists($path)) {
+    if (! Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
@@ -98,9 +99,9 @@ Route::get('/users/{filename}', function ($filename) {
 // ✅ User  imageid
 Route::get('/imageid/{filename}', function ($filename) {
     $filename = urldecode($filename);
-    $path = 'imageid/' . $filename;
+    $path = 'imageid/'.$filename;
 
-    if (!Storage::disk('public')->exists($path)) {
+    if (! Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
@@ -113,9 +114,9 @@ Route::get('/imageid/{filename}', function ($filename) {
 // categories imge
 Route::get('/categories/{filename}', function ($filename) {
     $filename = urldecode($filename);
-    $path = 'categories/' . $filename;
+    $path = 'categories/'.$filename;
 
-    if (!Storage::disk('public')->exists($path)) {
+    if (! Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
@@ -127,9 +128,9 @@ Route::get('/categories/{filename}', function ($filename) {
 //  imge   categorebanner
 Route::get('/categorebanner/{filename}', function ($filename) {
     $filename = urldecode($filename);
-    $path = 'categorebanner/' . $filename;
+    $path = 'categorebanner/'.$filename;
 
-    if (!Storage::disk('public')->exists($path)) {
+    if (! Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
@@ -141,9 +142,9 @@ Route::get('/categorebanner/{filename}', function ($filename) {
 //  offers imge  storebanners pages
 Route::get('/offersbanner/{filename}', function ($filename) {
     $filename = urldecode($filename);
-    $path = 'offersbanner/' . $filename;
+    $path = 'offersbanner/'.$filename;
 
-    if (!Storage::disk('public')->exists($path)) {
+    if (! Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
@@ -152,12 +153,12 @@ Route::get('/offersbanner/{filename}', function ($filename) {
 
     return response($file, 200)->header('Content-Type', $mime);
 })->where('filename', '.*');
-//  pages imge   
+//  pages imge
 Route::get('/pages/{filename}', function ($filename) {
     $filename = urldecode($filename);
-    $path = 'pages/' . $filename;
+    $path = 'pages/'.$filename;
 
-    if (!Storage::disk('public')->exists($path)) {
+    if (! Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
@@ -170,9 +171,9 @@ Route::get('/pages/{filename}', function ($filename) {
 //  imge  storebanners categorebanner
 Route::get('/storebanners/{filename}', function ($filename) {
     $filename = urldecode($filename);
-    $path = 'storebanners/' . $filename;
+    $path = 'storebanners/'.$filename;
 
-    if (!Storage::disk('public')->exists($path)) {
+    if (! Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
@@ -185,9 +186,9 @@ Route::get('/storebanners/{filename}', function ($filename) {
 //  imge  settings
 Route::get('/settings/{filename}', function ($filename) {
     $filename = urldecode($filename);
-    $path = 'settings/' . $filename;
+    $path = 'settings/'.$filename;
 
-    if (!Storage::disk('public')->exists($path)) {
+    if (! Storage::disk('public')->exists($path)) {
         return response()->json(['message' => 'الصورة غير موجودة', 'path' => $path], 404);
     }
 
@@ -204,7 +205,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout-phone', [UserController::class, 'logoutphone']);
     Route::get('user/info', [UserController::class, 'info']);
     Route::post('user/addPhoto', [UserController::class, 'addimg']);
-    //seller 
+    // seller
     Route::get('/seller/customers', [SellerCustomerController::class, 'index']);
     Route::get('/seller/customers/{id}', [SellerCustomerController::class, 'show']);
     Route::get('/seller/customers/{id}/orders', [SellerCustomerController::class, 'customerOrders']);
@@ -222,10 +223,10 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('cart/delete/{id}', [AddToController::class, 'deleteCartItem']);
     Route::delete('cart/deleteAll', [AddToController::class, 'deleteAllCartItems']);
 
-    // Order 
+    // Order
     Route::post('order/add', [OrderController::class, 'createOrder'])->middleware(['blockSupplierOrder']);
     Route::get('order/show', [OrderController::class, 'showOrder']);
-    //supplier/orders المورد
+    // supplier/orders المورد
     Route::get('supplier/orders', [SupplierOrderController::class, 'supplierOrders']);
     Route::patch('supplier/orders/{id}/status', [SupplierOrderController::class, 'updateStatus']);
 
@@ -235,7 +236,7 @@ Route::middleware('auth:api')->group(function () {
 
     // تنزيل فاتورة PDF للطلب
     Route::get('/supplier-orders/{id}/invoice', [SupplierOrderController::class, 'generateSupplierOrderInvoice']);
-    //orders Seller 
+    // orders Seller
     Route::get('sellerPosition', [OrderController::class, 'getpositionSellersByApprovedOrders']);
     Route::get('sellerApprovedOrdershow', [OrderController::class, 'showCurrentSellerApprovedOrders']);
     Route::get('ALLorder/show/forSeller', [OrderController::class, 'sellerOrdersForCustomers']);
@@ -272,17 +273,17 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-    //طلب سحب ارباح 
+    // طلب سحب ارباح
 
     //  عرض ارباجحهة الحاليه المندوب
     Route::get('/seller/myProfits', [SellerCustomerController::class, 'myProfits']);
-    //سحب كل 
+    // سحب كل
     Route::post('/seller/withdraw', [SellerCustomerController::class, 'requestWithdraw']);
-    //سحب جزء 
+    // سحب جزء
     Route::post('/seller/withdraw', [SellerCustomerController::class, 'requestWithdrawpart']);
     // عرض طلبا السحب
     Route::get('/seller/withdraws', [SellerCustomerController::class, 'myWithdraws']);
-    //فاتورا 
+    // فاتورا
     Route::get('/orders/{id}/invoice', [OrderController::class, 'generateInvoice']);
 });
 
@@ -299,7 +300,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     // ربط منتجات بمورد
     Route::post('suppliers/{supplierId}/products/attach', [
         SupplierProductController::class,
-        'attachProduct'
+        'attachProduct',
     ]);
     // حذف منتج من المورد
     Route::post('suppliers/{supplierId}/products/detach', [SupplierProductController::class, 'detachProduct']);
@@ -309,7 +310,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     // جلب الموردين المرتبطين بمنتج معيّن
     Route::get('products/{productId}/suppliers', [
         SupplierProductController::class,
-        'productSuppliers'
+        'productSuppliers',
     ]);
     // أدمن
     Route::post('orders/supplier-create', [SupplierOrderController::class, 'store']);
@@ -322,7 +323,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
         ->name('suppliers.products.export-data');
     // تنزيل كل فواتير المورد
     Route::get('/supplier-orders/{supplierId}/invoices', [SupplierOrderController::class, 'downloadAllInvoices']);
-    //جلب كل الموردين 
+    // جلب كل الموردين
     Route::get('/suppliers', [UserController::class, 'getSuppliers']);
     // Category
     Route::post('categorie/add', [CategorieController::class, 'AddCate']);
@@ -348,7 +349,7 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::post('user/update/{id}', [UserController::class, 'userUpdate']);
     Route::delete('user/delete/{id}', [UserController::class, 'UserDelete']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateOrderStatus']);
-    //seller 
+    // seller
     Route::get('/seller/customers', [SellerCustomerController::class, 'index']);
     Route::get('/seller/customers/{id}', [SellerCustomerController::class, 'show']);
     Route::get('/seller/customers/{id}/orders', [SellerCustomerController::class, 'customerOrders']);
@@ -358,17 +359,17 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     Route::delete('/seller/customers/{id}', [SellerCustomerController::class, 'destroy']);
     // 🔥 مسار إرسال إشعار من الأدمن
     Route::post('/notifications/send', [NotificationController::class, 'sendByAdmin']);
-    //offers
+    // offers
     Route::post('/offers', [OfferController::class, 'store']);
     Route::post('/offers/{id}', [OfferController::class, 'update']);
     Route::delete('/offers/{id}', [OfferController::class, 'destroy']);
-    //inquiries
+    // inquiries
     Route::get('/inquiries', [InquiryController::class, 'index']);
     Route::patch('/inquiries/{id}/status', [InquiryController::class, 'updateStatus']);
-    //settings
+    // settings
     Route::post('settings/create', [SettingController::class, 'create']);
     Route::post('settings/update', [SettingController::class, 'update']);
-    //all orders// and //by seller
+    // all orders// and //by seller
     Route::get('allorderbyseller', [OrderController::class, 'showAllOrdersBySellers']);
     Route::get('allorderbyseller/ApprovedOrders', [OrderController::class, 'showApprovedOrdersBySellers']);
     Route::get('orders/customers', [OrderController::class, 'showAllOrdersWithoutSeller']);
@@ -376,16 +377,16 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
 
     // عملاء (بدون seller_id)
     Route::post('/orders/import/customers', [OrderController::class, 'importCustomerOrders']);
-    //اضافه ارباح لي orders لي seller
+    // اضافه ارباح لي orders لي seller
     Route::post('/orders/{id}/add-profit', [OrderController::class, 'addSellerProfit']);
     // بائعون (approved فقط)
     Route::post('/orders/import/sellers/approved', [OrderController::class, 'importApprovedSellerOrders']);
-    //عرض ارباح المنديب
+    // عرض ارباح المنديب
     Route::get('/sellersProfits', [SellerCustomerController::class, 'sellersProfits']);
-    //موافقه او رفض طلب سحب الارباح 
+    // موافقه او رفض طلب سحب الارباح
     // الإدمن
     Route::get('/withdraw-requests', [SellerCustomerController::class, 'allWithdrawRequests']);
-    //موافقه او رفض طلب سحب الارباح 
+    // موافقه او رفض طلب سحب الارباح
     Route::patch('/withdraw-requests/{id}', [SellerCustomerController::class, 'updateWithdrawStatus']);
     Route::post('/withdraws/{id}/approve', [SellerCustomerController::class, 'approveWithdraw']);
 });
