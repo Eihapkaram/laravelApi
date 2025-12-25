@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\SupplierOrder;
 use App\Models\SupplierOrderItem;
 use App\Notifications\SupplierOrderCreated;
@@ -27,7 +28,7 @@ class SupplierOrderController extends Controller
         ]);
 
         // تأكد إن اللي بينفذ أدمن
-        if (! auth()->user()->is_admin) {
+        if (auth()->user()->role !== 'admin') {
             return response()->json(['message' => 'غير مصرح'], 403);
         }
 
@@ -165,12 +166,10 @@ class SupplierOrderController extends Controller
 
         // التأكد إن المستخدم يحق له الوصول: المورد نفسه أو الأدمن اللي أنشأ الطلب
         $user = auth()->user();
-
         if (
-            ! (
-                $user->role === 'admin' ||
-                ($user->role === 'supplier' && $user->id === $order->supplier_id)
-            )
+            $user->id !== $order->supplier_id &&
+            $user->id !== $order->created_by &&
+            $user->role !== 'admin'
         ) {
             return response()->json(['message' => 'غير مصرح'], 403);
         }
@@ -259,12 +258,8 @@ class SupplierOrderController extends Controller
     {
         $user = auth()->user();
 
-        if (
-            ! (
-                $user->role === 'admin' ||
-                ($user->role === 'supplier' && $user->id == $supplierId)
-            )
-        ) {
+        // فقط الأدمن أو المورد نفسه
+        if ($user->role !== 'admin' && $user->id != $supplierId) {
             return response()->json(['message' => 'غير مصرح'], 403);
         }
 
