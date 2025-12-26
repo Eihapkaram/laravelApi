@@ -22,12 +22,12 @@ class SupplierOrderResponded extends Notification
 
         // رسالة حسب حالة الطلب
         if ($this->order->status === 'preparing') {
-            $message = 'المورد قبل طلب التجهيز';
+            $message = "{$supplier->name} قبل طلب التجهيز";
         } elseif ($this->order->status === 'cancelled') {
             $reason = $this->order->supplier_reject_reason ?? 'بدون سبب محدد';
-            $message = "المورد رفض طلب التجهيز. السبب: {$reason}";
+            $message = "{$supplier->name} رفض طلب التجهيز. السبب: {$reason}";
         } else {
-            $message = 'تم تحديث حالة طلب المورد';
+            $message = "تم تحديث حالة طلب {$supplier->name}";
         }
 
         return [
