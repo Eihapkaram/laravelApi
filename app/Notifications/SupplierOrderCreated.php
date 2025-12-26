@@ -16,10 +16,10 @@ class SupplierOrderCreated extends Notification
         return ['database'];
     }
 
-    public function toDatabase($notifiable)
+    public function toArray($notifiable)
     {
         return [
-            'type' => 'supplier_order_created',
+            'title' => 'طلبية جديدة',
             'order_id' => $this->order->id,
             'message' => `لديك طلب تجهيز جديد رقم الطلب  #{$this->order->id}`,
             'status' => $this->order->status,
