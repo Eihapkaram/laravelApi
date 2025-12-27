@@ -63,8 +63,9 @@ class SupplierOrderController extends Controller
             DB::commit();
 
             // إشعار المورد
-            $order->supplier->notify(new SupplierOrderCreated($order));
-
+            $order->supplier->notify(
+    new SupplierOrderCreated($order->id, $order->status)
+);
             return response()->json([
                 'message' => 'تم إنشاء طلب التجهيز بنجاح',
                 'order' => $order->load('items.product', 'supplier'),
