@@ -9,7 +9,10 @@ class SupplierOrderCreated extends Notification
 {
     use Queueable;
 
-    public function __construct(public $order) {}
+    public function __construct(
+        public int $orderId,
+        public string $status
+    ) {}
 
     public function via($notifiable)
     {
@@ -20,9 +23,9 @@ class SupplierOrderCreated extends Notification
     {
         return [
             'title' => 'طلبية جديدة',
-            'order_id' => $this->order->id,
-            'message' => "لديك طلب تجهيز جديد رقم الطلب  #{$this->order->id}",
-            'status' => $this->order->status,
+            'order_id' => $this->orderId,
+            'message' => "لديك طلب تجهيز جديد رقم الطلب #{$this->orderId}",
+            'status' => $this->status,
         ];
     }
 }
