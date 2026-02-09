@@ -16,4 +16,9 @@ use App\Http\Controllers\PaymentController;
 Route::get('/', function () {
     return view('welcome');
 });
+Route::get('/loaderio-c0cab98f0304852a2a162793dd240c05.txt', function () {
+    return response('loaderio-c0cab98f0304852a2a162793dd240c05', 200)
+        ->header('Content-Type', 'text/plain');
+});
+
 Route::get('/paymob/redirect', [PaymentController::class, 'redirect']);
