@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\categorie;
 use App\Models\Page;
 use Illuminate\Http\Request;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use Spatie\QueryBuilder\QueryBuilder;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Spatie\QueryBuilder\QueryBuilder;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PageController extends Controller
@@ -31,7 +32,6 @@ class PageController extends Controller
             'img' => $path,
         ]);
 
-
         $pro = Page::get();
 
         return response()->json([
@@ -42,11 +42,44 @@ class PageController extends Controller
 
     public function showPageProduct()
     {
-        $pro = Page::with('pageproducts', 'categories')->get();
+        $pro = Page::all();
 
         return response()->json([
             'massege' => 'show all page prodcts',
             'pro' => $pro,
+        ]);
+    }
+
+    public function getCategoriesByPageSlug($slug)
+    {
+        $page = Page::where('slug', $slug)
+            ->with('categories')
+            ->first();
+
+        if (! $page) {
+            return response()->json([
+                'message' => 'Page not found',
+            ], 404);
+        }
+
+        return response()->json($page->categories);
+    }
+
+    public function getProductsByCategorySlug($slug)
+    {
+        $category = categorie::where('slug', $slug)
+            ->with('product')
+            ->first();
+
+        if (! $category) {
+            return response()->json([
+                'message' => 'Category not found',
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Products by category slug',
+            'products' => $category->product,
         ]);
     }
 
@@ -83,6 +116,7 @@ class PageController extends Controller
             'data' => Page::get(),
         ]);
     }
+
     public function search(Request $request)
     {
         $products = QueryBuilder::for(Page::query())
@@ -97,10 +131,11 @@ class PageController extends Controller
             'result' => $products,
         ], 200);
     }
+
     // ✅ تصدير البيانات إلى Excel
     public function export()
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
         // رؤوس الأعمدة
@@ -109,15 +144,14 @@ class PageController extends Controller
         $sheet->setCellValue('C1', 'img');
         $sheet->setCellValue('D1', 'Created At');
 
-
         // البيانات
         $pages = Page::all();
         $row = 2;
         foreach ($pages as $page) {
-            $sheet->setCellValue('A' . $row, $page->id);
-            $sheet->setCellValue('B' . $row, $page->slug);
-            $sheet->setCellValue('C' . $row, $page->img);
-            $sheet->setCellValue('D' . $row, $page->created_at);
+            $sheet->setCellValue('A'.$row, $page->id);
+            $sheet->setCellValue('B'.$row, $page->slug);
+            $sheet->setCellValue('C'.$row, $page->img);
+            $sheet->setCellValue('D'.$row, $page->created_at);
             $row++;
         }
 
@@ -151,7 +185,9 @@ class PageController extends Controller
 
         // تخطي أول صف (العناوين)
         foreach ($rows as $index => $row) {
-            if ($index == 1) continue;
+            if ($index == 1) {
+                continue;
+            }
 
             $slug = $row['B'] ?? null;
             if ($slug) {

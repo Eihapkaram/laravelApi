@@ -48,6 +48,7 @@ Route::post('/security-question', [UserController::class, 'getSecurityQuestion']
 Route::post('/resetpassword', [UserController::class, 'resetPassword']);
 Route::post('/reset-password', [UserController::class, 'resetPasswordWithSecurity']);
 Route::get('pro', [ProductController::class, 'index']);
+
 // الأكثر مبيعًا حسب page_id
 Route::get('/products/top-sold/{slug}', [OrderController::class, 'topSellingProductsByPage']);
 
@@ -58,6 +59,9 @@ Route::get('/search/cate', [ProductController::class, 'search']);
 Route::get('/search/category', [ProductController::class, 'searchByCategory']);
 Route::get('/search', [PageController::class, 'search']);
 Route::get('pageProducts/show', [PageController::class, 'showPageProduct']);
+Route::get('/page/{slug}/categories', [PageController::class, 'getCategoriesByPageSlug']);
+Route::get('/category/{slug}/products', [PageController::class, 'getProductsByCategorySlug']);
+
 Route::get('categorie/show', [CategorieController::class, 'showCateProduct']);
 Route::get('/offers/active', [OfferController::class, 'activeOffers']);
 Route::get('/offers', [OfferController::class, 'index']);
@@ -289,6 +293,11 @@ Route::middleware('auth:api')->group(function () {
 
 // 🧑‍💻 Admin Routes
 Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function () {
+    // Cart
+    Route::get('cart/show/users/carts', [AddToController::class, 'showAllUsersCarts']);
+    Route::get('cart/mostAddedProducts', [AddToController::class, 'mostAddedProducts']);
+    Route::get('cart/show/topCustomers', [AddToController::class, 'showAllUsersCarts']);
+
     // Product
     Route::post('create', [ProductController::class, 'create']);
     Route::get('/products/export', [ProductController::class, 'export']);
@@ -389,4 +398,5 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     // موافقه او رفض طلب سحب الارباح
     Route::patch('/withdraw-requests/{id}', [SellerCustomerController::class, 'updateWithdrawStatus']);
     Route::post('/withdraws/{id}/approve', [SellerCustomerController::class, 'approveWithdraw']);
+
 });
