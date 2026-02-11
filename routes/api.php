@@ -293,6 +293,11 @@ Route::middleware('auth:api')->group(function () {
 
 // 🧑‍💻 Admin Routes
 Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function () {
+    // عرض كل الطلبات للأدمن
+    Route::get('/admin/supplier-orders', [SupplierOrderController::class, 'adminAllOrders']);
+
+    // تعديل الحالة للأدمن
+    Route::put('/admin/supplier-orders/{id}/status', [SupplierOrderController::class, 'adminUpdateStatus']);
     // Cart
     Route::get('cart/show/users/carts', [AddToController::class, 'showAllUsersCarts']);
     Route::get('cart/mostAddedProducts', [AddToController::class, 'mostAddedProducts']);

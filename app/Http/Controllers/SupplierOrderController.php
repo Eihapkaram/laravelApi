@@ -79,6 +79,59 @@ class SupplierOrderController extends Controller
             ], 500);
         }
     }
+/**
+ * عرض جميع طلبات الموردين للأدمن
+ */
+public function adminAllOrders()
+{
+    // ✅ تحقق الصلاحية
+    if (auth()->user()->role !== 'admin') {
+        return response()->json([
+            'message' => 'غير مصرح'
+        ], 403);
+    }
+
+    $orders = SupplierOrder::with([
+        'items.product',
+        'supplier',
+        'creator'
+    ])->latest()->get();
+
+    return response()->json([
+        'message' => 'All supplier orders retrieved successfully',
+        'orders' => $orders
+    ]);
+}
+/**
+ * تعديل حالة الطلب بواسطة الأدمن
+ */
+public function adminUpdateStatus(Request $request, $id)
+{
+    // تحقق الصلاحية
+    if (auth()->user()->role !== 'admin') {
+        return response()->json([
+            'message' => 'غير مصرح'
+        ], 403);
+    }
+
+    $request->validate([
+        'status' => 'required|in:draft,sent,preparing,ready,received,cancelled',
+        'notes'  => 'nullable|string'
+    ]);
+
+    $order = SupplierOrder::findOrFail($id);
+
+    $order->update([
+        'status' => $request->status,
+        'notes'  => $request->notes ?? $order->notes,
+        'responded_at' => now()
+    ]);
+
+    return response()->json([
+        'message' => 'تم تحديث حالة الطلب بواسطة الأدمن',
+        'order' => $order->load('items.product', 'supplier')
+    ]);
+}
 
     /**
      * عرض طلبات المورد (للمورد نفسه)
