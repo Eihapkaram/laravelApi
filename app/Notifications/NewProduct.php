@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -12,6 +11,7 @@ class NewProduct extends Notification
     use Queueable;
 
     protected $user;
+
     protected $product;
 
     /**
@@ -58,7 +58,7 @@ class NewProduct extends Notification
     {
         return [
             'title' => '🛍️ منتج جديد تمت إضافته',
-            'message' => "تمت إضافة المنتج '{$this->product->titel}' بواسطة جملة الجمله ",
+            'message' => "تمت إضافة المنتج '{$this->product->titel}' بواسطة تاجر البلد ",
             'product_id' => $this->product->id,
             'price' => $this->product->price,
         ];
