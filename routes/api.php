@@ -232,8 +232,10 @@ Route::middleware('auth:api')->group(function () {
     Route::get('order/show', [OrderController::class, 'showOrder']);
     // supplier/orders المورد
     Route::get('supplier/orders', [SupplierOrderController::class, 'supplierOrders']);
-    Route::patch('supplier/orders/{id}/status', [SupplierOrderController::class, 'updateStatus']);
-
+    Route::post(
+        '/supplier-orders/{id}/status',
+        [SupplierOrderController::class, 'updateStatus']
+    );
     // المورد
     Route::post('supplier/orders/{id}/accept', [SupplierOrderController::class, 'accept']);
     Route::post('supplier/orders/{id}/reject', [SupplierOrderController::class, 'reject']);
@@ -403,5 +405,4 @@ Route::middleware(['auth:api', 'UserRole'])->prefix('dashboard')->group(function
     // موافقه او رفض طلب سحب الارباح
     Route::patch('/withdraw-requests/{id}', [SellerCustomerController::class, 'updateWithdrawStatus']);
     Route::post('/withdraws/{id}/approve', [SellerCustomerController::class, 'approveWithdraw']);
-
 });

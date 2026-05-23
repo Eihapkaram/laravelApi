@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\SupplierOrder;
 use App\Models\SupplierOrderItem;
+use App\Models\User;
 use App\Notifications\SupplierOrderCreated;
 use App\Notifications\SupplierOrderResponded;
+use App\Notifications\SupplierOrderStatusUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Mpdf\Mpdf;
@@ -64,8 +66,9 @@ class SupplierOrderController extends Controller
 
             // إشعار المورد
             $order->supplier->notify(
-    new SupplierOrderCreated($order->id, $order->status)
-);
+                new SupplierOrderCreated($order->id, $order->status)
+            );
+
             return response()->json([
                 'message' => 'تم إنشاء طلب التجهيز بنجاح',
                 'order' => $order->load('items.product', 'supplier'),
@@ -79,59 +82,61 @@ class SupplierOrderController extends Controller
             ], 500);
         }
     }
-/**
- * عرض جميع طلبات الموردين للأدمن
- */
-public function adminAllOrders()
-{
-    // ✅ تحقق الصلاحية
-    if (auth()->user()->role !== 'admin') {
+
+    /**
+     * عرض جميع طلبات الموردين للأدمن
+     */
+    public function adminAllOrders()
+    {
+        // ✅ تحقق الصلاحية
+        if (auth()->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'غير مصرح',
+            ], 403);
+        }
+
+        $orders = SupplierOrder::with([
+            'items.product',
+            'supplier',
+            'creator',
+        ])->latest()->get();
+
         return response()->json([
-            'message' => 'غير مصرح'
-        ], 403);
+            'message' => 'All supplier orders retrieved successfully',
+            'orders' => $orders,
+        ]);
     }
 
-    $orders = SupplierOrder::with([
-        'items.product',
-        'supplier',
-        'creator'
-    ])->latest()->get();
+    /**
+     * تعديل حالة الطلب بواسطة الأدمن
+     */
+    public function adminUpdateStatus(Request $request, $id)
+    {
+        // تحقق الصلاحية
+        if (auth()->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'غير مصرح',
+            ], 403);
+        }
 
-    return response()->json([
-        'message' => 'All supplier orders retrieved successfully',
-        'orders' => $orders
-    ]);
-}
-/**
- * تعديل حالة الطلب بواسطة الأدمن
- */
-public function adminUpdateStatus(Request $request, $id)
-{
-    // تحقق الصلاحية
-    if (auth()->user()->role !== 'admin') {
+        $request->validate([
+            'status' => 'required|in:draft,sent,preparing,ready,received,cancelled',
+            'notes' => 'nullable|string',
+        ]);
+
+        $order = SupplierOrder::findOrFail($id);
+
+        $order->update([
+            'status' => $request->status,
+            'notes' => $request->notes ?? $order->notes,
+            'responded_at' => now(),
+        ]);
+
         return response()->json([
-            'message' => 'غير مصرح'
-        ], 403);
+            'message' => 'تم تحديث حالة الطلب بواسطة الأدمن',
+            'order' => $order->load('items.product', 'supplier'),
+        ]);
     }
-
-    $request->validate([
-        'status' => 'required|in:draft,sent,preparing,ready,received,cancelled',
-        'notes'  => 'nullable|string'
-    ]);
-
-    $order = SupplierOrder::findOrFail($id);
-
-    $order->update([
-        'status' => $request->status,
-        'notes'  => $request->notes ?? $order->notes,
-        'responded_at' => now()
-    ]);
-
-    return response()->json([
-        'message' => 'تم تحديث حالة الطلب بواسطة الأدمن',
-        'order' => $order->load('items.product', 'supplier')
-    ]);
-}
 
     /**
      * عرض طلبات المورد (للمورد نفسه)
@@ -159,7 +164,21 @@ public function adminUpdateStatus(Request $request, $id)
             ->where('supplier_id', auth()->id())
             ->firstOrFail();
 
-        $order->update(['status' => $request->status]);
+        $order->update([
+            'status' => $request->status,
+        ]);
+
+        // تحميل بيانات المورد
+        $order->load('supplier');
+
+        // إرسال إشعار لكل الأدمنز
+        $admins = User::where('role', 'admin')->get();
+
+        foreach ($admins as $admin) {
+            $admin->notify(
+                new SupplierOrderStatusUpdated($order)
+            );
+        }
 
         return response()->json([
             'message' => 'تم تحديث حالة الطلب',
@@ -232,7 +251,7 @@ public function adminUpdateStatus(Request $request, $id)
         $user = auth()->user();
 
         if (
-            !(
+            ! (
                 $user->role === 'admin' ||
                 ($user->role === 'supplier' && $user->id === $order->supplier_id)
             )
@@ -240,9 +259,8 @@ public function adminUpdateStatus(Request $request, $id)
             return response()->json(['message' => 'غير مصرح'], 403);
         }
 
-
         $settings = Setting::first();
-        $logoPath = $settings && $settings->logo ? public_path('storage/' . $settings->logo) : null;
+        $logoPath = $settings && $settings->logo ? public_path('storage/'.$settings->logo) : null;
 
         $html = '
     <html lang="ar" dir="rtl">
@@ -261,18 +279,18 @@ public function adminUpdateStatus(Request $request, $id)
     </head>
     <body>
         <div align="center">'
-            . (file_exists($logoPath) ? '<img src="' . $logoPath . '" width="120">' : '') . '
+            .(file_exists($logoPath) ? '<img src="'.$logoPath.'" width="120">' : '').'
             <h3>فاتورة طلب المورد</h3>
         </div>
 
-        <p><strong>رقم الطلب:</strong> ' . $order->id . '</p>
-        <p><strong>تاريخ الطلب:</strong> ' . $order->created_at->format('Y-m-d') . '</p>
-        <p><strong>حالة الطلب:</strong> ' . $order->status . '</p>
+        <p><strong>رقم الطلب:</strong> '.$order->id.'</p>
+        <p><strong>تاريخ الطلب:</strong> '.$order->created_at->format('Y-m-d').'</p>
+        <p><strong>حالة الطلب:</strong> '.$order->status.'</p>
 
         <h4>معلومات المورد</h4>
-        <p><strong>الاسم:</strong> ' . $order->supplier->name . '</p>
-        <p><strong>الهاتف:</strong> ' . $order->supplier->phone . '</p>
-        <p><strong>البريد الإلكتروني:</strong> ' . $order->supplier->email . '</p>
+        <p><strong>الاسم:</strong> '.$order->supplier->name.'</p>
+        <p><strong>الهاتف:</strong> '.$order->supplier->phone.'</p>
+        <p><strong>البريد الإلكتروني:</strong> '.$order->supplier->email.'</p>
 
         <table>
             <thead>
@@ -287,10 +305,10 @@ public function adminUpdateStatus(Request $request, $id)
 
         foreach ($order->items as $item) {
             $html .= '<tr>
-            <td>' . $item->product->titel . '</td>
-            <td>' . $item->quantity . '</td>
-            <td>' . number_format(round($item->supplier_price), 2) . '</td>
-            <td>' . number_format(round($item->total_price), 2) . '</td>
+            <td>'.$item->product->titel.'</td>
+            <td>'.$item->quantity.'</td>
+            <td>'.number_format(round($item->supplier_price), 2).'</td>
+            <td>'.number_format(round($item->total_price), 2).'</td>
         </tr>';
         }
 
@@ -298,11 +316,11 @@ public function adminUpdateStatus(Request $request, $id)
             </tbody>
         </table>
 
-        <p class="total"><strong>المجموع الكلي:</strong> ' . number_format(round($order->total_price), 2) . '</p>
+        <p class="total"><strong>المجموع الكلي:</strong> '.number_format(round($order->total_price), 2).'</p>
 
         <div class="signature" align="left">
             <p>توقيع الشركة:</p>
-            ' . ($settings && $settings->site_name ? '<strong>' . $settings->site_name . '</strong>' : '') . '
+            '.($settings && $settings->site_name ? '<strong>'.$settings->site_name.'</strong>' : '').'
         </div>
     </body>
     </html>';
@@ -311,14 +329,14 @@ public function adminUpdateStatus(Request $request, $id)
             'tempDir' => storage_path('app/mpdf_temp'),
             'mode' => 'utf-8',
             'format' => 'A4',
-            'default_font' => 'dejavusans'
+            'default_font' => 'dejavusans',
         ]);
 
         $mpdf->WriteHTML($html);
 
         return response()->streamDownload(function () use ($mpdf) {
             echo $mpdf->Output('', 'S');
-        }, 'supplier-order-' . $order->id . '.pdf');
+        }, 'supplier-order-'.$order->id.'.pdf');
     }
 
     /**
@@ -329,14 +347,13 @@ public function adminUpdateStatus(Request $request, $id)
         $user = auth()->user();
 
         if (
-            !(
+            ! (
                 $user->role === 'admin' ||
                 ($user->role === 'supplier' && $user->id == $supplierId)
             )
         ) {
             return response()->json(['message' => 'غير مصرح'], 403);
         }
-
 
         $orders = SupplierOrder::where('supplier_id', $supplierId)
             ->with('items.product', 'supplier')
@@ -346,9 +363,9 @@ public function adminUpdateStatus(Request $request, $id)
             return response()->json(['message' => 'لا توجد طلبات لهذا المورد'], 404);
         }
 
-        $zip = new \ZipArchive();
-        $zipName = 'supplier_orders_' . $supplierId . '.zip';
-        $zipPath = storage_path('app/public/' . $zipName);
+        $zip = new \ZipArchive;
+        $zipName = 'supplier_orders_'.$supplierId.'.zip';
+        $zipPath = storage_path('app/public/'.$zipName);
 
         if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
             return response()->json(['message' => 'فشل في إنشاء ملف مضغوط'], 500);
@@ -356,7 +373,7 @@ public function adminUpdateStatus(Request $request, $id)
 
         foreach ($orders as $order) {
             $pdfContent = $this->generateSupplierOrderInvoiceHtml($order); // ترجع المحتوى HTML
-            $mpdf = new \Mpdf\Mpdf(['tempDir' => storage_path('app/mpdf_temp'), 'mode' => 'utf-8', 'format' => 'A4', 'default_font' => 'dejavusans']);
+            $mpdf = new Mpdf(['tempDir' => storage_path('app/mpdf_temp'), 'mode' => 'utf-8', 'format' => 'A4', 'default_font' => 'dejavusans']);
             $mpdf->WriteHTML($pdfContent);
             $pdfData = $mpdf->Output('', 'S');
 
