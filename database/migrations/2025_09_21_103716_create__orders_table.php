@@ -22,8 +22,8 @@ return new class extends Migration
             $table->decimal('total_price', 10, 2);
             $table->text('shipping_address')->nullable();
             $table->enum('payment_method', ['cod', 'credit_card', 'paypal'])->default('cod');
-             $table->string('store_banner')->nullable();
-             // ✅ حالة موافقة العميل
+            $table->string('store_banner')->nullable();
+            // ✅ حالة موافقة العميل
             $table->enum('approval_status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->timestamp('approved_at')->nullable();
             $table->string('city')->nullable();

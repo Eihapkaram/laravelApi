@@ -2,27 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use Mpdf\Mpdf;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use App\Models\Order;
-use App\Models\product;
 use App\Models\Page;
-use App\Notifications\CreatOrder;
-use App\Notifications\NewOrderNotification;
-use App\Notifications\UpdateOrder;
+use App\Models\product;
 use App\Models\Setting;
 use App\Models\User;
-use Illuminate\Support\Facades\Notification;
-use Illuminate\Notifications\Notifiable;
-use App\Notifications\OrderCreatedBySellerNotification;
-use App\Notifications\NewOrderForSupplierNotification;
+use App\Notifications\CreatOrder;
 use App\Notifications\LowStockNotification;
+use App\Notifications\NewOrderForSupplierNotification;
+use App\Notifications\NewOrderNotification;
 use App\Notifications\OrderApprovedNotification;
+use App\Notifications\OrderCreatedBySellerNotification;
 use App\Notifications\OrderRejectedNotification;
+use App\Notifications\UpdateOrder;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Validator;
+use Mpdf\Mpdf;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class OrderController extends Controller
 {
@@ -31,45 +30,44 @@ class OrderController extends Controller
     {
         $user = auth()->user();
 
-
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'غير مصرح. برجاء تسجيل الدخول أولاً.'], 401);
         }
 
         $validator = Validator::make($request->all(), [
-            'city'         => 'required|string|max:100',
-            'governorate'  => 'required|string|max:100',
-            'street'       => 'required|string|max:255',
-            'phone'        => ['required', 'regex:/^(010|011|012|015)[0-9]{8}$/'],
-            'store_name'   => 'nullable|string|max:255',
-            'status'       => 'nullable|string|in:pending,paid,shipped,completed,cancelled',
+            'city' => 'required|string|max:100',
+            'governorate' => 'required|string|max:100',
+            'street' => 'required|string|max:255',
+            'phone' => ['required', 'regex:/^(010|011|012|015)[0-9]{8}$/'],
+            'store_name' => 'nullable|string|max:255',
+            'status' => 'nullable|string|in:pending,paid,shipped,completed,cancelled',
             'payment_method' => 'nullable|string|in:cod,credit_card,paypal',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'خطأ في التحقق من البيانات',
-                'errors'  => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $cart = $user->getcart()->with('proCItem.product')->first();
 
-        if (!$cart || $cart->proCItem->isEmpty()) {
+        if (! $cart || $cart->proCItem->isEmpty()) {
             return response()->json(['message' => 'السلة فارغة'], 400);
         }
 
-        $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
+        $total = $cart->proCItem->sum(fn ($item) => $item->quantity * $item->product->price);
 
         $order = Order::create([
-            'user_id'        => $user->id,
-            'total_price'    => $total,
-            'status'         => $request->status ?? 'pending',
-            'city'           => $request->city,
-            'governorate'    => $request->governorate,
-            'street'         => $request->street,
-            'phone'          => $request->phone,
-            'store_name'     => $request->store_name,
+            'user_id' => $user->id,
+            'total_price' => $total,
+            'status' => $request->status ?? 'pending',
+            'city' => $request->city,
+            'governorate' => $request->governorate,
+            'street' => $request->street,
+            'phone' => $request->phone,
+            'store_name' => $request->store_name,
             'payment_method' => $request->payment_method,
 
         ]);
@@ -86,8 +84,8 @@ class OrderController extends Controller
         foreach ($cart->proCItem as $item) {
             $order->orderdetels()->create([
                 'product_id' => $item->product_id,
-                'quantity'   => $item->quantity,
-                'price'      => $item->product->price,
+                'quantity' => $item->quantity,
+                'price' => $item->product->price,
             ]);
         }
 
@@ -95,89 +93,121 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'تم إنشاء الطلب بنجاح',
-            'order'   => $order->load('orderdetels.product')
+            'order' => $order->load('orderdetels.product'),
         ], 201);
     }
 
-
     public function createBySeller(Request $request)
     {
-        $user = auth()->user(); // ممكن يكون admin أو seller
+        $user = auth()->user();
 
-        if (!in_array($user->role, ['admin', 'seller'])) {
+        if (! in_array($user->role, ['admin', 'seller'])) {
             return response()->json(['error' => 'غير مصرح لك بإنشاء طلبات'], 403);
         }
 
         $request->validate([
-            'user_id'        => 'required|exists:users,id',
-            'city'           => 'required|string|max:100',
-            'governorate'    => 'required|string|max:100',
-            'street'         => 'required|string|max:255',
-            'phone'          => ['required', 'regex:/^(010|011|012|015)[0-9]{8}$/'],
-            'store_name'     => 'nullable|string|max:255',
-            'status'         => 'nullable|string|in:pending,paid,shipped,completed,cancelled',
+            'user_id' => 'required|exists:users,id',
+            'city' => 'required|string|max:100',
+            'governorate' => 'required|string|max:100',
+            'street' => 'required|string|max:255',
+            'phone' => ['required', 'regex:/^(010|011|012|015)[0-9]{8}$/'],
+            'store_name' => 'nullable|string|max:255',
+
+            // ✅ البنر
+            'store_banner' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+
+            'status' => 'nullable|string|in:pending,paid,shipped,completed,cancelled',
             'payment_method' => 'nullable|string|in:cod,credit_card,paypal',
         ]);
 
         $recipient = User::find($request->user_id);
 
-        // السماح للـ Admin بعمل Order لأي مستخدم بما في ذلك Supplier
         if ($user->role === 'seller' && $recipient->role !== 'customer') {
             return response()->json(['error' => 'يمكنك فقط إنشاء طلبات لعملاء'], 403);
         }
 
+        // ✅ رفع البنر
+        $storeBannerPath = null;
+
+        if ($request->hasFile('store_banner')) {
+
+            $banner = $request->file('store_banner');
+
+            $bannerName = time().'_'.str_replace(' ', '_', $banner->getClientOriginalName());
+
+            $storeBannerPath = $banner->storeAs(
+                'store_banners',
+                $bannerName,
+                'public'
+            );
+        }
+
         $cart = $user->getcart()->with('proCItem.product')->first();
 
-        if (!$cart || $cart->proCItem->isEmpty()) {
+        if (! $cart || $cart->proCItem->isEmpty()) {
             return response()->json(['message' => 'السلة فارغة'], 400);
         }
 
-        $total = $cart->proCItem->sum(fn($item) => $item->quantity * $item->product->price);
+        $total = $cart->proCItem->sum(
+            fn ($item) => $item->quantity * $item->product->price
+        );
 
         $order = Order::create([
-            'user_id'        => $recipient->id,
-            'seller_id'      => $user->role === 'seller' ? $user->id : null,
-            'total_price'    => $total,
-            'status'         => $request->status ?? 'pending',
-            'city'           => $request->city,
-            'governorate'    => $request->governorate,
-            'street'         => $request->street,
-            'phone'          => $request->phone,
-            'store_name'     => $request->store_name,
+            'user_id' => $recipient->id,
+            'seller_id' => $user->role === 'seller' ? $user->id : null,
+            'total_price' => $total,
+            'status' => $request->status ?? 'pending',
+            'city' => $request->city,
+            'governorate' => $request->governorate,
+            'street' => $request->street,
+            'phone' => $request->phone,
+            'store_name' => $request->store_name,
+
+            // ✅ حفظ البنر
+            'store_banner' => $storeBannerPath,
+
             'payment_method' => $request->payment_method,
-            'approval_status' => $recipient->role === 'supplier' ? 'pending' : 'pending',
-            // ✅ إذا المستلم Supplier يبقى pending للموافقة
+            'approval_status' => 'pending',
         ]);
 
         foreach ($cart->proCItem as $item) {
+
             $order->orderdetels()->create([
                 'product_id' => $item->product_id,
-                'quantity'   => $item->quantity,
-                'price'      => $item->product->price,
+                'quantity' => $item->quantity,
+                'price' => $item->product->price,
             ]);
         }
 
-       // إشعارات
-if ($order) {
-    // إشعار لجميع الأدمن
-    $admins = User::where('role', 'admin')->get();
-    Notification::send($admins, new CreatOrder($user, $order));
+        // إشعارات
+        if ($order) {
 
-    // إشعار للمستلم حسب دوره
-    if ($recipient->role === 'supplier') {
-        // إشعار للمورد عند استلام طلبية
-        $recipient->notify(new NewOrderForSupplierNotification($order, $user));
-    } else {
-        // إشعار للبقية (مثل العملاء)
-        $recipient->notify(new OrderCreatedBySellerNotification($order, $user));
-    }
-}
+            $admins = User::where('role', 'admin')->get();
+
+            Notification::send(
+                $admins,
+                new CreatOrder($user, $order)
+            );
+
+            if ($recipient->role === 'supplier') {
+
+                $recipient->notify(
+                    new NewOrderForSupplierNotification($order, $user)
+                );
+
+            } else {
+
+                $recipient->notify(
+                    new OrderCreatedBySellerNotification($order, $user)
+                );
+            }
+        }
 
         $cart->proCItem()->truncate();
 
         return response()->json([
             'message' => 'تم إنشاء الطلب بنجاح',
-            'order'   => $order->load('orderdetels.product', 'userorder'),
+            'order' => $order->load('orderdetels.product', 'userorder'),
         ], 201);
     }
 
@@ -196,8 +226,10 @@ if ($order) {
             'approved_at' => now(),
         ]);
         $order->seller->notify(new OrderApprovedNotification($order, $user));
-        return response()->json(['message' => 'تمت الموافقة على الطلب', 'order' => $order->load('orderdetels.product', 'userorder'),]);
+
+        return response()->json(['message' => 'تمت الموافقة على الطلب', 'order' => $order->load('orderdetels.product', 'userorder')]);
     }
+
     // ✅ رفض الطلب
     public function rejectOrder($id)
     {
@@ -211,8 +243,7 @@ if ($order) {
         $order->update(['approval_status' => 'rejected']);
         $order->seller->notify(new OrderRejectedNotification($order, $user));
 
-
-        return response()->json(['message' => 'تم رفض الطلب', 'order' => $order->load('orderdetels.product', 'userorder'),]);
+        return response()->json(['message' => 'تم رفض الطلب', 'order' => $order->load('orderdetels.product', 'userorder')]);
     }
 
     // عرض  عدد طلبات المستخدم الحالي
@@ -223,7 +254,7 @@ if ($order) {
 
         return response()->json([
             'message' => 'تم جلب  عدد الطلبات الخاصة بك بنجاح',
-            'orderCount'   => $order,
+            'orderCount' => $order,
         ], 200);
     }
     // عرض طلبات المستخدم الحالي sales
@@ -240,7 +271,7 @@ if ($order) {
 
         return response()->json([
             'message' => 'تم جلب الطلبات الخاصة بك بنجاح',
-            'order'   => $order,
+            'order' => $order,
         ], 200);
     }
 
@@ -254,9 +285,10 @@ if ($order) {
 
         return response()->json([
             'message' => 'تم جلب كل الطلبات التي لم يتم إنشاؤها بواسطة بائع',
-            'orders'  => $orders,
+            'orders' => $orders,
         ], 200);
     }
+
     public function showApprovedOrdersBySellers()
     {
         // ✅ جلب الطلبات التي أنشأها بائع وتمت الموافقة عليها فقط
@@ -268,7 +300,7 @@ if ($order) {
 
         return response()->json([
             'message' => 'تم جلب الطلبات الموافق عليها التي قام بها البائعون بنجاح',
-            'orders'  => $orders,
+            'orders' => $orders,
         ], 200);
     }
 
@@ -282,7 +314,7 @@ if ($order) {
 
         return response()->json([
             'message' => 'تم جلب كل الطلبات التي قام بها البائعون بنجاح',
-            'orders'  => $orders,
+            'orders' => $orders,
         ], 200);
     }
 
@@ -305,7 +337,7 @@ if ($order) {
 
         return response()->json([
             'message' => 'تم جلب الطلبات التي أنشأها البائع للعملاء بنجاح',
-            'orders'  => $orders
+            'orders' => $orders,
         ], 200);
     }
 
@@ -327,10 +359,9 @@ if ($order) {
 
         return response()->json([
             'message' => 'تم جلب عدد الطلبات التي أنشأها البائع للعملاء',
-            'count' => $count
+            'count' => $count,
         ], 200);
     }
-
 
     // عرض آخر طلب
     public function showlatestOrder()
@@ -357,10 +388,11 @@ if ($order) {
 
         return response()->json([
             'message' => 'تم جلب جميع الطلبات بنجاح',
-            'orders'  => $orders,
+            'orders' => $orders,
         ], 200);
     }
-    //لعرض الطلبات الي عملها seller لي costomer ووافق عليها costomer
+
+    // لعرض الطلبات الي عملها seller لي costomer ووافق عليها costomer
     public function showCurrentSellerApprovedOrders()
     {
         $sellerId = auth()->id(); // 🧩 البائع الحالي
@@ -374,11 +406,11 @@ if ($order) {
 
         return response()->json([
             'message' => 'تم جلب الطلبات التي أنشأها هذا البائع ووافق عليها العملاء بنجاح',
-            'orders'  => $orders,
+            'orders' => $orders,
         ], 200);
     }
 
-    //جلب المنديب ب الترتيب حسب الي عمل اوردارات اكتر وتم اكملها 
+    // جلب المنديب ب الترتيب حسب الي عمل اوردارات اكتر وتم اكملها
     public function getpositionSellersByApprovedOrders()
     {
         // ✅ جلب البائعين مع عدد الطلبات الموافق عليها فقط
@@ -394,7 +426,8 @@ if ($order) {
             'sellers' => $sellers,
         ], 200);
     }
-    // اضافه الارباح علي طلبيات المنديب 
+
+    // اضافه الارباح علي طلبيات المنديب
     public function addSellerProfit(Request $request, $orderId)
     {
         $admin = auth()->user();
@@ -409,7 +442,7 @@ if ($order) {
 
         $order = Order::with('seller')->find($orderId);
 
-        if (!$order) {
+        if (! $order) {
             return response()->json(['message' => 'الطلب غير موجود'], 404);
         }
 
@@ -426,7 +459,7 @@ if ($order) {
 
         return response()->json([
             'message' => 'تمت إضافة أرباح المندوب بنجاح',
-            'order' => $order->only(['id', 'seller_id', 'seller_profit', 'total_price'])
+            'order' => $order->only(['id', 'seller_id', 'seller_profit', 'total_price']),
         ], 200);
     }
 
@@ -436,7 +469,7 @@ if ($order) {
         $user = auth()->user();
         $order = Order::find($id);
 
-        if (!$order) {
+        if (! $order) {
             return response()->json(['message' => 'الطلب غير موجود'], 404);
         }
 
@@ -452,23 +485,23 @@ if ($order) {
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'خطأ في التحقق من الحالة الجديدة',
-                'errors'  => $validator->errors(),
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         // لو المستخدم العادي بيحاول يعدل
         if ($user->role !== 'admin') {
             // الحالات المسموح بها فقط للمستخدم
-            if (!in_array($request->status, ['pending', 'cancelled'])) {
+            if (! in_array($request->status, ['pending', 'cancelled'])) {
                 return response()->json([
-                    'message' => 'يمكنك فقط إلغاء الطلب أو إرجاعه لحالة الانتظار'
+                    'message' => 'يمكنك فقط إلغاء الطلب أو إرجاعه لحالة الانتظار',
                 ], 403);
             }
 
             // لا يمكن تعديل حالة الطلب بعد الشحن أو الإكمال
             if (in_array($order->status, ['shipped', 'completed'])) {
                 return response()->json([
-                    'message' => 'لا يمكنك تعديل الطلب بعد شحنه أو إكماله'
+                    'message' => 'لا يمكنك تعديل الطلب بعد شحنه أو إكماله',
                 ], 403);
             }
         }
@@ -483,7 +516,7 @@ if ($order) {
                     // تأكد إن المخزون يكفي، لو مش كفاية رجّع رسالة خطأ
                     if ($product->stock < $item->quantity) {
                         return response()->json([
-                            'message' => "المخزون غير كافي للمنتج: {$product->titel}"
+                            'message' => "المخزون غير كافي للمنتج: {$product->titel}",
                         ], 400);
                     }
 
@@ -498,10 +531,9 @@ if ($order) {
             }
         }
 
-
         return response()->json([
             'message' => 'تم تحديث حالة الطلب بنجاح',
-            'order'   => $order,
+            'order' => $order,
         ], 200);
         if ($order) {
             // جيب كل المستخدمين اللي رولهم أدمن
@@ -511,20 +543,21 @@ if ($order) {
             Notification::send($admins, new UpdateOrder($user));
         }
     }
+
     public function topSellingProductsByPage($slug)
     {
         // التحقق هل الصفحة موجودة عبر الـ slug
         $page = Page::where('slug', $slug)->first();
 
-        if (!$page) {
+        if (! $page) {
             return response()->json([
                 'success' => false,
-                'message' => 'الصفحة غير موجودة'
+                'message' => 'الصفحة غير موجودة',
             ], 404);
         }
 
         // جلب أعلى المنتجات مبيعاً اعتماداً على page_id
-        $products = Product::where('page_id', $page->id)
+        $products = product::where('page_id', $page->id)
             ->withSum('orderdetils as total_sold', 'quantity')
             ->withCount('orderdetils as total_orders')
             ->orderByDesc('total_sold')
@@ -536,16 +569,17 @@ if ($order) {
             return response()->json([
                 'success' => true,
                 'message' => 'لا يوجد منتجات مباعة على هذه الصفحة حتى الآن',
-                'products' => []
+                'products' => [],
             ]);
         }
 
         return response()->json([
             'success' => true,
             'message' => 'أكثر المنتجات مبيعًا على هذه الصفحة',
-            'products' => $products
+            'products' => $products,
         ]);
     }
+
     public function mostOrderedProducts()
     {
         $products = product::withCount('orderdetils as total_orders') // عدد الطلبات لكل منتج
@@ -554,11 +588,11 @@ if ($order) {
 
         return response()->json([
             'message' => 'أكثر المنتجات طلبًا تم جلبها بنجاح',
-            'products' => $products
+            'products' => $products,
         ]);
     }
 
-    //فاتور
+    // فاتور
     public function generateInvoice($id)
     {
         ini_set('max_execution_time', 300);
@@ -568,7 +602,7 @@ if ($order) {
         $settings = Setting::first();
 
         $logoPath = $settings && $settings->logo
-            ? public_path('storage/' . $settings->logo)
+            ? public_path('storage/'.$settings->logo)
             : null;
 
         $html = '
@@ -626,18 +660,18 @@ if ($order) {
     </head>
     <body>
         <div align="center">
-            ' . (file_exists($logoPath) ? '<img src="' . $logoPath . '" width="120">' : '') . '
+            '.(file_exists($logoPath) ? '<img src="'.$logoPath.'" width="120">' : '').'
             <h3>فاتورة الطلب</h3>
         </div>
 
-        <p><strong>رقم الطلب:</strong> ' . $order->id . '</p>
-        <p><strong>تاريخ الطلب:</strong> ' . $order->created_at->format('Y-m-d') . '</p>
+        <p><strong>رقم الطلب:</strong> '.$order->id.'</p>
+        <p><strong>تاريخ الطلب:</strong> '.$order->created_at->format('Y-m-d').'</p>
 
         <div class="customer-info">
             <h4>معلومات العميل</h4>
-            <p><strong>الاسم:</strong> ' . $order->userorder->name . '</p>
-            <p><strong>الهاتف:</strong> ' . $order->phone . '</p>
-            <p><strong>العنوان:</strong> ' . $order->street . ', ' . $order->city . ', ' . $order->governorate . '</p>
+            <p><strong>الاسم:</strong> '.$order->userorder->name.'</p>
+            <p><strong>الهاتف:</strong> '.$order->phone.'</p>
+            <p><strong>العنوان:</strong> '.$order->street.', '.$order->city.', '.$order->governorate.'</p>
         </div>
 
         <table>
@@ -653,10 +687,10 @@ if ($order) {
 
         foreach ($order->orderdetels as $item) {
             $html .= '<tr>
-            <td>' . $item->product->titel . '</td>
-            <td>' . $item->quantity . '</td>
-            <td>' . number_format(round($item->price), 0) . ' جنيه</td>
-            <td>' . number_format(round($item->price * $item->quantity), 0) . ' جنيه</td>
+            <td>'.$item->product->titel.'</td>
+            <td>'.$item->quantity.'</td>
+            <td>'.number_format(round($item->price), 0).' جنيه</td>
+            <td>'.number_format(round($item->price * $item->quantity), 0).' جنيه</td>
         </tr>';
         }
 
@@ -664,11 +698,11 @@ if ($order) {
             </tbody>
         </table>
 
-        <p class="total"><strong>المجموع الكلي:</strong> ' . number_format(round($order->total_price), 0) . ' جنيه</p>
+        <p class="total"><strong>المجموع الكلي:</strong> '.number_format(round($order->total_price), 0).' جنيه</p>
 
         <div class="signature" align="left">
             <p>توقيع الشركة:</p>
-            ' . ($settings && $settings->site_name ? '<strong>' . $settings->site_name . '</strong>' : '') . '
+            '.($settings && $settings->site_name ? '<strong>'.$settings->site_name.'</strong>' : '').'
         </div>
     </body>
     </html>';
@@ -677,16 +711,15 @@ if ($order) {
             'tempDir' => storage_path('app/mpdf_temp'),
             'mode' => 'utf-8',
             'format' => 'A4',
-            'default_font' => 'dejavusans'
+            'default_font' => 'dejavusans',
         ]);
 
         $mpdf->WriteHTML($html);
 
         return response()->streamDownload(function () use ($mpdf) {
             echo $mpdf->Output('', 'S');
-        }, 'invoice-' . $order->id . '.pdf');
+        }, 'invoice-'.$order->id.'.pdf');
     }
-
 
     // حذف طلب (للمستخدم أو admin)
     public function deleteOrder($id)
@@ -694,7 +727,7 @@ if ($order) {
         $user = auth()->user();
         $order = Order::find($id);
 
-        if (!$order) {
+        if (! $order) {
             return response()->json(['message' => 'الطلب غير موجود'], 404);
         }
 
@@ -714,6 +747,7 @@ if ($order) {
 
         if ($user->role === 'admin') {
             Order::truncate();
+
             return response()->json(['message' => 'تم حذف جميع الطلبات بواسطة المدير'], 200);
         }
 
@@ -721,11 +755,12 @@ if ($order) {
 
         return response()->json(['message' => 'تم حذف جميع طلباتك بنجاح'], 200);
     }
+
     // ✅ استيراد الطلبات باستخدام PhpSpreadsheet
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv'
+            'file' => 'required|mimes:xlsx,xls,csv',
         ]);
 
         $file = $request->file('file');
@@ -735,18 +770,18 @@ if ($order) {
 
         // تخطي الصف الأول (العناوين)
         foreach (array_slice($rows, 1) as $row) {
-            if (!empty($row[1])) { // تأكد من وجود user_id مثلاً
+            if (! empty($row[1])) { // تأكد من وجود user_id مثلاً
                 Order::updateOrCreate(
                     ['id' => $row[0] ?? null],
                     [
-                        'user_id'        => $row[1] ?? null,
-                        'seller_id'      => $row[2] ?? null,
-                        'total_price'    => $row[3] ?? 0,
-                        'status'         => $row[4] ?? 'pending',
-                        'city'           => $row[5] ?? null,
-                        'governorate'    => $row[6] ?? null,
-                        'street'         => $row[7] ?? null,
-                        'phone'          => $row[8] ?? null,
+                        'user_id' => $row[1] ?? null,
+                        'seller_id' => $row[2] ?? null,
+                        'total_price' => $row[3] ?? 0,
+                        'status' => $row[4] ?? 'pending',
+                        'city' => $row[5] ?? null,
+                        'governorate' => $row[6] ?? null,
+                        'street' => $row[7] ?? null,
+                        'phone' => $row[8] ?? null,
                         'payment_method' => $row[9] ?? null,
                         'approval_status' => $row[10] ?? 'pending',
                     ]
@@ -760,7 +795,7 @@ if ($order) {
     // ✅ تصدير الطلبات باستخدام PhpSpreadsheet
     public function export()
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
         // رؤوس الأعمدة
@@ -781,32 +816,33 @@ if ($order) {
         $row = 2;
 
         foreach ($orders as $order) {
-            $sheet->setCellValue('A' . $row, $order->id);
-            $sheet->setCellValue('B' . $row, $order->user_id);
-            $sheet->setCellValue('C' . $row, $order->seller_id);
-            $sheet->setCellValue('D' . $row, $order->total_price);
-            $sheet->setCellValue('E' . $row, $order->status);
-            $sheet->setCellValue('F' . $row, $order->city);
-            $sheet->setCellValue('G' . $row, $order->governorate);
-            $sheet->setCellValue('H' . $row, $order->street);
-            $sheet->setCellValue('I' . $row, $order->phone);
-            $sheet->setCellValue('J' . $row, $order->payment_method);
-            $sheet->setCellValue('K' . $row, $order->approval_status);
+            $sheet->setCellValue('A'.$row, $order->id);
+            $sheet->setCellValue('B'.$row, $order->user_id);
+            $sheet->setCellValue('C'.$row, $order->seller_id);
+            $sheet->setCellValue('D'.$row, $order->total_price);
+            $sheet->setCellValue('E'.$row, $order->status);
+            $sheet->setCellValue('F'.$row, $order->city);
+            $sheet->setCellValue('G'.$row, $order->governorate);
+            $sheet->setCellValue('H'.$row, $order->street);
+            $sheet->setCellValue('I'.$row, $order->phone);
+            $sheet->setCellValue('J'.$row, $order->payment_method);
+            $sheet->setCellValue('K'.$row, $order->approval_status);
             $row++;
         }
 
         $writer = new Xlsx($spreadsheet);
-        $fileName = 'orders-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-        $filePath = storage_path('app/public/' . $fileName);
+        $fileName = 'orders-'.now()->format('Y-m-d_H-i-s').'.xlsx';
+        $filePath = storage_path('app/public/'.$fileName);
 
         $writer->save($filePath);
 
         return response()->download($filePath)->deleteFileAfterSend(true);
     }
+
     public function importCustomerOrders(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv'
+            'file' => 'required|mimes:xlsx,xls,csv',
         ]);
 
         $file = $request->file('file');
@@ -815,18 +851,18 @@ if ($order) {
         $rows = $sheet->toArray();
 
         foreach (array_slice($rows, 1) as $row) {
-            if (!empty($row[1])) { // user_id موجود
+            if (! empty($row[1])) { // user_id موجود
                 Order::updateOrCreate(
                     ['id' => $row[0] ?? null],
                     [
-                        'user_id'        => $row[1],
-                        'seller_id'      => null, // ✅ بدون seller_id
-                        'total_price'    => $row[3] ?? 0,
-                        'status'         => $row[4] ?? 'pending',
-                        'city'           => $row[5] ?? null,
-                        'governorate'    => $row[6] ?? null,
-                        'street'         => $row[7] ?? null,
-                        'phone'          => $row[8] ?? null,
+                        'user_id' => $row[1],
+                        'seller_id' => null, // ✅ بدون seller_id
+                        'total_price' => $row[3] ?? 0,
+                        'status' => $row[4] ?? 'pending',
+                        'city' => $row[5] ?? null,
+                        'governorate' => $row[6] ?? null,
+                        'street' => $row[7] ?? null,
+                        'phone' => $row[8] ?? null,
                         'payment_method' => $row[9] ?? null,
                         'approval_status' => $row[10] ?? 'pending',
                     ]
@@ -840,7 +876,7 @@ if ($order) {
     // ✅ تصدير الطلبات الخاصة بالعملاء (بدون seller_id)
     public function exportCustomerOrders()
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
         // رؤوس الأعمدة
@@ -864,12 +900,12 @@ if ($order) {
                 $order->phone,
                 $order->payment_method,
                 $order->approval_status,
-            ], null, 'A' . $row);
+            ], null, 'A'.$row);
             $row++;
         }
 
-        $fileName = 'customer-orders-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-        $filePath = storage_path('app/public/' . $fileName);
+        $fileName = 'customer-orders-'.now()->format('Y-m-d_H-i-s').'.xlsx';
+        $filePath = storage_path('app/public/'.$fileName);
         (new Xlsx($spreadsheet))->save($filePath);
 
         return response()->download($filePath)->deleteFileAfterSend(true);
@@ -879,7 +915,7 @@ if ($order) {
     public function importApprovedSellerOrders(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv'
+            'file' => 'required|mimes:xlsx,xls,csv',
         ]);
 
         $file = $request->file('file');
@@ -888,18 +924,18 @@ if ($order) {
         $rows = $sheet->toArray();
 
         foreach (array_slice($rows, 1) as $row) {
-            if (!empty($row[2])) { // seller_id موجود
+            if (! empty($row[2])) { // seller_id موجود
                 Order::updateOrCreate(
                     ['id' => $row[0] ?? null],
                     [
-                        'user_id'        => $row[1] ?? null,
-                        'seller_id'      => $row[2],
-                        'total_price'    => $row[3] ?? 0,
-                        'status'         => $row[4] ?? 'pending',
-                        'city'           => $row[5] ?? null,
-                        'governorate'    => $row[6] ?? null,
-                        'street'         => $row[7] ?? null,
-                        'phone'          => $row[8] ?? null,
+                        'user_id' => $row[1] ?? null,
+                        'seller_id' => $row[2],
+                        'total_price' => $row[3] ?? 0,
+                        'status' => $row[4] ?? 'pending',
+                        'city' => $row[5] ?? null,
+                        'governorate' => $row[6] ?? null,
+                        'street' => $row[7] ?? null,
+                        'phone' => $row[8] ?? null,
                         'payment_method' => $row[9] ?? null,
                         'approval_status' => 'approved', // ✅ نثبّت الحالة
                     ]
@@ -913,7 +949,7 @@ if ($order) {
     // ✅ تصدير الطلبات الخاصة بالبائعين الموافق عليها فقط
     public function exportApprovedSellerOrders()
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
         $headers = ['ID', 'User ID', 'Seller ID', 'Total Price', 'Status', 'City', 'Governorate', 'Street', 'Phone', 'Payment Method', 'Approval Status'];
@@ -940,12 +976,12 @@ if ($order) {
                 $order->phone,
                 $order->payment_method,
                 $order->approval_status,
-            ], null, 'A' . $row);
+            ], null, 'A'.$row);
             $row++;
         }
 
-        $fileName = 'approved-seller-orders-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-        $filePath = storage_path('app/public/' . $fileName);
+        $fileName = 'approved-seller-orders-'.now()->format('Y-m-d_H-i-s').'.xlsx';
+        $filePath = storage_path('app/public/'.$fileName);
         (new Xlsx($spreadsheet))->save($filePath);
 
         return response()->download($filePath)->deleteFileAfterSend(true);
