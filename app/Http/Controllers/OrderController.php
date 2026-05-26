@@ -133,7 +133,7 @@ class OrderController extends Controller
 
             $storeBannerPath = $request
                 ->file('store_banner')
-                ->store('store_banners', 'public');
+                ->store('storebanners', 'public');
         }
 
         $cart = $user->getcart()->with('proCItem.product')->first();
