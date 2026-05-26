@@ -25,10 +25,13 @@ class SupplierOrderStatusUpdated extends Notification
     {
         return [
             'title' => 'تحديث حالة طلب مورد',
-            'message' => 'قام المورد بتحديث حالة الطلب رقم #'.$this->order->id,
+            'message' => 'قام المورد '.$this->order->supplier->name.
+                ' (ID: '.$this->order->supplier->id.') بتحديث حالة الطلب رقم #'.$this->order->id,
+
             'order_id' => $this->order->id,
             'status' => $this->order->status,
             'supplier_name' => $this->order->supplier->name,
+            'supplier_id' => $this->order->supplier->id,
         ];
     }
 }
