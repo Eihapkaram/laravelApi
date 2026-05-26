@@ -260,6 +260,7 @@ class ProductController extends Controller
                 'id' => $category->id,
                 'name' => $category->name,
                 'description' => $category->description,
+                'banner' => $category->banner,
             ],
             'products' => $products,
         ], 200);
