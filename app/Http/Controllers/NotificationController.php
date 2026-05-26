@@ -2,23 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Notification;
 use App\Models\User;
 use App\Notifications\AdminNotification;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class NotificationController extends Controller
 {
     /**
      * عرض كل الإشعارات للمستخدم الحالي
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
 
+        $notifications = $user->notifications()
+            ->latest()
+            ->paginate(10);
+
         return response()->json([
-            'notifications' => $user->notifications,
-            'unread_count' => $user->unreadNotifications->count(),
+            'notifications' => $notifications,
+            'unread_count' => $user->unreadNotifications()->count(),
         ]);
     }
 
@@ -33,6 +37,7 @@ class NotificationController extends Controller
 
         if ($notification) {
             $notification->markAsRead();
+
             return response()->json(['message' => 'تم تحديد الإشعار كمقروء ✅']);
         }
 
@@ -50,6 +55,7 @@ class NotificationController extends Controller
 
         if ($notification) {
             $notification->delete();
+
             return response()->json(['message' => 'تم حذف الإشعار بنجاح 🗑️']);
         }
 
@@ -80,7 +86,7 @@ class NotificationController extends Controller
         }
 
         $request->validate([
-            'title'   => 'required|string|max:255',
+            'title' => 'required|string|max:255',
             'message' => 'required|string',
             'user_id' => 'nullable|exists:users,id',
         ]);
@@ -89,6 +95,7 @@ class NotificationController extends Controller
         if ($request->user_id) {
             $targetUser = User::find($request->user_id);
             $targetUser->notify(new AdminNotification($request->title, $request->message));
+
             return response()->json(['message' => 'تم إرسال الإشعار للمستخدم المحدد ✅']);
         }
 
