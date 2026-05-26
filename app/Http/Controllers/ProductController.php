@@ -250,14 +250,18 @@ class ProductController extends Controller
             ], 404);
         }
 
-        $products = product::where('categorie_id', $category->id)
+        // pagination للمنتجات
+        $products = $category->product()
             ->paginate(10);
-
-        $category->product = $products;
 
         return response()->json([
             'success' => true,
-            'category' => $category,
+            'category' => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'description' => $category->description,
+            ],
+            'products' => $products,
         ], 200);
     }
 
