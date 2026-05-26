@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
@@ -28,8 +29,8 @@ class UserController extends Controller
             'security_question' => 'required',
             'security_answer' => 'required',
             'wallet_number' => 'nullable|numeric',
-            'front_id_image' => 'nullable',
-            'back_id_image' => 'nullable',
+            'front_id_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'back_id_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'terms_accepted' => 'required|accepted',
         ]);
 
@@ -38,12 +39,10 @@ class UserController extends Controller
             $path = $request->file('img')->storeAs('users', $imge, 'public');
         }
         if ($request->hasFile('front_id_image')) {
-            $imge1 = $request->file('front_id_image')->getClientOriginalName();
-            $path1 = $request->file('front_id_image')->storeAs('imageid', $imge1, 'public');
+            $path1 = $request->file('front_id_image')->store('imageid', 'public');
         }
         if ($request->hasFile('back_id_image')) {
-            $imge2 = $request->file('back_id_image')->getClientOriginalName();
-            $path2 = $request->file('back_id_image')->storeAs('imageid', $imge2, 'public');
+            $path2 = $request->file('back_id_image')->store('imageid', 'public');
         }
 
         $user = User::create([
@@ -287,8 +286,8 @@ class UserController extends Controller
             'security_question' => 'required',
             'security_answer' => 'required',
             'wallet_number' => 'nullable|numeric',
-            'front_id_image' => 'nullable',
-            'back_id_image' => 'nullable',
+            'front_id_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'back_id_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'terms_accepted' => 'required|accepted',
             'phone' => [
                 'required',
@@ -302,12 +301,10 @@ class UserController extends Controller
 
         $user = User::where('phone', $request->phone)->first();
         if ($request->hasFile('front_id_image')) {
-            $imge3 = $request->file('front_id_image')->getClientOriginalName();
-            $path3 = $request->file('front_id_image')->storeAs('imageid', $imge3, 'public');
+            $path3 = $request->file('front_id_image')->store('imageid', 'public');
         }
         if ($request->hasFile('back_id_image')) {
-            $imge4 = $request->file('back_id_image')->getClientOriginalName();
-            $path4 = $request->file('back_id_image')->storeAs('imageid', $imge4, 'public');
+            $path4 = $request->file('back_id_image')->store('imageid', 'public');
         }
         if (! $user) {
             $user = User::create([
@@ -617,7 +614,7 @@ class UserController extends Controller
 
             User::chunk(500, function ($usersChunk) use ($sheet, &$row) {
                 foreach ($usersChunk as $user) {
-                    $sheet->setCellValueExplicit('A'.$row, $user->id, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit('A'.$row, $user->id, DataType::TYPE_STRING);
                     $sheet->setCellValue('B'.$row, $user->name ?? '');
                     $sheet->setCellValue('C'.$row, $user->last_name ?? '');
                     $sheet->setCellValue('D'.$row, $user->email ?? '');
