@@ -131,15 +131,9 @@ class OrderController extends Controller
 
         if ($request->hasFile('store_banner')) {
 
-            $banner = $request->file('store_banner');
-
-            $bannerName = time().'_'.str_replace(' ', '_', $banner->getClientOriginalName());
-
-            $storeBannerPath = $banner->storeAs(
-                'store_banners',
-                $bannerName,
-                'public'
-            );
+            $storeBannerPath = $request
+                ->file('store_banner')
+                ->store('store_banners', 'public');
         }
 
         $cart = $user->getcart()->with('proCItem.product')->first();
