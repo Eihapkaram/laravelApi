@@ -2,24 +2,36 @@
 
 namespace App\Http\Controllers;
 
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-use App\Models\product;
 use App\Models\categorie;
-use Illuminate\Http\Request;
-use App\Notifications\NewProduct;
+use App\Models\product;
 use App\Models\User;
+use App\Notifications\NewProduct;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class ProductController extends Controller
 {
     public function index()
     {
         $data = product::with('productReviwes', 'images')->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'all products',
+            'products' => $data,
+        ]);
+    }
+
+    public function index2()
+    {
+        $data = product::with('productReviwes', 'images')
+            ->paginate(10);
 
         return response()->json([
             'success' => true,
@@ -47,7 +59,7 @@ class ProductController extends Controller
             'discount' => 'required',
         ]);
 
-        if (!$request) {
+        if (! $request) {
             return response()->json(['error' => 'faild in create']);
         }
 
@@ -75,7 +87,7 @@ class ProductController extends Controller
             'inCount' => $request->inCount,
             'Counttype' => $request->Counttype,
             'inCounttype' => $request->inCounttype,
-            'discount' =>  $request->discount,
+            'discount' => $request->discount,
         ]);
         $user = auth()->user();
         if ($product) {
@@ -130,8 +142,7 @@ class ProductController extends Controller
     public function update(Request $request, product $product, $id)
     {
 
-
-        if (!$request) {
+        if (! $request) {
             return response()->json(['error' => 'faild edit']);
         }
 
@@ -158,7 +169,7 @@ class ProductController extends Controller
             'brand' => $request->brand ?? $pro->brand,
             'Counttype' => $request->Counttype ?? $pro->Counttype,
             'inCounttype' => $request->inCounttype ?? $pro->inCounttype,
-            'discount' =>  $request->discount ?? $pro->discount,
+            'discount' => $request->discount ?? $pro->discount,
         ]);
 
         // تحديث الصور الإضافية
@@ -171,7 +182,7 @@ class ProductController extends Controller
             }
 
             foreach ($request->file('images_url') as $imageUP) {
-                $imageName = time() . '_' . uniqid() . '.' . $imageUP->getClientOriginalExtension();
+                $imageName = time().'_'.uniqid().'.'.$imageUP->getClientOriginalExtension();
                 $path1 = $imageUP->storeAs('products', $imageName, 'public');
                 $product->images()->create(['path' => $path]);
             }
@@ -211,7 +222,7 @@ class ProductController extends Controller
 
     public function search(Request $request)
     {
-        $products = QueryBuilder::for(Product::query())
+        $products = QueryBuilder::for(product::query())
             ->allowedFilters([
                 'titel',
                 'brand',
@@ -225,6 +236,7 @@ class ProductController extends Controller
             'result' => $products,
         ], 200);
     }
+
     public function searchByCategory(Request $request)
     {
         $query = $request->input('q'); // اسم الفئة المطلوبة
@@ -233,7 +245,7 @@ class ProductController extends Controller
             ->where('name', 'like', "%{$query}%")
             ->first();
 
-        if (!$category) {
+        if (! $category) {
             return response()->json([
                 'success' => false,
                 'message' => 'لم يتم العثور على الفئة المطلوبة',
@@ -246,18 +258,17 @@ class ProductController extends Controller
         ], 200);
     }
 
-
     // ✅ تصدير المنتجات إلى Excel
     public function export()
     {
-        $products = Product::with('page')->get();
+        $products = product::with('page')->get();
 
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
         // العناوين
         $sheet->fromArray([
-            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'discount']
+            ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'discount'],
         ]);
 
         // البيانات
@@ -279,7 +290,6 @@ class ProductController extends Controller
                 $product->inCounttype,
                 $product->discount,
 
-
             ];
         }
         $sheet->fromArray($rows, null, 'A2');
@@ -287,7 +297,7 @@ class ProductController extends Controller
         // حفظ الملف مؤقتًا وإرساله
         $fileName = 'products.xlsx';
         $writer = new Xlsx($spreadsheet);
-        $tempPath = storage_path('app/' . $fileName);
+        $tempPath = storage_path('app/'.$fileName);
         $writer->save($tempPath);
 
         return response()->download($tempPath)->deleteFileAfterSend(true);
@@ -305,7 +315,7 @@ class ProductController extends Controller
 
         // تخطي أول صف (العناوين)
         foreach (array_slice($rows, 1) as $row) {
-            Product::updateOrCreate(
+            product::updateOrCreate(
                 ['id' => $row[0] ?? null],
                 [
                     'titel' => $row[1] ?? '',

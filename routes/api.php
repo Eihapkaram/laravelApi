@@ -48,6 +48,7 @@ Route::post('/security-question', [UserController::class, 'getSecurityQuestion']
 Route::post('/resetpassword', [UserController::class, 'resetPassword']);
 Route::post('/reset-password', [UserController::class, 'resetPasswordWithSecurity']);
 Route::get('pro', [ProductController::class, 'index']);
+Route::get('pro10', [ProductController::class, 'index2']);
 
 // الأكثر مبيعًا حسب page_id
 Route::get('/products/top-sold/{slug}', [OrderController::class, 'topSellingProductsByPage']);
