@@ -30,8 +30,7 @@ class ProductController extends Controller
 
     public function index2()
     {
-        $data = product::with('productReviwes', 'images')
-            ->paginate(10);
+        $data = product::paginate(10);
 
         return response()->json([
             'success' => true,
