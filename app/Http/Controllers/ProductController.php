@@ -238,10 +238,9 @@ class ProductController extends Controller
 
     public function searchByCategory(Request $request)
     {
-        $query = $request->input('q'); // اسم الفئة المطلوبة
+        $query = $request->input('q');
 
-        $category = categorie::with('product') // نجيب الفئة مع منتجاتها
-            ->where('name', 'like', "%{$query}%")
+        $category = categorie::where('name', 'like', "%{$query}%")
             ->first();
 
         if (! $category) {
@@ -250,6 +249,11 @@ class ProductController extends Controller
                 'message' => 'لم يتم العثور على الفئة المطلوبة',
             ], 404);
         }
+
+        $products = product::where('categorie_id', $category->id)
+            ->paginate(10);
+
+        $category->product = $products;
 
         return response()->json([
             'success' => true,
