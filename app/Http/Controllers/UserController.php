@@ -188,7 +188,20 @@ class UserController extends Controller
 
     public function userinfo()
     {
-        $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude', 'created_at')->get();
+        $userdata = User::select(
+            'id',
+            'name',
+            'last_name',
+            'email',
+            'phone',
+            'role',
+            'img',
+            'latitude',
+            'longitude',
+            'created_at',
+            'front_id_image',
+            'back_id_image',
+        )->get();
 
         return response()->json(['user' => $userdata], 200);
     }
