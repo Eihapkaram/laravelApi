@@ -257,11 +257,10 @@ class OrderController extends Controller
     {
         $user = auth()->user();
 
-        // ✅ ترتيب الطلبات من الأحدث إلى الأقدم
         $order = $user->getOrder()
             ->with('orderdetels.product', 'seller')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(10);
 
         return response()->json([
             'message' => 'تم جلب الطلبات الخاصة بك بنجاح',

@@ -79,13 +79,17 @@ class ReviewController extends Controller
         }
     }
 
-public function showProReviwes($id)
-{
-    $allproreview = product::find($id)->productReviwes()->with('user')->get();
+    public function showProReviwes($id)
+    {
+        $product = product::findOrFail($id);
 
-    return response()->json([
-        'massege' => 'show all  reviwe for this product done',
-        'Proreviwes' => $allproreview,
-    ]);
-}
+        $allproreview = $product->productReviwes()
+            ->with('user')
+            ->paginate(10);
+
+        return response()->json([
+            'massege' => 'show all review for this product done',
+            'Proreviwes' => $allproreview,
+        ]);
+    }
 }

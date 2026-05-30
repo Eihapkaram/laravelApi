@@ -42,10 +42,10 @@ class PageController extends Controller
 
     public function showPageProduct()
     {
-        $pro = Page::all();
+        $pro = Page::limit(10)->get();
 
         return response()->json([
-            'massege' => 'show all page prodcts',
+            'massege' => 'show all page products',
             'pro' => $pro,
         ]);
     }

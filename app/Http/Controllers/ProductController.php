@@ -225,15 +225,20 @@ class ProductController extends Controller
             ->allowedFilters([
                 'titel',
                 'brand',
-                AllowedFilter::exact('categorie.name'),
+
+                AllowedFilter::callback('categorie.name', function ($query, $value) {
+                    $query->whereHas('categorie', function ($q) use ($value) {
+                        $q->where('name', $value);
+                    });
+                }),
             ])
-            ->allowedIncludes(['page', 'images', 'productReviwes', 'categorie'])
-            ->get();
+            ->paginate(10)
+            ->appends($request->query());
 
         return response()->json([
             'success' => true,
             'result' => $products,
-        ], 200);
+        ]);
     }
 
     public function searchByCategory(Request $request)
