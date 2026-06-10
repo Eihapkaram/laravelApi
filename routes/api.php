@@ -57,6 +57,7 @@ Route::get('/products/top-sold/{slug}', [OrderController::class, 'topSellingProd
 Route::get('/products/most-ordered', [OrderController::class, 'mostOrderedProducts']);
 Route::get('settings', [SettingController::class, 'index']);
 Route::get('/search/cate', [ProductController::class, 'search']);
+Route::get('/search/cate2', [ProductController::class, 'search8']);
 Route::get('/search/category', [ProductController::class, 'searchByCategory']);
 Route::get('/search', [PageController::class, 'search']);
 Route::get('pageProducts/show', [PageController::class, 'showPageProduct']);

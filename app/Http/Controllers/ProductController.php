@@ -249,7 +249,21 @@ class ProductController extends Controller
 
     public function search8(Request $request)
     {
-        $products = QueryBuilder::for(product::query())
+        // إضافة الحقول الجديدة داخل مصفوفة الـ select
+        $products = QueryBuilder::for(product::query()->select([
+            'id',
+            'titel',
+            'img',
+            'price',
+            'description',
+            'votes',
+            'inCount',
+            'Counttype',
+            'inCounttype',
+            'discount',
+            'brand',
+            'stock',
+        ]))
             ->allowedFilters([
                 'titel',
                 'brand',
