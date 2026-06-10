@@ -226,9 +226,14 @@ class ProductController extends Controller
                 'titel',
                 'brand',
 
+                // تحسين الفلتر ليفك تشفير النصوص العربية ويبحث بشكل مرن
                 AllowedFilter::callback('categorie.name', function ($query, $value) {
-                    $query->whereHas('categorie', function ($q) use ($value) {
-                        $q->where('name', $value);
+                    // 1. فك تشفير الكلمة القادمة من الرابط (مثال: من %D9%85%D9%85%D9%8A%D8%B2 إلى مميز)
+                    $decodedValue = urldecode($value);
+
+                    // 2. البحث باستخدام % لضمان العثور على الفئة حتى لو بها مسافات زائدة
+                    $query->whereHas('categorie', function ($q) use ($decodedValue) {
+                        $q->where('name', 'like', "%{$decodedValue}%");
                     });
                 }),
             ])
