@@ -19,24 +19,26 @@ class UserController extends Controller
     public function register(Request $request)
     {
         $this->validate($request, [
-            'name' => 'required',
-            'email' => 'required|email|unique:users',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users',
             'password' => 'required|min:8',
-            'last_name' => 'required',
-            'role' => 'required',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-            'security_question' => 'required',
-            'security_answer' => 'required',
+            'last_name' => 'required|string|max:255',
+            'role' => 'required|in:customer,supplier,seller', // تقييد الأدوار لمنع التلاعب بالصلاحيات
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'security_question' => 'required|string|max:255',
+            'security_answer' => 'required|string',
             'wallet_number' => 'nullable|numeric',
+            'img' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096', // إضافة فحص لصورة الحساب المفقودة فوق
             'front_id_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'back_id_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'terms_accepted' => 'required|accepted',
         ]);
 
         if ($request->hasFile('img')) {
-            $imge = $request->file('img')->getClientOriginalName();
-            $path = $request->file('img')->storeAs('users', $imge, 'public');
+            // توليد اسم عشوائي آمن لمنع تخطي الامتدادات أو استبدال ملفات النظام
+            $imgName = uniqid('img_', true).'.'.$request->file('img')->getClientOriginalExtension();
+            $path = $request->file('img')->storeAs('users', $imgName, 'public');
         }
         if ($request->hasFile('front_id_image')) {
             $path1 = $request->file('front_id_image')->store('imageid', 'public');
@@ -49,17 +51,17 @@ class UserController extends Controller
             'name' => $request->name,
             'last_name' => $request->last_name,
             'email' => $request->email,
-            'password' => bcrypt($request->password),
+            'password' => Hash::make($request->password), // استخدام Hash::make بدلاً من bcrypt القديمة
             'role' => $request->role ?? 'customer',
             'img' => $path ?? 'null',
             'latitude' => $request->latitude ?? 'null',
             'longitude' => $request->longitude ?? 'null',
             'security_question' => $request->security_question ?? 'null',
-            'security_answer' => bcrypt($request->security_answer) ?? 'null',
+            'security_answer' => Hash::make(trim($request->security_answer)) ?? 'null', // تشفير الإجابة الأمنية لضمان عدم قراءتها من قاعدة البيانات
             'wallet_number' => $request->wallet_number ?? 'null',
             'front_id_image' => $path1 ?? 'null',
             'back_id_image' => $path2 ?? 'null',
-            'terms_accepted' => $request->terms_accepted, // ✅
+            'terms_accepted' => $request->terms_accepted,
         ]);
 
         $token = $user->createToken('eihapkaramvuejs')->accessToken;
@@ -73,19 +75,20 @@ class UserController extends Controller
 
     public function userUpdate(Request $request, $id)
     {
-        $this->validate($request, [
-            'name' => 'required',
-            'password' => 'required|min:8',
-            'last_name' => 'required',
-            'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-        ]);
-
-        if ($request->hasFile('img')) {
-            $imge = $request->file('img')->getClientOriginalName();
-            $path = $request->file('img')->storeAs('users', $imge, 'public');
+        // حماية ID: التأكد أن المستخدم يعدل حسابه الشخصي فقط ولا يحق له تعديل حساب مستخدم آخر عبر الـ ID
+        if (auth()->id() != $id) {
+            return response()->json(['message' => 'غير مصرح لك بتعديل هذا الحساب'], 403);
         }
+
+        $this->validate($request, [
+            'name' => 'required|string|max:255',
+            'password' => 'required|min:8',
+            'last_name' => 'required|string|max:255',
+            'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'role' => 'nullable|in:customer,supplier,seller',
+        ]);
 
         $user = User::find($id);
         if (! $user) {
@@ -94,18 +97,23 @@ class UserController extends Controller
             ], 404);
         }
 
+        if ($request->hasFile('img')) {
+            $imgName = uniqid('img_', true).'.'.$request->file('img')->getClientOriginalExtension();
+            $path = $request->file('img')->storeAs('users', $imgName, 'public');
+        }
+
         $user->update([
             'name' => $request->name,
             'last_name' => $request->last_name,
-            'email' => auth()->user()->find($id)->email,
-            'phone' => auth()->user()->find($id)->phone,
-            'password' => bcrypt($request->password),
-            'role' => $request->role ?? 'customer',
+            'email' => $user->email, // جلب البيانات مباشرة من الموديل المستدعى وليس بعمل Query متكرر غير آمن
+            'phone' => $user->phone,
+            'password' => Hash::make($request->password),
+            'role' => $request->role ?? $user->role, // حماية ضد التلاعب بالصلاحيات عبر الـ Request
             'img' => $path ?? $user->img,
             'latitude' => $request->latitude ?? $user->latitude,
             'longitude' => $request->longitude ?? $user->longitude,
             'security_question' => $request->security_question ?? $user->security_question,
-            'security_answer' => $request->security_answer ?? $user->security_answer,
+            'security_answer' => $request->has('security_answer') ? Hash::make(trim($request->security_answer)) : $user->security_answer,
             'wallet_number' => $request->wallet_number ?? $user->wallet_number,
         ]);
 
@@ -144,13 +152,9 @@ class UserController extends Controller
     public function addimg(Request $request)
     {
         $this->validate($request, [
-            'img' => 'image|mimes:jpeg,png,jpg,gif,webp',
+            'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
         ]);
 
-        if ($request->hasFile('img')) {
-            $imge = $request->file('img')->getClientOriginalName();
-            $path = $request->file('img')->storeAs('users', $imge, 'public');
-        }
         $user = auth()->user();
         if (! $user) {
             return response()->json([
@@ -158,36 +162,54 @@ class UserController extends Controller
             ], 404);
         }
 
+        if ($request->hasFile('img')) {
+            $imgName = uniqid('img_', true).'.'.$request->file('img')->getClientOriginalExtension();
+            $path = $request->file('img')->storeAs('users', $imgName, 'public');
+        }
+
         $user->update([
-            'img' => $path ?? 'null',
+            'img' => $path ?? $user->img,
         ]);
 
         return response()->json([
-            'message' => 'تم اضافه صورة  بنجاح',
+            'message' => 'تم اضافه صورة بنجاح',
             'user' => $user,
         ], 200);
     }
 
     public function Login(Request $Request)
     {
+        // إضافة التحقق من الحقول المدخلة لمنع الـ SQL Injection المحتمل في بعض فريموركات الـ Auth وإيقاف العمليات العشوائية
+        $Request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
         $data = [
             'email' => $Request->email,
             'password' => $Request->password,
         ];
+
         if (auth()->attempt($data)) {
-            $token = auth()->user()->createToken('eihapkaramvuejs')->accessToken;
-            $user = Auth::user();
+            $user = auth()->user();
+            $token = $user->createToken('eihapkaramvuejs')->accessToken;
             $user->last_seen = now();
             $user->save();
 
             return response()->json(['token' => $token], 200);
         } else {
-            return response()->json(['error' => 'field login'], 401);
+            // رسالة خطأ عامة وموحدة لحماية النظام من الـ Enumeration Attacks (معرفة هل الإيميل مسجل أم لا)
+            return response()->json(['error' => 'بيانات الدخول غير صحيحة'], 401);
         }
     }
 
     public function userinfo()
     {
+        // تقييد الوصول لهذه الداتا (مثلاً الأدمن فقط)، حظر الوصول العام لكل حسابات المستخدمين الحساسة كـ IDs المرفوعة.
+        if (! auth()->user() || ! in_array(auth()->user()->role, ['admin', 'manager'])) {
+            return response()->json(['message' => 'غير مصرح لك بالوصول لهذه البيانات'], 403);
+        }
+
         $userdata = User::select(
             'id',
             'name',
@@ -205,26 +227,28 @@ class UserController extends Controller
 
         return response()->json(['user' => $userdata], 200);
     }
-    // جلب العملاء القريبين من موقع المندوب
 
     public function usersNearby(Request $request)
     {
-        $user = auth()->user(); // 🧍‍♂️ المستخدم الحالي
+        $user = auth()->user();
 
-        // تأكد أن عنده إحداثيات
         if (! $user->latitude || ! $user->longitude) {
             return response()->json([
                 'message' => '⚠️ لا يوجد إحداثيات محفوظة للمستخدم الحالي.',
             ], 400);
         }
 
+        // فلترة الـ distance القادمة من الـ request
+        $request->validate([
+            'distance' => 'nullable|numeric|min:1|max:500',
+        ]);
+
         $latitude = $user->latitude;
         $longitude = $user->longitude;
-        $distance = $request->distance ?? 10; // المسافة الافتراضية 10 كم
+        $distance = $request->distance ?? 10;
 
-        // 🔍 جلب العملاء القريبين من المستخدم الحالي فقط
         $users = User::where('role', 'customer')
-            ->where('id', '!=', $user->id) // استبعاد المستخدم نفسه
+            ->where('id', '!=', $user->id)
             ->nearby($latitude, $longitude, $distance)
             ->get();
 
@@ -236,6 +260,11 @@ class UserController extends Controller
 
     public function OneUserinfo($id)
     {
+        // التحقق من الصلاحيات: يحق للمستخدم رؤية حسابه فقط، أو للأدمن رؤية أي حساب
+        if (auth()->id() != $id && ! in_array(auth()->user()->role, ['admin', 'manager'])) {
+            return response()->json(['message' => 'غير مصرح لك باستعراض بيانات هذا المستخدم'], 403);
+        }
+
         $userdata = User::select('id', 'name', 'last_name', 'email', 'phone', 'role', 'img', 'latitude', 'longitude', 'created_at')->find($id);
         if (! $userdata) {
             return response()->json(['message' => 'المستخدم غير موجود'], 404);
@@ -266,39 +295,50 @@ class UserController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->token()->revoke();
+        if ($request->user() && $request->user()->token()) {
+            $request->user()->token()->revoke();
+        }
 
         return response()->json(['message' => 'تم تسجيل الخروج بنجاح']);
     }
 
     public function logoutAll(Request $request)
     {
-        $request->user()->token()->revoke();
+        if ($request->user() && $request->user()->token()) {
+            $request->user()->token()->revoke();
+        }
 
         return response()->json(['message' => 'تم تسجيل الخروج']);
     }
 
     public function UserDelete($id)
     {
-        if (! User::find($id)) {
-            return response()->json(['message' => 'لم يتم ايجاد حساب المستخدم']);
+        // حظر الحذف العشوائي بدون صلاحية أدمن أو أن يكون صاحب الحساب نفسه
+        if (auth()->id() != $id && ! in_array(auth()->user()->role, ['admin'])) {
+            return response()->json(['message' => 'غير مصرح لك بحذف هذا الحساب'], 403);
         }
-        User::find($id)->delete();
 
-        return response()->json(['message' => 'تم ازاله حساب  المستخدم']);
+        $user = User::find($id);
+        if (! $user) {
+            return response()->json(['message' => 'لم يتم ايجاد حساب المستخدم'], 404);
+        }
+        $user->delete();
+
+        return response()->json(['message' => 'تم ازاله حساب المستخدم']);
     }
 
     public function registerWithPhone(Request $request)
     {
         $request->validate([
-            'name' => 'required',
+            'name' => 'required|string|max:255',
             'password' => 'required|min:8',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-            'role' => 'required',
-            'security_question' => 'required',
-            'security_answer' => 'required',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'role' => 'required|in:customer,supplier,seller',
+            'security_question' => 'required|string|max:255',
+            'security_answer' => 'required|string',
             'wallet_number' => 'nullable|numeric',
+            'img' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'front_id_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'back_id_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'terms_accepted' => 'required|accepted',
@@ -312,32 +352,34 @@ class UserController extends Controller
             'phone.regex' => 'رقم الهاتف يجب أن يتكون من 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015',
         ]);
 
-        $user = User::where('phone', $request->phone)->first();
+        if ($request->hasFile('img')) {
+            $imgName = uniqid('img_', true).'.'.$request->file('img')->getClientOriginalExtension();
+            $path = $request->file('img')->storeAs('users', $imgName, 'public');
+        }
         if ($request->hasFile('front_id_image')) {
             $path3 = $request->file('front_id_image')->store('imageid', 'public');
         }
         if ($request->hasFile('back_id_image')) {
             $path4 = $request->file('back_id_image')->store('imageid', 'public');
         }
-        if (! $user) {
-            $user = User::create([
-                'phone' => $request->phone,
-                'name' => $request->name,
-                'password' => bcrypt($request->password),
-                'latitude' => $request->latitude,
-                'role' => $request->role ?? 'customer',
-                'img' => $path ?? 'null',
-                'longitude' => $request->longitude,
-                'security_question' => $request->security_question ?? 'null',
-                'security_answer' => bcrypt($request->security_answer) ?? 'null',
-                'wallet_number' => $request->wallet_number ?? 'null',
-                'front_id_image' => $path3 ?? 'null',
-                'back_id_image' => $path4 ?? 'null',
-                'terms_accepted' => $request->terms_accepted,
 
-            ]);
-            $user->notify(new WelcomeUser($user));
-        }
+        $user = User::create([
+            'phone' => $request->phone,
+            'name' => $request->name,
+            'password' => Hash::make($request->password),
+            'latitude' => $request->latitude,
+            'role' => $request->role ?? 'customer',
+            'img' => $path ?? 'null',
+            'longitude' => $request->longitude,
+            'security_question' => $request->security_question ?? 'null',
+            'security_answer' => Hash::make(trim($request->security_answer)) ?? 'null',
+            'wallet_number' => $request->wallet_number ?? 'null',
+            'front_id_image' => $path3 ?? 'null',
+            'back_id_image' => $path4 ?? 'null',
+            'terms_accepted' => $request->terms_accepted,
+        ]);
+
+        $user->notify(new WelcomeUser($user));
 
         $token = $user->createToken('eihapkaramvuejs')->accessToken;
 
@@ -350,7 +392,7 @@ class UserController extends Controller
 
     public function getSuppliers()
     {
-        $suppliers = User::with('suppliedProducts')  // تحميل العلاقة
+        $suppliers = User::with('suppliedProducts')
             ->where('role', 'supplier')
             ->get();
 
@@ -377,22 +419,14 @@ class UserController extends Controller
 
         $user = User::where('phone', $request->phone)->first();
 
-        if (! $user) {
+        // حماية هجمات الـ Enumeration: توحيد ردود الخطأ عند الفشل
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'الرقم غير مسجل',
+                'message' => 'بيانات الدخول غير صحيحة التلفون أو كلمة المرور',
             ], 401);
         }
 
-        // التحقق من كلمة المرور
-        if (! Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'كلمة المرور غير صحيحة',
-            ], 401);
-        }
-
-        // إنشاء التوكن
         $token = $user->createToken('eihapkaramvuejs')->accessToken;
 
         $user->last_seen = now();
@@ -415,7 +449,9 @@ class UserController extends Controller
 
     public function logoutphone(Request $request)
     {
-        $request->user()->token()->revoke();
+        if ($request->user() && $request->user()->token()) {
+            $request->user()->token()->revoke();
+        }
 
         return response()->json([
             'success' => true,
@@ -423,16 +459,14 @@ class UserController extends Controller
         ]);
     }
 
-    // سوال التحقق
     public function getSecurityQuestion(Request $request)
     {
         $request->validate([
-            'identifier' => 'required', // البريد أو رقم الهاتف
+            'identifier' => 'required|string',
         ]);
 
         $identifier = $request->identifier;
 
-        // البحث حسب الإيميل أو رقم الهاتف
         $user = User::where('email', $identifier)
             ->orWhere('phone', $identifier)
             ->first();
@@ -448,18 +482,16 @@ class UserController extends Controller
         ], 200, [], JSON_UNESCAPED_UNICODE);
     }
 
-    // اعاده تعين كلمه السر
     public function resetPasswordWithSecurity(Request $request)
     {
         $request->validate([
-            'identifier' => 'required', // البريد أو رقم الهاتف
+            'identifier' => 'required|string',
             'security_answer' => 'required|string',
             'new_password' => 'required|string|min:8|confirmed',
         ]);
 
         $identifier = $request->identifier;
 
-        // البحث حسب البريد أو رقم الهاتف
         $user = User::where('email', $identifier)
             ->orWhere('phone', $identifier)
             ->first();
@@ -470,19 +502,16 @@ class UserController extends Controller
             ], 404);
         }
 
-        // التحقق من إجابة السؤال الأمني
         if (! $user->security_answer || ! Hash::check(trim($request->security_answer), $user->security_answer)) {
             return response()->json([
                 'message' => 'إجابة السؤال الأمني غير صحيحة.',
             ], 403);
         }
 
-        // تحديث كلمة المرور بشكل آمن
         $user->password = Hash::make($request->new_password);
-        $user->last_seen = now(); // تحديث آخر ظهور (اختياري)
+        $user->last_seen = now();
         $user->save();
 
-        // إنشاء توكن جديد (Passport أو Sanctum حسب مشروعك)
         $token = $user->createToken('Personal Access Token')->accessToken;
 
         return response()->json([
@@ -499,7 +528,6 @@ class UserController extends Controller
         ], 200);
     }
 
-    // اعاده تعين كلمه السر
     public function resetPassword(Request $request)
     {
         $request->validate([
@@ -510,7 +538,6 @@ class UserController extends Controller
             'new_password' => 'required|min:8|confirmed',
         ]);
 
-        // 🔍 التحقق من وجود سجل إعادة التعيين
         $record = DB::table('password_resets')
             ->where('phone', $request->phone)
             ->where('token', $request->token)
@@ -520,41 +547,33 @@ class UserController extends Controller
             return response()->json(['message' => 'الرابط غير صالح أو منتهي الصلاحية.'], 400);
         }
 
-        // 🕒 التحقق من صلاحية الرابط (ساعة واحدة)
         if (now()->diffInMinutes($record->created_at) > 60) {
             DB::table('password_resets')->where('phone', $request->phone)->delete();
 
             return response()->json(['message' => 'انتهت صلاحية رابط إعادة التعيين.'], 400);
         }
 
-        // 🔍 التحقق من المستخدم
         $user = User::where('phone', $request->phone)->first();
         if (! $user) {
             return response()->json(['message' => 'المستخدم غير موجود.'], 404);
         }
 
-        // 🚫 منع البائع من استخدام رابط إعادة التعيين
         if ($user->role === 'seller') {
             return response()->json([
                 'message' => 'غير مسموح للبائعين باستخدام رابط إعادة تعيين كلمة المرور.',
             ], 403);
         }
 
-        // ✅ تحديث كلمة المرور + سؤال وإجابة الأمان
         $user->update([
             'password' => Hash::make($request->new_password),
             'security_question' => $request->security_question,
-            'security_answer' => Hash::make($request->security_answer),
+            'security_answer' => Hash::make(trim($request->security_answer)),
             'last_seen' => now(),
         ]);
 
-        // 🗑️ حذف السجل من password_resets
         DB::table('password_resets')->where('phone', $request->phone)->delete();
 
-        // ✅ تسجيل الدخول تلقائياً بعد التعيين
-        Auth::login($user);
-
-        // ✅ إنشاء توكن Passport
+        // أمان: يفضل عدم استخدام تسجيل الدخول التلقائي بالـ Session في الـ APIs هنا وتوليد Token فقط
         $tokenResult = $user->createToken('Personal Access Token');
         $token = $tokenResult->accessToken;
         $expiresAt = $tokenResult->token->expires_at;
@@ -568,11 +587,15 @@ class UserController extends Controller
         ]);
     }
 
-    // ✅ استيراد المستخدمين من ملف Excel
     public function importUsers(Request $request)
     {
+        // حماية الصلاحية للأدمن فقط
+        if (! auth()->user() || auth()->user()->role !== 'admin') {
+            return response()->json(['message' => 'غير مسموح لك برفع واستيراد ملفات المستخدمين'], 403);
+        }
+
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls',
+            'file' => 'required|mimes:xlsx,xls|max:10240', // تحديد حد أقصى لحجم الملف
         ]);
 
         $filePath = $request->file('file')->getRealPath();
@@ -580,25 +603,27 @@ class UserController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $rows = $sheet->toArray();
 
-        // نفترض أول صف عناوين الأعمدة
         foreach (array_slice($rows, 1) as $row) {
-            // مثال على ترتيب الأعمدة داخل الملف:
-            // [0 => id, 1 => name, 2 => last_name, 3 => email, 4 => phone, 5 => role, 6 => password, 7 => img]
-
-            if (empty($row[1]) && empty($row[3])) {
-                continue; // تجاهل الصفوف الفارغة
+            if (empty($row[3])) { // التحقق أن الإيميل متواجد وأنه صالح قبل الإدخال لمنع الـ Null Constraints
+                continue;
             }
+
+            // فلترة وتأكيد صحة الإيميل المدخل من ملف الإكسيل لعدم تخريب قاعدة البيانات
+            if (! filter_var($row[3], FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
             User::updateOrCreate(
-                ['email' => $row[3] ?? null],
+                ['email' => $row[3]],
                 [
-                    'name' => $row[1] ?? null,
-                    'last_name' => $row[2] ?? null,
+                    'name' => sanitize_string($row[1] ?? 'User'),
+                    'last_name' => sanitize_string($row[2] ?? null),
                     'phone' => $row[4] ?? null,
-                    'role' => $row[5] ?? 'customer',
-                    'password' => isset($row[6]) ? Hash::make($row[6]) : Hash::make('12345678'),
+                    'role' => in_array($row[5] ?? '', ['customer', 'supplier', 'seller']) ? $row[5] : 'customer',
+                    'password' => isset($row[6]) && $row[6] != '********' ? Hash::make($row[6]) : Hash::make('12345678'),
                     'img' => $row[7] ?? null,
-                    'latitude' => $row[8] ?? null,
-                    'longitude' => $row[9] ?? null,
+                    'latitude' => is_numeric($row[8] ?? null) ? $row[8] : null,
+                    'longitude' => is_numeric($row[9] ?? null) ? $row[9] : null,
                 ]
             );
         }
@@ -608,6 +633,11 @@ class UserController extends Controller
 
     public function exportUsers()
     {
+        // حماية الصلاحية للأدمن فقط لحظر تسريب بيانات المستخدمين بالكامل
+        if (! auth()->user() || auth()->user()->role !== 'admin') {
+            return response()->json(['message' => 'غير مسموح لك بتصدير بيانات المستخدمين'], 403);
+        }
+
         try {
             $fileName = 'users_export_'.date('Y_m_d_His').'.xlsx';
             $tempPath = storage_path('app/'.$fileName);
@@ -615,11 +645,9 @@ class UserController extends Controller
             $spreadsheet = new Spreadsheet;
             $sheet = $spreadsheet->getActiveSheet();
 
-            // دعم الحروف العربية
             $sheet->getDefaultStyle()->getFont()->setName('Arial');
             $sheet->getDefaultStyle()->getFont()->setSize(12);
 
-            // العناوين
             $headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Role', 'Password', 'Img', 'Latitude', 'Longitude'];
             $sheet->fromArray([$headers], null, 'A1');
 
@@ -628,20 +656,21 @@ class UserController extends Controller
             User::chunk(500, function ($usersChunk) use ($sheet, &$row) {
                 foreach ($usersChunk as $user) {
                     $sheet->setCellValueExplicit('A'.$row, $user->id, DataType::TYPE_STRING);
-                    $sheet->setCellValue('B'.$row, $user->name ?? '');
-                    $sheet->setCellValue('C'.$row, $user->last_name ?? '');
-                    $sheet->setCellValue('D'.$row, $user->email ?? '');
-                    $sheet->setCellValue('E'.$row, $user->phone ?? '');
+                    // استخدام e() أو strip_tags لمنع ثغرات الـ XSS في حال فتح الملف داخل المتصفح
+                    $sheet->setCellValue('B'.$row, strip_tags($user->name ?? ''));
+                    $sheet->setCellValue('C'.$row, strip_tags($user->last_name ?? ''));
+                    $sheet->setCellValue('D'.$row, strip_tags($user->email ?? ''));
+                    $sheet->setCellValue('E'.$row, strip_tags($user->phone ?? ''));
                     $sheet->setCellValue('F'.$row, $user->role ?? '');
-                    $sheet->setCellValue('G'.$row, '********');
+                    $sheet->setCellValue('G'.$row, '********'); // عدم تصدير الـ Hashes الحقيقية لزيادة الأمان
 
-                    // إضافة الصورة في الخلية H إذا موجودة وصالحة
                     try {
-                        if ($user->img && file_exists(public_path($user->img))) {
+                        // أمان: فحص المسار لمنع الـ Path Traversal وإضافة صور خارج مجلد العمل المسموح
+                        if ($user->img && file_exists(public_path($user->img)) && ! str_contains($user->img, '..')) {
                             $drawing = new Drawing;
                             $drawing->setPath(public_path($user->img));
                             $drawing->setCoordinates('H'.$row);
-                            $drawing->setHeight(50); // تقليل ارتفاع الصورة لتقليل استهلاك الذاكرة
+                            $drawing->setHeight(50);
                             $drawing->setWorksheet($sheet);
                         } else {
                             $sheet->setCellValue('H'.$row, '');
@@ -659,7 +688,6 @@ class UserController extends Controller
             $writer = new Xlsx($spreadsheet);
             $writer->save($tempPath);
 
-            // تحقق من وجود الملف قبل محاولة تحميله
             if (! file_exists($tempPath)) {
                 return response()->json([
                     'error' => true,
@@ -671,10 +699,14 @@ class UserController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'error' => true,
-                'message' => $e->getMessage(),
-                'file' => method_exists($e, 'getFile') ? $e->getFile() : null,
-                'line' => method_exists($e, 'getLine') ? $e->getLine() : null,
+                'message' => 'حدث خطأ أثناء تصدير الملف الحساس.',
             ], 500);
         }
     }
+}
+
+// دالة مساعدة لتطهير النصوص البرمجية المدخلة من ملفات الرفع الخارجية
+function sanitize_string($value)
+{
+    return $value ? htmlspecialchars(strip_tags(trim($value)), ENT_QUOTES, 'UTF-8') : null;
 }
