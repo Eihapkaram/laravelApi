@@ -155,15 +155,12 @@ class ProductController extends Controller
         'description' => 'nullable|string',
         'votes' => 'nullable|numeric',
         'url' => 'nullable|string',
-        'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         'price' => 'nullable|numeric',
         'stock' => 'nullable|integer',
         'category_id' => 'nullable|integer|min:1',
         'page_id' => 'nullable|integer|min:1',
         'brand' => 'nullable|string',
         'discount' => 'nullable|numeric',
-        'images_url' => 'nullable|array',
-        'images_url.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048', // تحقق من كل صورة إضافية
     ]);
 
     $id = (int)$id;
