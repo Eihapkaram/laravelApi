@@ -8,87 +8,110 @@ use Illuminate\Http\Request;
 
 class ReviewController extends Controller
 {
+    // ➕ إضافة تقييم جديد
     public function AddReviwes(Request $request, $id)
     {
-        $userid = auth()->user()->id;
         $request->validate([
-            'comment' => 'required',
+            'comment' => 'required|string',
         ]);
+
         Review::create([
             'comment' => $request->comment,
             'product_id' => $id,
-            'user_id' => $userid,
+            'user_id' => auth()->id(),
         ]);
 
-        $data = product::where('id', $id)->with('productReviwes')->get();
+        // جلب المنتج مع التقييمات الخاصة به لتحديث الـ Pinia store مباشرة
+        $data = product::with('productReviwes')->find($id);
 
         return response()->json([
             'massege' => 'add reviwes is done',
-            'data' => $data,
-
+            'data' => [$data], // وضعناه داخل مصفوفة تماشياً مع الـ Frontend لديك
         ]);
     }
 
+    // ✏️ تعديل تقييم
     public function UpdateReviwes(Request $request, $id)
     {
-        $userid = auth()->user()->id;
         $request->validate([
-            'comment' => 'required',
+            'comment' => 'required|string',
         ]);
-        if ($userid = Review::find($id)->user_id) {
-            Review::find($id)->update([
+
+        // جلب الريفيو أولاً للتأكد من وجوده
+        $review = Review::find($id);
+
+        if (! $review) {
+            return response()->json(['massege' => 'Review not found'], 404);
+        }
+
+        // ✅ تم إصلاح الشرط هنا باستخدام المقارنة (==) لضمان أن صاحب الريفيو فقط هو من يملك صلاحية التعديل
+        if (auth()->id() == $review->user_id) {
+            $review->update([
                 'comment' => $request->comment,
-                'user_id' => $userid,
             ]);
-            $data = product::where('id', Review::find($id)->product_id)->with('productReviwes')->get();
+
+            // جلب بيانات المنتج المحدثة
+            $data = product::with('productReviwes')->find($review->product_id);
 
             return response()->json([
                 'massege' => 'edit reviwes is done',
-                'data' => $data,
-            ]);
-        } else {
-            return response()->json([
-                'massege' => "don't can edit this  reviwes",
+                'data' => [$data],
             ]);
         }
+
+        return response()->json([
+            'massege' => "don't can edit this reviews",
+        ], 403);
     }
 
+    // ❌ حذف تقييم
     public function DeleteReviwes($id, $reviweid)
     {
-        $allproreview = product::find($id)->productReviwes()->get();
-        $s = null;
-        foreach ($allproreview as $reviwe) {
-            if (! $reviwe->find($reviweid)) {
-                return response()->json([
-                    'message' => 'Review not found',
-                    'reviwesNow' => $reviwe->get(),
-                ], 404);
-                if ($review->user_id !== auth()->id()) {
-                    return response()->json([
-                        'message' => 'You cannot delete this review',
-                    ], 403);
-                }
-            }
+        // جلب الريفيو المطلوب حذفه مباشرة
+        $review = Review::where('id', $reviweid)->where('product_id', $id)->first();
 
-            $reviwe->destroy($reviweid);
-
+        if (! $review) {
             return response()->json([
-                'massege' => 'delete reviwe done',
-                'reviwesNow' => $reviwe->get(),
-            ]);
+                'message' => 'Review not found',
+            ], 404);
         }
+
+        // ✅ حماية الحذف: التأكد من أن المستخدم الحالي هو صاحب الريفيو
+        if ($review->user_id !== auth()->id()) {
+            return response()->json([
+                'message' => 'You cannot delete this review',
+            ], 403);
+        }
+
+        // تنفيذ الحذف
+        $review->delete();
+
+        // جلب التقييمات المتبقية لهذا المنتج فقط لإرسالها للواجهة
+        $remainingReviews = Review::where('product_id', $id)->get();
+
+        return response()->json([
+            'massege' => 'delete reviwe done',
+            'reviwesNow' => $remainingReviews,
+        ]);
     }
 
+    // 🔍 عرض تقييمات منتج معين (Paginatited)
     public function showProReviwes($id)
     {
         $product = product::findOrFail($id);
 
+        // 1. حساب العدد الإجمالي للمراجعات الخاصة بهذا المنتج فقط
+        $totalReviewsCount = $product->productReviwes()->count();
+
+        // 2. جلب المراجعات مع الـ Pagination والـ User المرتط بها
         $allproreview = $product->productReviwes()
             ->with('user')
+            ->latest() // ترتيبها من الأحدث للأقدم
             ->paginate(10);
 
         return response()->json([
             'massege' => 'show all review for this product done',
+            'total_reviews_count' => $totalReviewsCount, // الحقل الجديد للعدد الإجمالي
             'Proreviwes' => $allproreview,
         ]);
     }

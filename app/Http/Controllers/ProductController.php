@@ -222,7 +222,7 @@ class ProductController extends Controller
     public function search(Request $request)
     {
         // استخدام select لتحديد الحقول المطلوبة فقط من قاعدة البيانات
-        $products = QueryBuilder::for(product::query()->select(['id', 'titel', 'img', 'price']))
+        $products = QueryBuilder::for(product::query()->select(['id', 'titel', 'img', 'price', 'stock']))
             ->allowedFilters([
                 'titel',
                 'brand',

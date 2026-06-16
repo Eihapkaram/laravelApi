@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Offer;
-use Illuminate\Http\Request;
 use App\Models\User;
 use App\Notifications\OfferCreatedNotification;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class OfferController extends Controller
@@ -25,27 +24,20 @@ class OfferController extends Controller
     public function show($id)
     {
         $offer = Offer::findOrFail($id);
+
         return response()->json($offer);
     }
-// ✅ جلب العروض الحالية فقط (الفعالة الآن)
-public function activeOffers()
-{
-    $today = now();
 
-    $offers = Offer::where('is_active', true)
-        ->where(function ($query) use ($today) {
-            $query->whereNull('start_date')
-                ->orWhere('start_date', '<=', $today);
-        })
-        ->where(function ($query) use ($today) {
-            $query->whereNull('end_date')
-                ->orWhere('end_date', '>=', $today);
-        })
-        ->orderBy('created_at', 'desc')
-        ->get();
+    // ✅ جلب العروض الحالية فقط (الفعالة الآن)
+    public function activeOffers()
+    {
+        $offers = Offer::select('id', 'product_id', 'banner')
+            ->where('is_active', 1)
+            ->orderByDesc('created_at')
+            ->get();
 
-    return response()->json($offers);
-}
+        return response()->json($offers);
+    }
 
     // ✅ إنشاء عرض جديد
     public function store(Request $request)
@@ -70,26 +62,28 @@ public function activeOffers()
         }
 
         $offer = Offer::create([
-             
+
             'title' => $request->title,
             'description' => $request->description,
             'banner' => $path,
             'product_id' => $request->product_id,
             'discount_value' => $request->discount_value,
-            'discount_type' =>$request->discount_type,
+            'discount_type' => $request->discount_type,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'is_active' => $request->is_active,
-      
-        ]);
-$users = User::where('role', '!=', 'admin')->get();
 
-foreach ($users as $user) {
-    $user->notify(new OfferCreatedNotification($offer));
-}
+        ]);
+        // 🌟 التعديل هنا: جلب المستخدمين باستبعاد الـ admin والـ supplier معاً
+        $users = User::whereNotIn('role', ['admin', 'supplier'])->get();
+
+        foreach ($users as $user) {
+            $user->notify(new OfferCreatedNotification($offer));
+        }
+
         return response()->json([
             'message' => 'تم إنشاء العرض بنجاح',
-            'offer' => $offer
+            'offer' => $offer,
         ], 201);
     }
 
@@ -114,8 +108,8 @@ foreach ($users as $user) {
             if ($offer->banner) {
                 Storage::disk('public')->delete($offer->banner);
             }
-             // رفع الصورة الرئيسية
-        $path = null;
+            // رفع الصورة الرئيسية
+            $path = null;
             $image = $request->file('banner')->getClientOriginalName();
             $path = $request->file('banner')->storeAs('offersbanner', $image, 'public');
             $data['banner'] = $path;
@@ -125,7 +119,7 @@ foreach ($users as $user) {
 
         return response()->json([
             'message' => 'تم تحديث العرض بنجاح',
-            'offer' => $offer
+            'offer' => $offer,
         ]);
     }
 
