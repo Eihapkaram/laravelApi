@@ -45,7 +45,7 @@ class ProductController extends Controller
             'titel' => 'required|string|max:255',
             'description' => 'required|string',
             'votes' => 'required|numeric',
-            'url' => 'required|url',
+            'url' => 'required|numeric',
             'inCount' => 'required',
             'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048', // تحديد الحجم الأقصى 2 ميجا لحماية السيرفر
             'price' => 'required|numeric',
@@ -154,7 +154,7 @@ class ProductController extends Controller
             'titel' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'votes' => 'nullable|numeric',
-            'url' => 'nullable|url',
+            'url' => 'nullable|numeric',
             'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'price' => 'nullable|numeric',
             'stock' => 'nullable|integer',
