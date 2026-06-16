@@ -143,39 +143,31 @@ class ProductController extends Controller
 
     public function edit(product $product) {}
 
-   public function update(Request $request, product $product, $id)
+  public function update(Request $request, product $product, $id)
 {
     if (! $request) {
         return response()->json(['error' => 'faild edit']);
     }
 
-    // تعديل الـ Validation: لا نفحص الصورة إلا إذا كانت ملفاً مرفوعاً بالفعل HasFile
+    // استخدام sometimes يعني الحقل مطلوب "فقط في حال تم إرساله" في الـ Request
     $request->validate([
         'titel' => 'sometimes|string|max:255',
         'description' => 'sometimes|string',
         'votes' => 'sometimes|numeric',
         'url' => 'sometimes|string',
-        // أزلنا شرط image من هنا مؤقتاً وسنقوم بفحصه يدوياً بالأسفل لحل مشكلة الـ 422
         'price' => 'sometimes|numeric',
         'stock' => 'sometimes|integer',
         'category_id' => 'sometimes|integer|min:1',
         'page_id' => 'sometimes|integer|min:1',
         'brand' => 'sometimes|string',
         'discount' => 'sometimes|numeric',
-        'images_url' => 'sometimes|array',
     ]);
 
     $id = (int)$id;
     $pro = product::findOrFail($id);
 
-    // رفع الصورة الرئيسية: نفحص أولاً هل المرسل ملف حقيقي؟
-    if ($request->hasFile('img') && $request->file('img')->isValid()) {
-        
-        // هنا نقوم بعمل Validation يدوي سريع للصورة لضمان الأمان
-        $request->validate([
-            'img' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-        ]);
-
+    // تعديل الصورة الرئيسية: يتم فقط لو تم رفع ملف جديد
+    if ($request->hasFile('img')) {
         if ($pro->img) {
             Storage::disk('public')->delete($pro->img);
         }
@@ -186,7 +178,8 @@ class ProductController extends Controller
         $pro->save();
     }
 
-    // تحديث باقي الحقول النصية والرقمية بسلاسة
+    // التحديث الذكي: نأخذ فقط البيانات المرسلة فعلياً في الـ Request ونقوم بدمجها مع البيانات القديمة
+    // دالة $request->all() مع fill تجعل الحقول غير المرسلة تظل كما هي في قاعدة البيانات تماماً
     $pro->update(array_filter([
         'titel' => $request->has('titel') ? $request->titel : $pro->titel,
         'description' => $request->has('description') ? $request->description : $pro->description,
@@ -202,14 +195,8 @@ class ProductController extends Controller
         'discount' => $request->has('discount') ? $request->discount : $pro->discount,
     ]));
 
-    // تعديل الصور الإضافية: نتأكد أن المرسل يحتوي على ملفات مرفوعة حقيقية وليست روابط قديمة
+    // تعديل الصور الإضافية: يتم فقط لو تم رفع مصفوفة صور جديدة
     if ($request->hasFile('images_url')) {
-        
-        // تحقق يدوي سريع من أمان الصور الإضافية المرفوعة
-        $request->validate([
-            'images_url.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-        ]);
-
         foreach ($pro->images as $oldImage) {
             Storage::disk('public')->delete($oldImage->path);
             $oldImage->delete();
