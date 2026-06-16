@@ -42,31 +42,32 @@ class ProductController extends Controller
     public function create(Request $request)
     {
         $request->validate([
-            'titel' => 'required',
-            'description' => 'required',
-            'votes' => 'required',
-            'url' => 'required',
+            'titel' => 'required|string|max:255',
+            'description' => 'required|string',
+            'votes' => 'required|numeric',
+            'url' => 'required|url',
             'inCount' => 'required',
-            'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp',
-            'price' => 'required',
-            'stock' => 'required',
-            'category_id' => 'required|min:1',
-            'page_id' => 'required|min:1',
-            'brand' => 'required',
+            'img' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048', // تحديد الحجم الأقصى 2 ميجا لحماية السيرفر
+            'price' => 'required|numeric',
+            'stock' => 'required|integer',
+            'category_id' => 'required|integer|min:1',
+            'page_id' => 'required|integer|min:1',
+            'brand' => 'required|string',
             'Counttype' => 'required',
             'inCounttype' => 'required',
-            'discount' => 'required',
+            'discount' => 'required|numeric',
         ]);
 
         if (! $request) {
             return response()->json(['error' => 'faild in create']);
         }
 
-        // رفع الصورة الرئيسية
+        // رفع الصورة الرئيسية - تأمين الاسم عبر توليد اسم فريد يمنع ثغرات الـ PHP Shell
         $path = null;
         if ($request->hasFile('img')) {
-            $image = $request->file('img')->getClientOriginalName();
-            $path = $request->file('img')->storeAs('products', $image, 'public');
+            $imageExtension = $request->file('img')->getClientOriginalExtension();
+            $imageName = time() . '_' . uniqid() . '.' . $imageExtension;
+            $path = $request->file('img')->storeAs('products', $imageName, 'public');
         }
 
         $imagePath = null;
@@ -88,6 +89,7 @@ class ProductController extends Controller
             'inCounttype' => $request->inCounttype,
             'discount' => $request->discount,
         ]);
+        
         $user = auth()->user();
         if ($product) {
             // جيب كل المستخدمين اللي رولهم أدمن
@@ -97,10 +99,11 @@ class ProductController extends Controller
             Notification::send($admins, new NewProduct($user, $product));
         }
 
-        // رفع صور إضافية
+        // رفع صور إضافية - تأمين الأسماء
         if ($request->hasFile('images_url')) {
             foreach ($request->file('images_url') as $image) {
-                $imageup = $image->getClientOriginalName();
+                $imageExtension = $image->getClientOriginalExtension();
+                $imageup = time() . '_' . uniqid() . '.' . $imageExtension;
                 $path = $image->storeAs('products', $imageup, 'public');
                 $product->images()->create(['path' => $path]);
             }
@@ -117,6 +120,8 @@ class ProductController extends Controller
 
     public function show($id)
     {
+        // تأمين الـ ID بالتأكد من أنه قيمة رقمية لصد أي محاولات Inject
+        $id = (int)$id;
         $product = product::find($id);
         if (is_null($product)) {
             return response()->json([
@@ -140,17 +145,37 @@ class ProductController extends Controller
 
     public function update(Request $request, product $product, $id)
     {
-
         if (! $request) {
             return response()->json(['error' => 'faild edit']);
         }
 
+        // إضافة الـ Validation لحماية البيانات المدخلة في التحديث
+        $request->validate([
+            'titel' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'votes' => 'nullable|numeric',
+            'url' => 'nullable|url',
+            'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'price' => 'nullable|numeric',
+            'stock' => 'nullable|integer',
+            'category_id' => 'nullable|integer|min:1',
+            'page_id' => 'nullable|integer|min:1',
+            'brand' => 'nullable|string',
+            'discount' => 'nullable|numeric',
+        ]);
+
+        $id = (int)$id;
         $pro = product::findOrFail($id);
 
-        // رفع الصورة الرئيسية الجديدة
+        // رفع الصورة الرئيسية الجديدة بأمان
         if ($request->hasFile('img')) {
-            $image = $request->file('img')->getClientOriginalName();
-            $path = $request->file('img')->storeAs('products', $image, 'public');
+            // حذف الصورة القديمة من السيرفر لتوفير المساحة والأمان
+            if ($pro->img) {
+                Storage::disk('public')->delete($pro->img);
+            }
+            $imageExtension = $request->file('img')->getClientOriginalExtension();
+            $imageName = time() . '_' . uniqid() . '.' . $imageExtension;
+            $path = $request->file('img')->storeAs('products', $imageName, 'public');
             $pro->img = $path ?? $pro->img;
             $pro->save();
         }
@@ -160,7 +185,6 @@ class ProductController extends Controller
             'description' => $request->description ?? $pro->description,
             'votes' => $request->votes ?? $pro->votes,
             'url' => $request->url ?? $pro->url,
-
             'price' => $request->price ?? $pro->price,
             'stock' => $request->stock ?? $pro->stock,
             'category_id' => $request->category_id ?? $pro->category_id,
@@ -183,7 +207,8 @@ class ProductController extends Controller
             foreach ($request->file('images_url') as $imageUP) {
                 $imageName = time().'_'.uniqid().'.'.$imageUP->getClientOriginalExtension();
                 $path1 = $imageUP->storeAs('products', $imageName, 'public');
-                $product->images()->create(['path' => $path]);
+                // تم تعديل متغير $path الخطأ إلى $path1 هنا لإصلاح الـ Bug
+                $product->images()->create(['path' => $path1]);
             }
         }
 
@@ -196,12 +221,18 @@ class ProductController extends Controller
 
     public function destroy($id)
     {
+        $id = (int)$id;
         $product = product::with('images')->find($id);
 
         if ($product) {
             foreach ($product->images as $img) {
                 Storage::disk('public')->delete($img->path);
                 $img->delete();
+            }
+
+            // حذف الصورة الرئيسية أيضاً عند حذف المنتج لحماية مساحة السيرفر
+            if ($product->img) {
+                Storage::disk('public')->delete($product->img);
             }
 
             $product->delete();
@@ -221,18 +252,12 @@ class ProductController extends Controller
 
     public function search(Request $request)
     {
-        // استخدام select لتحديد الحقول المطلوبة فقط من قاعدة البيانات
         $products = QueryBuilder::for(product::query()->select(['id', 'titel', 'img', 'price', 'stock']))
             ->allowedFilters([
                 'titel',
                 'brand',
-
-                // تحسين الفلتر ليفك تشفير النصوص العربية ويبحث بشكل مرن
                 AllowedFilter::callback('categorie.name', function ($query, $value) {
-                    // 1. فك تشفير الكلمة القادمة من الرابط (مثال: من %D9%85%D9%85%D9%8A%D8%B2 إلى مميز)
                     $decodedValue = urldecode($value);
-
-                    // 2. البحث باستخدام % لضمان العثور على الفئة حتى لو بها مسافات زائدة
                     $query->whereHas('categorie', function ($q) use ($decodedValue) {
                         $q->where('name', 'like', "%{$decodedValue}%");
                     });
@@ -249,7 +274,6 @@ class ProductController extends Controller
 
     public function search8(Request $request)
     {
-        // إضافة الحقول الجديدة داخل مصفوفة الـ select
         $products = QueryBuilder::for(product::query()->select([
             'id',
             'titel',
@@ -267,13 +291,8 @@ class ProductController extends Controller
             ->allowedFilters([
                 'titel',
                 'brand',
-
-                // تحسين الفلتر ليفك تشفير النصوص العربية ويبحث بشكل مرن
                 AllowedFilter::callback('categorie.name', function ($query, $value) {
-                    // 1. فك تشفير الكلمة القادمة من الرابط (مثال: من %D9%85%D9%85%D9%8A%D8%B2 إلى مميز)
                     $decodedValue = urldecode($value);
-
-                    // 2. البحث باستخدام % لضمان العثور على الفئة حتى لو بها مسافات زائدة
                     $query->whereHas('categorie', function ($q) use ($decodedValue) {
                         $q->where('name', 'like', "%{$decodedValue}%");
                     });
@@ -290,7 +309,8 @@ class ProductController extends Controller
 
     public function searchByCategory(Request $request)
     {
-        $query = $request->input('q');
+        // تأمين وتطهير المدخلات من نصوص سكريبت خبيثة (XSS Protection)
+        $query = strip_tags($request->input('q'));
 
         $category = categorie::where('name', 'like', "%{$query}%")
             ->first();
@@ -302,7 +322,6 @@ class ProductController extends Controller
             ], 404);
         }
 
-        // pagination للمنتجات
         $products = $category->product()
             ->paginate(10);
 
@@ -318,7 +337,6 @@ class ProductController extends Controller
         ], 200);
     }
 
-    // ✅ تصدير المنتجات إلى Excel
     public function export()
     {
         $products = product::with('page')->get();
@@ -326,12 +344,10 @@ class ProductController extends Controller
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
-        // العناوين
         $sheet->fromArray([
             ['ID', 'Title', 'Description', 'Votes', 'InCount', 'URL', 'Brand', 'Price', 'Stock', 'Category ID', 'Page ID', 'Counttype', 'inCounttype', 'discount'],
         ]);
 
-        // البيانات
         $rows = [];
         foreach ($products as $product) {
             $rows[] = [
@@ -349,12 +365,10 @@ class ProductController extends Controller
                 $product->Counttype,
                 $product->inCounttype,
                 $product->discount,
-
             ];
         }
         $sheet->fromArray($rows, null, 'A2');
 
-        // حفظ الملف مؤقتًا وإرساله
         $fileName = 'products.xlsx';
         $writer = new Xlsx($spreadsheet);
         $tempPath = storage_path('app/'.$fileName);
@@ -363,34 +377,36 @@ class ProductController extends Controller
         return response()->download($tempPath)->deleteFileAfterSend(true);
     }
 
-    // ✅ استيراد المنتجات من Excel
     public function import(Request $request)
     {
-        $request->validate(['file' => 'required|mimes:xlsx,xls']);
+        // تأمين فحص ملف الـ Excel قبل قراءته للتأكد من هويته ونوعه
+        $request->validate(['file' => 'required|file|mimes:xlsx,xls|max:5120']);
         $file = $request->file('file')->getRealPath();
 
         $spreadsheet = IOFactory::load($file);
         $sheet = $spreadsheet->getActiveSheet();
         $rows = $sheet->toArray();
 
-        // تخطي أول صف (العناوين)
         foreach (array_slice($rows, 1) as $row) {
+            // تأمين البيانات القادمة من الـ Excel وتحويلها للأنواع المناسبة لمنع الـ SQL Injection والبيانات التالفة
+            $id = isset($row[0]) ? (int)$row[0] : null;
+            
             product::updateOrCreate(
-                ['id' => $row[0] ?? null],
+                ['id' => $id],
                 [
-                    'titel' => $row[1] ?? '',
-                    'description' => $row[2] ?? '',
-                    'votes' => $row[3] ?? 0,
-                    'inCount' => $row[4] ?? '',
-                    'url' => $row[5] ?? '',
-                    'brand' => $row[6] ?? '',
-                    'price' => $row[7] ?? 0,
-                    'stock' => $row[8] ?? 0,
-                    'category_id' => $row[9] ?? null,
-                    'page_id' => $row[10] ?? null,
-                    'Counttype' => $row[11] ?? null,
-                    'inCounttype' => $row[12] ?? null,
-                    'discount' => $row[13] ?? null,
+                    'titel' => strip_tags($row[1] ?? ''),
+                    'description' => strip_tags($row[2] ?? ''),
+                    'votes' => isset($row[3]) ? (float)$row[3] : 0,
+                    'inCount' => strip_tags($row[4] ?? ''),
+                    'url' => filter_var($row[5] ?? '', FILTER_VALIDATE_URL) ? $row[5] : '',
+                    'brand' => strip_tags($row[6] ?? ''),
+                    'price' => isset($row[7]) ? (float)$row[7] : 0,
+                    'stock' => isset($row[8]) ? (int)$row[8] : 0,
+                    'category_id' => isset($row[9]) ? (int)$row[9] : null,
+                    'page_id' => isset($row[10]) ? (int)$row[10] : null,
+                    'Counttype' => strip_tags($row[11] ?? ''),
+                    'inCounttype' => strip_tags($row[12] ?? ''),
+                    'discount' => isset($row[13]) ? (float)$row[13] : null,
                 ]
             );
         }
