@@ -143,82 +143,81 @@ class ProductController extends Controller
 
     public function edit(product $product) {}
 
-    public function update(Request $request, product $product, $id)
-    {
-        if (! $request) {
-            return response()->json(['error' => 'faild edit']);
-        }
-
-        // إضافة الـ Validation لحماية البيانات المدخلة في التحديث
-        $request->validate([
-            'titel' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-            'votes' => 'nullable|numeric',
-            'url' => 'nullable|string',
-            'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'price' => 'nullable|numeric',
-            'stock' => 'nullable|integer',
-            'category_id' => 'nullable|integer|min:1',
-            'page_id' => 'nullable|integer|min:1',
-            'brand' => 'nullable|string',
-            'discount' => 'nullable|numeric',
-        ]);
-
-        $id = (int)$id;
-        $pro = product::findOrFail($id);
-
-        // رفع الصورة الرئيسية الجديدة بأمان
-        if ($request->hasFile('img')) {
-            // حذف الصورة القديمة من السيرفر لتوفير المساحة والأمان
-            if ($pro->img) {
-                Storage::disk('public')->delete($pro->img);
-            }
-            $imageExtension = $request->file('img')->getClientOriginalExtension();
-            $imageName = time() . '_' . uniqid() . '.' . $imageExtension;
-            $path = $request->file('img')->storeAs('products', $imageName, 'public');
-            $pro->img = $path ?? $pro->img;
-            $pro->save();
-        }
-
-        $pro->update([
-            'titel' => $request->titel ?? $pro->titel,
-            'description' => $request->description ?? $pro->description,
-            'votes' => $request->votes ?? $pro->votes,
-            'url' => $request->url ?? $pro->url,
-            'price' => $request->price ?? $pro->price,
-            'stock' => $request->stock ?? $pro->stock,
-            'category_id' => $request->category_id ?? $pro->category_id,
-            'page_id' => $request->page_id ?? $pro->page_id,
-            'brand' => $request->brand ?? $pro->brand,
-            'Counttype' => $request->Counttype ?? $pro->Counttype,
-            'inCounttype' => $request->inCounttype ?? $pro->inCounttype,
-            'discount' => $request->discount ?? $pro->discount,
-        ]);
-
-        // تحديث الصور الإضافية
-        $product = product::findOrFail($id);
-
-        if ($request->hasFile('images_url')) {
-            foreach ($product->images as $oldImage) {
-                Storage::disk('public')->delete($oldImage->path);
-                $oldImage->delete();
-            }
-
-            foreach ($request->file('images_url') as $imageUP) {
-                $imageName = time().'_'.uniqid().'.'.$imageUP->getClientOriginalExtension();
-                $path1 = $imageUP->storeAs('products', $imageName, 'public');
-                // تم تعديل متغير $path الخطأ إلى $path1 هنا لإصلاح الـ Bug
-                $product->images()->create(['path' => $path1]);
-            }
-        }
-
-        return response()->json([
-            'sucsse' => 'true',
-            'message' => 'edit item done',
-            'imgupdate' => $product->load('images'),
-        ]);
+   public function update(Request $request, product $product, $id)
+{
+    if (! $request) {
+        return response()->json(['error' => 'faild edit']);
     }
 
+    // إضافة الـ Validation لحماية البيانات المدخلة في التحديث
+    $request->validate([
+        'titel' => 'nullable|string|max:255',
+        'description' => 'nullable|string',
+        'votes' => 'nullable|numeric',
+        'url' => 'nullable|string',
+        'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        'price' => 'nullable|numeric',
+        'stock' => 'nullable|integer',
+        'category_id' => 'nullable|integer|min:1',
+        'page_id' => 'nullable|integer|min:1',
+        'brand' => 'nullable|string',
+        'discount' => 'nullable|numeric',
+        'images_url' => 'nullable|array',
+        'images_url.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048', // تحقق من كل صورة إضافية
+    ]);
+
+    $id = (int)$id;
+    $pro = product::findOrFail($id);
+
+    // رفع الصورة الرئيسية الجديدة بأمان (لو مش موجودة في الـ Request، هيفضل محتفظ بالقديمة تلقائياً)
+    if ($request->hasFile('img')) {
+        // حذف الصورة القديمة من السيرفر لتوفير المساحة والأمان
+        if ($pro->img) {
+            Storage::disk('public')->delete($pro->img);
+        }
+        $imageExtension = $request->file('img')->getClientOriginalExtension();
+        $imageName = time() . '_' . uniqid() . '.' . $imageExtension;
+        $path = $request->file('img')->storeAs('products', $imageName, 'public');
+        $pro->img = $path;
+        $pro->save();
+    }
+
+    $pro->update([
+        'titel' => $request->titel ?? $pro->titel,
+        'description' => $request->description ?? $pro->description,
+        'votes' => $request->votes ?? $pro->votes,
+        'url' => $request->url ?? $pro->url,
+        'price' => $request->price ?? $pro->price,
+        'stock' => $request->stock ?? $pro->stock,
+        'category_id' => $request->category_id ?? $pro->category_id,
+        'page_id' => $request->page_id ?? $pro->page_id,
+        'brand' => $request->brand ?? $pro->brand,
+        'Counttype' => $request->Counttype ?? $pro->Counttype,
+        'inCounttype' => $request->inCounttype ?? $pro->inCounttype,
+        'discount' => $request->discount ?? $pro->discount,
+    ]);
+
+    // تحديث الصور الإضافية (لو مرفعش صور جديدة، هيفضل محتفظ بالقديمة كاملة بدون أي حذف)
+    if ($request->hasFile('images_url')) {
+        // الحذف مبيتمش إلا لو الشرط دا تحقق ودخلنا هنا فعلياً
+        foreach ($pro->images as $oldImage) {
+            Storage::disk('public')->delete($oldImage->path);
+            $oldImage->delete();
+        }
+
+        foreach ($request->file('images_url') as $imageUP) {
+            $imageName = time().'_'.uniqid().'.'.$imageUP->getClientOriginalExtension();
+            $path1 = $imageUP->storeAs('products', $imageName, 'public');
+            $pro->images()->create(['path' => $path1]);
+        }
+    }
+
+    return response()->json([
+        'sucsse' => 'true',
+        'message' => 'edit item done',
+        'imgupdate' => $pro->load('images'),
+    ]);
+}
     public function destroy($id)
     {
         $id = (int)$id;
