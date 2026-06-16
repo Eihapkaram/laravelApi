@@ -149,29 +149,33 @@ class ProductController extends Controller
         return response()->json(['error' => 'faild edit']);
     }
 
-    // إضافة الـ Validation لحماية البيانات المدخلة في التحديث
+    // تعديل الـ Validation: لا نفحص الصورة إلا إذا كانت ملفاً مرفوعاً بالفعل HasFile
     $request->validate([
-        'titel' => 'nullable|string|max:255',
-        'description' => 'nullable|string',
-        'votes' => 'nullable|numeric',
-        'url' => 'nullable|string',
-        'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-        'price' => 'nullable|numeric',
-        'stock' => 'nullable|integer',
-        'category_id' => 'nullable|integer|min:1',
-        'page_id' => 'nullable|integer|min:1',
-        'brand' => 'nullable|string',
-        'discount' => 'nullable|numeric',
-        'images_url' => 'nullable|array',
-        'images_url.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048', // تحقق من كل صورة إضافية
+        'titel' => 'sometimes|string|max:255',
+        'description' => 'sometimes|string',
+        'votes' => 'sometimes|numeric',
+        'url' => 'sometimes|string',
+        // أزلنا شرط image من هنا مؤقتاً وسنقوم بفحصه يدوياً بالأسفل لحل مشكلة الـ 422
+        'price' => 'sometimes|numeric',
+        'stock' => 'sometimes|integer',
+        'category_id' => 'sometimes|integer|min:1',
+        'page_id' => 'sometimes|integer|min:1',
+        'brand' => 'sometimes|string',
+        'discount' => 'sometimes|numeric',
+        'images_url' => 'sometimes|array',
     ]);
 
     $id = (int)$id;
     $pro = product::findOrFail($id);
 
-    // رفع الصورة الرئيسية الجديدة بأمان (لو مش موجودة في الـ Request، هيفضل محتفظ بالقديمة تلقائياً)
-    if ($request->hasFile('img')) {
-        // حذف الصورة القديمة من السيرفر لتوفير المساحة والأمان
+    // رفع الصورة الرئيسية: نفحص أولاً هل المرسل ملف حقيقي؟
+    if ($request->hasFile('img') && $request->file('img')->isValid()) {
+        
+        // هنا نقوم بعمل Validation يدوي سريع للصورة لضمان الأمان
+        $request->validate([
+            'img' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ]);
+
         if ($pro->img) {
             Storage::disk('public')->delete($pro->img);
         }
@@ -182,24 +186,30 @@ class ProductController extends Controller
         $pro->save();
     }
 
-    $pro->update([
-        'titel' => $request->titel ?? $pro->titel,
-        'description' => $request->description ?? $pro->description,
-        'votes' => $request->votes ?? $pro->votes,
-        'url' => $request->url ?? $pro->url,
-        'price' => $request->price ?? $pro->price,
-        'stock' => $request->stock ?? $pro->stock,
-        'category_id' => $request->category_id ?? $pro->category_id,
-        'page_id' => $request->page_id ?? $pro->page_id,
-        'brand' => $request->brand ?? $pro->brand,
-        'Counttype' => $request->Counttype ?? $pro->Counttype,
-        'inCounttype' => $request->inCounttype ?? $pro->inCounttype,
-        'discount' => $request->discount ?? $pro->discount,
-    ]);
+    // تحديث باقي الحقول النصية والرقمية بسلاسة
+    $pro->update(array_filter([
+        'titel' => $request->has('titel') ? $request->titel : $pro->titel,
+        'description' => $request->has('description') ? $request->description : $pro->description,
+        'votes' => $request->has('votes') ? $request->votes : $pro->votes,
+        'url' => $request->has('url') ? $request->url : $pro->url,
+        'price' => $request->has('price') ? $request->price : $pro->price,
+        'stock' => $request->has('stock') ? $request->stock : $pro->stock,
+        'category_id' => $request->has('category_id') ? $request->category_id : $pro->category_id,
+        'page_id' => $request->has('page_id') ? $request->page_id : $pro->page_id,
+        'brand' => $request->has('brand') ? $request->brand : $pro->brand,
+        'Counttype' => $request->has('Counttype') ? $request->Counttype : $pro->Counttype,
+        'inCounttype' => $request->has('inCounttype') ? $request->inCounttype : $pro->inCounttype,
+        'discount' => $request->has('discount') ? $request->discount : $pro->discount,
+    ]));
 
-    // تحديث الصور الإضافية (لو مرفعش صور جديدة، هيفضل محتفظ بالقديمة كاملة بدون أي حذف)
+    // تعديل الصور الإضافية: نتأكد أن المرسل يحتوي على ملفات مرفوعة حقيقية وليست روابط قديمة
     if ($request->hasFile('images_url')) {
-        // الحذف مبيتمش إلا لو الشرط دا تحقق ودخلنا هنا فعلياً
+        
+        // تحقق يدوي سريع من أمان الصور الإضافية المرفوعة
+        $request->validate([
+            'images_url.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ]);
+
         foreach ($pro->images as $oldImage) {
             Storage::disk('public')->delete($oldImage->path);
             $oldImage->delete();
