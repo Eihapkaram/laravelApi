@@ -23,6 +23,7 @@ class OfferController extends Controller
     // ✅ عرض عرض معين
     public function show($id)
     {
+        $id = (int)$id; // تأمين الـ ID من أي محاولات حقن
         $offer = Offer::findOrFail($id);
 
         return response()->json($offer);
@@ -42,10 +43,10 @@ class OfferController extends Controller
     // ✅ إنشاء عرض جديد
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'banner' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'banner' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048', // تأمين الحجم والنوع
             'product_id' => 'nullable|exists:products,id',
             'discount_value' => 'nullable|numeric',
             'discount_type' => 'nullable|in:percent,fixed',
@@ -54,15 +55,15 @@ class OfferController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // رفع الصورة الرئيسية
+        // رفع الصورة الرئيسية باسم فريد مشفر للأمان
         $path = null;
         if ($request->hasFile('banner')) {
-            $image = $request->file('banner')->getClientOriginalName();
-            $path = $request->file('banner')->storeAs('offersbanner', $image, 'public');
+            $imageExtension = $request->file('banner')->getClientOriginalExtension();
+            $imageName = time() . '_' . uniqid() . '.' . $imageExtension;
+            $path = $request->file('banner')->storeAs('offersbanner', $imageName, 'public');
         }
 
         $offer = Offer::create([
-
             'title' => $request->title,
             'description' => $request->description,
             'banner' => $path,
@@ -71,10 +72,10 @@ class OfferController extends Controller
             'discount_type' => $request->discount_type,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
-            'is_active' => $request->is_active,
-
+            'is_active' => $request->is_active ?? true,
         ]);
-        // 🌟 التعديل هنا: جلب المستخدمين باستبعاد الـ admin والـ supplier معاً
+
+        // 🌟 جلب المستخدمين باستبعاد الـ admin والـ supplier معاً
         $users = User::whereNotIn('role', ['admin', 'supplier'])->get();
 
         foreach ($users as $user) {
@@ -87,15 +88,16 @@ class OfferController extends Controller
         ], 201);
     }
 
-    // ✅ تحديث عرض
+    // ✅ تحديث عرض (ذكي وآمن)
     public function update(Request $request, $id)
     {
+        $id = (int)$id;
         $offer = Offer::findOrFail($id);
 
-        $data = $request->validate([
+        // استخدام sometimes لتحديث الحقول المرسلة فقط دون تصفير البقية
+        $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'banner' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'product_id' => 'nullable|exists:products,id',
             'discount_value' => 'nullable|numeric',
             'discount_type' => 'nullable|in:percent,fixed',
@@ -104,17 +106,35 @@ class OfferController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        if ($request->hasFile('banner')) {
+        // تجميع البيانات المحدثة فقط مع الاحتفاظ بالقديم إذا لم يُرسل
+        $data = [];
+        $fields = ['title', 'description', 'product_id', 'discount_value', 'discount_type', 'start_date', 'end_date', 'is_active'];
+        
+        foreach ($fields as $field) {
+            if ($request->has($field)) {
+                $data[$field] = $request->input($field);
+            }
+        }
+
+        // فحص وتحديث البنر: يتم فقط إذا تم رفع ملف حقيقي لمنع الـ 422 والحفاظ على البنر القديم
+        if ($request->hasFile('banner') && $request->file('banner')->isValid()) {
+            
+            // Validation يدوي للبنر المرفوع حديثاً
+            $request->validate([
+                'banner' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            ]);
+
             if ($offer->banner) {
                 Storage::disk('public')->delete($offer->banner);
             }
-            // رفع الصورة الرئيسية
-            $path = null;
-            $image = $request->file('banner')->getClientOriginalName();
-            $path = $request->file('banner')->storeAs('offersbanner', $image, 'public');
+
+            $imageExtension = $request->file('banner')->getClientOriginalExtension();
+            $imageName = time() . '_' . uniqid() . '.' . $imageExtension;
+            $path = $request->file('banner')->storeAs('offersbanner', $imageName, 'public');
             $data['banner'] = $path;
         }
 
+        // تحديث البيانات في قاعدة البيانات
         $offer->update($data);
 
         return response()->json([
@@ -126,6 +146,7 @@ class OfferController extends Controller
     // ✅ حذف عرض
     public function destroy($id)
     {
+        $id = (int)$id;
         $offer = Offer::findOrFail($id);
 
         if ($offer->banner) {
