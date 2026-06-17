@@ -3,7 +3,7 @@
 return [
 
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
-    'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE'],
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     'allowed_origins' => ['https://jomlet.netlify.app'],
     'allowed_headers' => ['Content-Type', 'X-Requested-With', 'Authorization', 'Accept', 'Origin'],
     'exposed_headers' => ['Authorization'],
